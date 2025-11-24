@@ -18,22 +18,40 @@ export default function ListaLancamentosPage() {
     dataInicio: '',
     dataFim: '',
     grupo: '',
-    subgrupo: ''
+    subgrupo: '',
+    statusQuitado: 'TODAS' // TODAS, QUITADAS, ABERTAS
   });
 
   const [grupos, setGrupos] = useState([]);
   const [subgrupos, setSubgrupos] = useState([]);
   const [fontSize, setFontSize] = useState(14);
   const [ocultarValores, setOcultarValores] = useState(false);
+  
+  const [editandoValor, setEditandoValor] = useState(null);
+  const [novoValor, setNovoValor] = useState('');
+  
+  const [showQuitadoModal, setShowQuitadoModal] = useState(false);
+  const [lancamentoParaQuitar, setLancamentoParaQuitar] = useState(null);
+  const [formasPagamento, setFormasPagamento] = useState([]);
+  const [dadosQuitacao, setDadosQuitacao] = useState({
+    data_quitacao: new Date().toISOString().split('T')[0],
+    forma_pagamento_id: ''
+  });
 
   useEffect(() => {
     loadGrupos();
     loadLancamentos();
+    loadFormasPagamento();
   }, []);
 
   async function loadGrupos() {
     const { data } = await supabase.from('grupos').select('*').order('nome');
     if (data) setGrupos(data);
+  }
+
+  async function loadFormasPagamento() {
+    const { data } = await supabase.from('formas_pagamento').select('*').eq('ativo', true).order('nome');
+    if (data) setFormasPagamento(data);
   }
 
   async function loadLancamentos() {
@@ -96,19 +114,127 @@ export default function ListaLancamentosPage() {
     }
   }
 
+  function abrirModalQuitacao(lancamento) {
+    setLancamentoParaQuitar(lancamento);
+    setDadosQuitacao({
+      data_quitacao: new Date().toISOString().split('T')[0],
+      forma_pagamento_id: ''
+    });
+    setShowQuitadoModal(true);
+  }
+
+  function fecharModalQuitacao() {
+    setShowQuitadoModal(false);
+    setLancamentoParaQuitar(null);
+  }
+
+  async function confirmarQuitacao() {
+    if (!dadosQuitacao.forma_pagamento_id) {
+      alert('Por favor, selecione uma forma de pagamento');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('lancamentos')
+      .update({ 
+        quitado: true,
+        data_quitacao: dadosQuitacao.data_quitacao,
+        forma_pagamento_id: dadosQuitacao.forma_pagamento_id
+      })
+      .eq('id', lancamentoParaQuitar.id);
+
+    if (error) {
+      alert('Erro ao quitar lançamento: ' + error.message);
+    } else {
+      alert('Lançamento quitado com sucesso!');
+      fecharModalQuitacao();
+      loadLancamentos();
+    }
+  }
+
+  async function reabrirLancamento(id) {
+    if (!confirm('Tem certeza que deseja reabrir este lançamento?')) return;
+
+    const { error } = await supabase
+      .from('lancamentos')
+      .update({ 
+        quitado: false,
+        data_quitacao: null,
+        forma_pagamento_id: null
+      })
+      .eq('id', id);
+
+    if (error) {
+      alert('Erro ao reabrir lançamento: ' + error.message);
+    } else {
+      loadLancamentos();
+    }
+  }
+
+  function iniciarEdicaoValor(lancamento) {
+    setEditandoValor(lancamento.id);
+    setNovoValor(parseFloat(lancamento.valor).toFixed(2));
+  }
+
+  function cancelarEdicaoValor() {
+    setEditandoValor(null);
+    setNovoValor('');
+  }
+
+  async function salvarNovoValor(id) {
+    const valorNumerico = parseFloat(novoValor);
+    
+    if (isNaN(valorNumerico) || valorNumerico <= 0) {
+      alert('Por favor, insira um valor válido maior que zero');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('lancamentos')
+      .update({ valor: valorNumerico })
+      .eq('id', id);
+
+    if (error) {
+      alert('Erro ao atualizar valor: ' + error.message);
+    } else {
+      setEditandoValor(null);
+      setNovoValor('');
+      loadLancamentos();
+    }
+  }
+
+  // Filtrar lançamentos por status de quitado
+  const lancamentosFiltrados = lancamentos.filter(lanc => {
+    if (filtros.statusQuitado === 'QUITADAS') {
+      return lanc.tipo === 'DESPESA' && lanc.quitado === true;
+    } else if (filtros.statusQuitado === 'ABERTAS') {
+      return lanc.tipo === 'DESPESA' && lanc.quitado === false;
+    }
+    return true; // TODAS
+  });
+
   const totalDespesas = lancamentos
-    .filter(l => l.tipo === 'DESPESA')
+    .filter(l => l.tipo === 'DESPESA' && !l.quitado)
     .reduce((sum, l) => sum + parseFloat(l.valor), 0);
 
   const totalReceitas = lancamentos
     .filter(l => l.tipo === 'RECEITA')
     .reduce((sum, l) => sum + parseFloat(l.valor), 0);
 
-  const saldo = totalReceitas - totalDespesas;
+  const totalDespesasGeral = lancamentos
+    .filter(l => l.tipo === 'DESPESA')
+    .reduce((sum, l) => sum + parseFloat(l.valor), 0);
+
+  const saldo = totalReceitas - totalDespesasGeral;
+
+  const temFiltroAtivo = filtros.statusQuitado !== 'TODAS' || filtros.tipo !== 'TODOS' || 
+                         filtros.dataInicio || filtros.dataFim;
 
   function exportarParaExcel() {
     const csv = gerarCSV();
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    // Adicionar BOM para UTF-8 para Excel reconhecer acentos corretamente
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `lancamentos_${new Date().toISOString().split('T')[0]}.csv`;
@@ -116,16 +242,17 @@ export default function ListaLancamentosPage() {
   }
 
   function gerarCSV() {
-    let csv = 'Data,Descrição,Grupo,Subgrupo,Classe,Tipo,Valor\n';
+    // Usar ponto-e-vírgula como separador (padrão Excel PT-BR)
+    let csv = 'Data;Descrição;Grupo;Subgrupo;Classe;Tipo;Valor\n';
     lancamentos.forEach(lanc => {
       const data = new Date(lanc.data).toLocaleDateString('pt-BR');
-      const descricao = (lanc.descricao_complementar || '').replace(/,/g, ';');
-      const grupo = lanc.classe?.subgrupo?.grupo?.nome || '-';
-      const subgrupo = lanc.classe?.subgrupo?.nome || '-';
-      const classe = lanc.classe?.descricao || '-';
+      const descricao = (lanc.descricao_complementar || '').replace(/"/g, '""'); // Escapar aspas duplas
+      const grupo = (lanc.classe?.subgrupo?.grupo?.nome || '-').replace(/"/g, '""');
+      const subgrupo = (lanc.classe?.subgrupo?.nome || '-').replace(/"/g, '""');
+      const classe = (lanc.classe?.descricao || '-').replace(/"/g, '""');
       const tipo = lanc.tipo;
-      const valor = parseFloat(lanc.valor).toFixed(2);
-      csv += `${data},"${descricao}",${grupo},${subgrupo},${classe},${tipo},${valor}\n`;
+      const valor = parseFloat(lanc.valor).toFixed(2).replace('.', ','); // Usar vírgula decimal
+      csv += `"${data}";"${descricao}";"${grupo}";"${subgrupo}";"${classe}";"${tipo}";"${valor}"\n`;
     });
     return csv;
   }
@@ -229,8 +356,12 @@ export default function ListaLancamentosPage() {
 
         {/* Filtros */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6 no-print">
-          <h2 className="text-lg font-bold text-gray-800 mb-4">🔍 Filtros</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-bold text-gray-800">
+              🔍 Filtros {temFiltroAtivo && <span className="ml-2 text-blue-600">🔵 Filtro ativo</span>}
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
               <select
@@ -241,6 +372,18 @@ export default function ListaLancamentosPage() {
                 <option value="TODOS">Todos</option>
                 <option value="DESPESA">Despesas</option>
                 <option value="RECEITA">Receitas</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status Despesas</label>
+              <select
+                value={filtros.statusQuitado}
+                onChange={(e) => setFiltros({ ...filtros, statusQuitado: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              >
+                <option value="TODAS">Todas</option>
+                <option value="ABERTAS">Abertas</option>
+                <option value="QUITADAS">Quitadas</option>
               </select>
             </div>
             <div>
@@ -294,46 +437,106 @@ export default function ListaLancamentosPage() {
                       Carregando...
                     </td>
                   </tr>
-                ) : lancamentos.length === 0 ? (
+                ) : lancamentosFiltrados.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
                       Nenhum lançamento encontrado
                     </td>
                   </tr>
                 ) : (
-                  lancamentos.map((lanc) => (
+                  lancamentosFiltrados.map((lanc) => (
                     <tr key={lanc.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-gray-700">
                         {new Date(lanc.data).toLocaleDateString('pt-BR')}
                       </td>
-                      <td className="px-4 py-3 text-gray-700">
-                        {lanc.descricao_complementar || '-'}
+                      <td className={`px-4 py-3 ${lanc.quitado ? 'text-gray-400' : 'text-gray-700'}`}>
+                        {lanc.descricao_complementar || '-'}{lanc.quitado ? ' (quitado)' : ''}
                       </td>
-                      <td className="px-4 py-3 text-gray-600">
+                      <td className={`px-4 py-3 ${lanc.quitado ? 'text-gray-400' : 'text-gray-600'}`}>
                         {lanc.classe?.subgrupo?.grupo?.nome || '-'}
                       </td>
-                      <td className="px-4 py-3 text-gray-600">
+                      <td className={`px-4 py-3 ${lanc.quitado ? 'text-gray-400' : 'text-gray-600'}`}>
                         {lanc.classe?.subgrupo?.nome || '-'}
                       </td>
-                      <td className="px-4 py-3 text-gray-600">
-                        {lanc.classe?.descricao || '-'}
+                      <td className={`px-4 py-3 ${lanc.quitado ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {lanc.classe?.descricao || '-'}{lanc.quitado ? ' (quitado)' : ''}
                       </td>
                       <td className={`px-4 py-3 text-right font-semibold ${
                         lanc.tipo === 'DESPESA' ? 'text-red-600' : 'text-green-600'
                       }`}>
                         {ocultarValores ? '•••••' : (
-                          <>
-                            {lanc.tipo === 'DESPESA' ? '-' : '+'} R$ {parseFloat(lanc.valor).toFixed(2)}
-                          </>
+                          editandoValor === lanc.id ? (
+                            <div className="flex items-center justify-end gap-2">
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={novoValor}
+                                onChange={(e) => setNovoValor(e.target.value)}
+                                className="w-24 px-2 py-1 border border-blue-500 rounded text-right"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') salvarNovoValor(lanc.id);
+                                  if (e.key === 'Escape') cancelarEdicaoValor();
+                                }}
+                              />
+                              <button
+                                onClick={() => salvarNovoValor(lanc.id)}
+                                className="text-green-600 hover:text-green-700 text-xl"
+                                title="Salvar"
+                              >
+                                ✓
+                              </button>
+                              <button
+                                onClick={cancelarEdicaoValor}
+                                className="text-red-600 hover:text-red-700 text-xl"
+                                title="Cancelar"
+                              >
+                                ✗
+                              </button>
+                            </div>
+                          ) : (
+                            <span 
+                              onClick={() => !lanc.quitado && iniciarEdicaoValor(lanc)}
+                              className={`px-2 py-1 rounded inline-block ${
+                                lanc.quitado 
+                                  ? 'cursor-not-allowed' 
+                                  : 'cursor-pointer hover:bg-gray-100'
+                              }`}
+                              title={lanc.quitado ? 'Não é possível editar valor de lançamento quitado' : 'Clique para editar o valor'}
+                            >
+                              {lanc.tipo === 'DESPESA' ? '-' : '+'} R$ {parseFloat(lanc.valor).toFixed(2)}
+                            </span>
+                          )
                         )}
                       </td>
                       <td className="px-4 py-3 text-center no-print">
-                        <button
-                          onClick={() => deletarLancamento(lanc.id)}
-                          className="text-red-600 hover:text-red-800 font-medium"
-                        >
-                          🗑️
-                        </button>
+                        <div className="flex justify-center gap-2">
+                          {lanc.tipo === 'DESPESA' && (
+                            <button
+                              onClick={() => lanc.quitado ? reabrirLancamento(lanc.id) : abrirModalQuitacao(lanc)}
+                              className={`px-3 py-1 rounded text-sm font-medium ${
+                                lanc.quitado 
+                                  ? 'bg-yellow-500 hover:bg-yellow-600 text-white' 
+                                  : 'bg-green-500 hover:bg-green-600 text-white'
+                              }`}
+                              title={lanc.quitado ? 'Marcar como quitado' : 'Marcar como quitado'}
+                            >
+                              {lanc.quitado ? '↻ Quitado' : '✓ Quitar'}
+                            </button>
+                          )}
+                          <button
+                            onClick={() => deletarLancamento(lanc.id)}
+                            className={`font-medium text-xl ${
+                              lanc.quitado && lanc.tipo === 'DESPESA'
+                                ? 'text-gray-300 cursor-not-allowed' 
+                                : 'text-red-600 hover:text-red-800'
+                            }`}
+                            title={lanc.quitado && lanc.tipo === 'DESPESA' ? 'Não é possível excluir lançamento quitado' : 'Excluir lançamento'}
+                            disabled={lanc.quitado && lanc.tipo === 'DESPESA'}
+                          >
+                            🗑️
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -347,6 +550,73 @@ export default function ListaLancamentosPage() {
           Total de {lancamentos.length} lançamento(s)
         </div>
       </div>
+
+      {/* Modal de Quitação */}
+      {showQuitadoModal && lancamentoParaQuitar && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">
+              💰 Quitar Lançamento
+            </h3>
+            
+            <div className="mb-4 p-3 bg-gray-50 rounded">
+              <p className="text-sm text-gray-600">Descrição:</p>
+              <p className="font-medium">{lancamentoParaQuitar.descricao_complementar || '-'}</p>
+              <p className="text-sm text-gray-600 mt-2">Valor:</p>
+              <p className="font-bold text-red-600">R$ {parseFloat(lancamentoParaQuitar.valor).toFixed(2)}</p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Data da Quitação *
+                </label>
+                <input
+                  type="date"
+                  value={dadosQuitacao.data_quitacao}
+                  onChange={(e) => setDadosQuitacao({ ...dadosQuitacao, data_quitacao: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Forma de Pagamento *
+                </label>
+                <select
+                  value={dadosQuitacao.forma_pagamento_id}
+                  onChange={(e) => setDadosQuitacao({ ...dadosQuitacao, forma_pagamento_id: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Selecione...</option>
+                  {formasPagamento.map(forma => (
+                    <option key={forma.id} value={forma.id}>
+                      {forma.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={fecharModalQuitacao}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarQuitacao}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                ✓ Confirmar Quitação
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CSS para impressão */}
       <style jsx global>{`

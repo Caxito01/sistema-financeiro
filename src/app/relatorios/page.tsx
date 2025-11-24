@@ -110,6 +110,7 @@ export default function RelatoriosPage() {
         tipo,
         data,
         descricao_complementar,
+        quitado,
         classe:classes(
           id,
           codigo,
@@ -179,6 +180,10 @@ export default function RelatoriosPage() {
       const subgrupoCodigo = lanc.classe?.subgrupo?.codigo || 0;
       const classeNome = lanc.classe?.descricao || 'Sem Classe';
       const classeCodigo = lanc.classe?.codigo || 0;
+      
+      // Criar chave única para separar quitados de não quitados
+      const classeKey = lanc.quitado ? `${classeNome}_quitado` : classeNome;
+      const classeDisplay = lanc.quitado ? `${classeNome} (quitado)` : classeNome;
 
       if (!grupos[grupoNome]) {
         grupos[grupoNome] = {
@@ -199,26 +204,39 @@ export default function RelatoriosPage() {
         };
       }
 
-      if (!grupos[grupoNome].subgrupos[subgrupoNome].classes[classeNome]) {
-        grupos[grupoNome].subgrupos[subgrupoNome].classes[classeNome] = {
-          nome: classeNome,
+      if (!grupos[grupoNome].subgrupos[subgrupoNome].classes[classeKey]) {
+        grupos[grupoNome].subgrupos[subgrupoNome].classes[classeKey] = {
+          nome: classeDisplay,
           codigo: classeCodigo,
           total: 0,
-          lancamentos: []
+          lancamentos: [],
+          quitado: lanc.quitado || false
         };
       }
 
       const valor = parseFloat(lanc.valor);
       grupos[grupoNome].total += valor;
       grupos[grupoNome].subgrupos[subgrupoNome].total += valor;
-      grupos[grupoNome].subgrupos[subgrupoNome].classes[classeNome].total += valor;
-      grupos[grupoNome].subgrupos[subgrupoNome].classes[classeNome].lancamentos.push(lanc);
+      grupos[grupoNome].subgrupos[subgrupoNome].classes[classeKey].total += valor;
+      grupos[grupoNome].subgrupos[subgrupoNome].classes[classeKey].lancamentos.push(lanc);
     });
 
     return Object.values(grupos);
   }
 
   const totalGeral = relatorio.reduce((sum, grupo) => sum + grupo.total, 0);
+  
+  // Calcular total de lançamentos quitados
+  const totalQuitados = relatorio.reduce((sum, grupo) => {
+    return sum + Object.values(grupo.subgrupos).reduce((subSum, subgrupo) => {
+      return subSum + Object.values(subgrupo.classes).reduce((classSum, classe) => {
+        if (classe.quitado) {
+          return classSum + classe.total;
+        }
+        return classSum;
+      }, 0);
+    }, 0);
+  }, 0);
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -352,13 +370,25 @@ export default function RelatoriosPage() {
         </div>
 
         {/* Total Geral */}
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg shadow-md p-6 mb-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm opacity-90">Total Geral do Período</p>
-              <p className="text-4xl font-bold mt-1">R$ {totalGeral.toFixed(2)}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg shadow-md p-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm opacity-90">Total Geral do Período</p>
+                <p className="text-4xl font-bold mt-1">R$ {totalGeral.toFixed(2)}</p>
+              </div>
+              <div className="text-6xl opacity-20">💰</div>
             </div>
-            <div className="text-6xl opacity-20">💰</div>
+          </div>
+
+          <div className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg shadow-md p-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm opacity-90">Total Quitado</p>
+                <p className="text-4xl font-bold mt-1">R$ {totalQuitados.toFixed(2)}</p>
+              </div>
+              <div className="text-6xl opacity-20">✓</div>
+            </div>
           </div>
         </div>
 
@@ -402,10 +432,10 @@ export default function RelatoriosPage() {
 
                           {/* CLASSES */}
                           {Object.values(subgrupo.classes).map((classe: any, cIdx) => (
-                            <tr key={`classe-${gIdx}-${sIdx}-${cIdx}`} className="hover:bg-gray-50 border-b border-gray-100">
-                              <td className="px-4 py-2 pl-12 text-sm text-gray-600">{classe.codigo}</td>
-                              <td className="px-4 py-2 text-sm text-gray-700">{classe.nome}</td>
-                              <td className="px-4 py-2 text-right text-sm font-medium text-gray-900">
+                            <tr key={`classe-${gIdx}-${sIdx}-${cIdx}`} className={`hover:bg-gray-50 border-b border-gray-100 ${classe.quitado ? 'bg-gray-100' : ''}`}>
+                              <td className={`px-4 py-2 pl-12 text-sm ${classe.quitado ? 'text-gray-400' : 'text-gray-600'}`}>{classe.codigo}</td>
+                              <td className={`px-4 py-2 text-sm ${classe.quitado ? 'text-gray-400' : 'text-gray-700'}`}>{classe.nome}</td>
+                              <td className={`px-4 py-2 text-right text-sm font-medium ${classe.quitado ? 'text-gray-400' : 'text-gray-900'}`}>
                                 R$ {classe.total.toFixed(2)}
                               </td>
                             </tr>

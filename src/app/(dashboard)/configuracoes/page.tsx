@@ -31,14 +31,21 @@ interface Classe {
   ativo: boolean;
 }
 
+interface FormaPagamento {
+  id: number;
+  nome: string;
+  ativo: boolean;
+}
+
 type ModalMode = 'create' | 'edit' | 'delete' | null;
-type EntityType = 'grupo' | 'subgrupo' | 'classe';
+type EntityType = 'grupo' | 'subgrupo' | 'classe' | 'formaPagamento';
 
 export default function ConfiguracoesPage() {
   const router = useRouter();
   const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [subgrupos, setSubgrupos] = useState<Subgrupo[]>([]);
   const [classes, setClasses] = useState<Classe[]>([]);
+  const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
 
   const [selectedGrupoId, setSelectedGrupoId] = useState<number | null>(null);
   const [selectedSubgrupoId, setSelectedSubgrupoId] = useState<number | null>(null);
@@ -56,6 +63,8 @@ export default function ConfiguracoesPage() {
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const [expandedGrupos, setExpandedGrupos] = useState<Set<number>>(new Set());
+  const [showBannerAjuda, setShowBannerAjuda] = useState(true);
+  const [showModalAjuda, setShowModalAjuda] = useState(false);
 
   useEffect(() => {
     carregarDados();
@@ -106,15 +115,18 @@ export default function ConfiguracoesPage() {
     try {
       const supabase = createClient();
 
-      const [{ data: gruposData }, { data: subgruposData }, { data: classesData }] = await Promise.all([
+      const [{ data: gruposData }, { data: subgruposData }, { data: classesData }, { data: formasPagamentoData }] = await Promise.all([
         supabase.from('grupos').select('*').order('codigo'),
         supabase.from('subgrupos').select('*').order('codigo'),
         supabase.from('classes').select('*').order('codigo'),
+        supabase.from('formas_pagamento').select('*').order('nome'),
       ]);
 
       setGrupos(gruposData || []);
       setSubgrupos(subgruposData || []);
       setClasses(classesData || []);
+      setFormasPagamento(formasPagamentoData || []);
+      console.log('Formas de Pagamento carregadas:', formasPagamentoData);
     } catch (error) {
       captureException(error);
       showNotification('error', 'Erro ao carregar dados');
@@ -161,6 +173,8 @@ export default function ConfiguracoesPage() {
           await supabase.from('subgrupos').insert(data);
         } else if (entityType === 'classe') {
           await supabase.from('classes').insert(data);
+        } else if (entityType === 'formaPagamento') {
+          await supabase.from('formas_pagamento').insert(data);
         }
         showNotification('success', `${entityType} criado com sucesso!`);
       } else if (modalMode === 'edit') {
@@ -170,6 +184,8 @@ export default function ConfiguracoesPage() {
           await supabase.from('subgrupos').update(data).eq('id', editingEntity.id);
         } else if (entityType === 'classe') {
           await supabase.from('classes').update(data).eq('id', editingEntity.id);
+        } else if (entityType === 'formaPagamento') {
+          await supabase.from('formas_pagamento').update(data).eq('id', editingEntity.id);
         }
         showNotification('success', `${entityType} atualizado com sucesso!`);
       }
@@ -204,6 +220,8 @@ export default function ConfiguracoesPage() {
         await supabase.from('subgrupos').delete().eq('id', editingEntity.id);
       } else if (entityType === 'classe') {
         await supabase.from('classes').delete().eq('id', editingEntity.id);
+      } else if (entityType === 'formaPagamento') {
+        await supabase.from('formas_pagamento').delete().eq('id', editingEntity.id);
       }
 
       showNotification('success', `${entityType} excluído com sucesso!`);
@@ -274,12 +292,21 @@ export default function ConfiguracoesPage() {
         {/* Cabeçalho */}
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800">Configurações - Hierarquia</h1>
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg"
-          >
-            ← Voltar
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowModalAjuda(true)}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+              title="Ajuda"
+            >
+              ❓ Ajuda
+            </button>
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg"
+            >
+              ← Voltar
+            </button>
+          </div>
         </div>
 
         {notification && (
@@ -288,10 +315,52 @@ export default function ConfiguracoesPage() {
           </div>
         )}
 
+        {/* Banner de Ajuda Expansível */}
+        {showBannerAjuda && (
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-lg">
+            <div className="flex justify-between items-start">
+              <div className="flex gap-3">
+                <div className="text-blue-500 text-2xl">💡</div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-blue-900 mb-2">Bem-vindo às Configurações!</h3>
+                  <p className="text-sm text-blue-800 mb-2">
+                    Aqui você gerencia a estrutura hierárquica do seu sistema financeiro: <strong>Grupos → Subgrupos → Classes</strong>
+                  </p>
+                  <ul className="text-sm text-blue-800 space-y-1 ml-4">
+                    <li>• Use a <strong>Seleção Hierárquica</strong> para criar e editar itens</li>
+                    <li>• A <strong>Visualização em Árvore</strong> mostra toda a estrutura</li>
+                    <li>• Gerencie <strong>Formas de Pagamento</strong> na seção abaixo</li>
+                    <li>• Clique em <strong>❓ Ajuda</strong> para mais informações</li>
+                  </ul>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowBannerAjuda(false)}
+                className="text-blue-500 hover:text-blue-700 text-xl font-bold ml-4"
+                title="Fechar"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Seção Dropdowns Cascata */}
           <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Seleção Hierárquica</h2>
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="text-xl font-bold text-gray-800">Seleção Hierárquica</h2>
+              <div className="group relative">
+                <span className="text-blue-500 cursor-help text-lg">ⓘ</span>
+                <div className="invisible group-hover:visible absolute left-0 top-6 bg-gray-800 text-white text-sm rounded-lg p-3 w-64 z-10 shadow-lg">
+                  <p className="font-semibold mb-1">Como usar:</p>
+                  <p className="text-xs leading-relaxed">
+                    Selecione um item nos dropdowns para editá-lo ou excluí-lo. 
+                    Use o botão <span className="text-blue-300">+</span> para criar novos itens na hierarquia.
+                  </p>
+                </div>
+              </div>
+            </div>
 
             <div className="space-y-4">
               <div>
@@ -410,7 +479,7 @@ export default function ConfiguracoesPage() {
                 <div key={grupo.id} className="mb-2">
                   <div className="flex items-center gap-2 p-2 bg-blue-50 rounded hover:bg-blue-100 cursor-pointer" onClick={() => toggleGrupoExpansion(grupo.id)}>
                     {expandedGrupos.has(grupo.id) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                    <span className={`font-medium ${!grupo.ativo ? 'text-gray-500' : ''}`}>
+                    <span className={`font-medium ${!grupo.ativo ? 'text-red-600' : ''}`}>
                       {grupo.codigo} - {grupo.nome}{!grupo.ativo ? ' (inativo)' : ''}
                     </span>
                   </div>
@@ -421,13 +490,13 @@ export default function ConfiguracoesPage() {
                         <div key={subgrupo.id} className="mb-1">
                           <div className="flex items-center gap-2 p-2 bg-green-50 rounded hover:bg-green-100">
                             <ChevronRight size={14} />
-                            <span className={`text-sm ${!subgrupo.ativo ? 'text-gray-500' : ''}`}>
+                            <span className={`text-sm ${!subgrupo.ativo ? 'text-red-600' : ''}`}>
                               {subgrupo.codigo} - {subgrupo.nome}{!subgrupo.ativo ? ' (inativo)' : ''}
                             </span>
                           </div>
                           <div className="ml-6 mt-1">
                             {getFilteredClassesBySubgrupo(subgrupo.id).map(classe => (
-                              <div key={classe.id} className={`p-1 text-sm hover:bg-gray-100 rounded ${!classe.ativo ? 'text-gray-500' : 'text-gray-700'}`}>
+                              <div key={classe.id} className={`p-1 text-sm hover:bg-gray-100 rounded ${!classe.ativo ? 'text-red-600' : 'text-gray-700'}`}>
                                 • {classe.codigo} - {classe.descricao}{!classe.ativo ? ' (inativo)' : ''}
                               </div>
                             ))}
@@ -438,6 +507,55 @@ export default function ConfiguracoesPage() {
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Seção Formas de Pagamento */}
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-xl font-bold text-gray-800 mb-4">
+            💳 Formas de Pagamento ({formasPagamento.length})
+          </h2>
+
+          <div className="space-y-4">
+            {/* Lista de formas de pagamento */}
+            <div className="space-y-2">
+              {formasPagamento.length > 0 ? (
+                formasPagamento.map(forma => (
+                  <div key={forma.id} className="flex gap-2 items-center">
+                    <div className={`flex-1 border border-gray-300 rounded px-3 py-2 ${!forma.ativo ? 'bg-red-50 text-red-600' : 'bg-white'}`}>
+                      {forma.nome}{!forma.ativo ? ' (inativo)' : ''}
+                    </div>
+                    <button 
+                      onClick={() => openModal('edit', 'formaPagamento', forma)} 
+                      className="bg-yellow-600 text-white p-2 rounded hover:bg-yellow-700"
+                      title="Editar"
+                    >
+                      <Edit size={20} />
+                    </button>
+                    <button 
+                      onClick={() => openModal('delete', 'formaPagamento', forma)} 
+                      className="bg-red-600 text-white p-2 rounded hover:bg-red-700"
+                      title="Excluir"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500 text-center py-4 text-sm">Nenhuma forma de pagamento cadastrada. Clique no botão abaixo para adicionar.</p>
+              )}
+            </div>
+
+            {/* Botão adicionar */}
+            <div className="flex gap-2">
+              <button 
+                onClick={() => openModal('create', 'formaPagamento')} 
+                className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+                title="Adicionar"
+              >
+                <Plus size={20} />
+              </button>
             </div>
           </div>
         </div>
@@ -454,6 +572,134 @@ export default function ConfiguracoesPage() {
             onDelete={handleDelete}
             onClose={closeModal}
           />
+        )}
+
+        {/* Modal de Ajuda */}
+        {showModalAjuda && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white border-b p-6 flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-gray-800">📚 Guia de Configurações</h2>
+                <button
+                  onClick={() => setShowModalAjuda(false)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* Visão Geral */}
+                <section>
+                  <h3 className="text-xl font-bold text-blue-600 mb-3">🎯 Visão Geral</h3>
+                  <p className="text-gray-700 mb-2">
+                    A página de Configurações permite organizar seus lançamentos financeiros em uma estrutura hierárquica de 3 níveis:
+                  </p>
+                  <div className="bg-gray-50 p-4 rounded-lg border-l-4 border-blue-500">
+                    <p className="font-mono text-sm">
+                      <strong className="text-blue-600">Grupo</strong> → <strong className="text-green-600">Subgrupo</strong> → <strong className="text-purple-600">Classe</strong>
+                    </p>
+                    <p className="text-xs text-gray-600 mt-2">
+                      Exemplo: <span className="text-blue-600">DESPESAS</span> → <span className="text-green-600">IMÓVEL</span> → <span className="text-purple-600">Energia Elétrica</span>
+                    </p>
+                  </div>
+                </section>
+
+                {/* Seleção Hierárquica */}
+                <section>
+                  <h3 className="text-xl font-bold text-blue-600 mb-3">🔧 Seleção Hierárquica</h3>
+                  <div className="space-y-3">
+                    <div className="flex gap-3">
+                      <span className="text-2xl">➕</span>
+                      <div>
+                        <p className="font-semibold">Criar Novo Item</p>
+                        <p className="text-sm text-gray-600">Clique no botão <span className="text-blue-500">+</span> ao lado do dropdown para criar um novo grupo, subgrupo ou classe.</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <span className="text-2xl">✏️</span>
+                      <div>
+                        <p className="font-semibold">Editar Item</p>
+                        <p className="text-sm text-gray-600">Selecione um item no dropdown e clique no botão amarelo <span className="text-yellow-600">✏️</span> para editá-lo.</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <span className="text-2xl">🗑️</span>
+                      <div>
+                        <p className="font-semibold">Excluir Item</p>
+                        <p className="text-sm text-gray-600">Selecione um item e clique no botão vermelho <span className="text-red-600">🗑️</span>. Não é possível excluir itens com dependências.</p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Visualização em Árvore */}
+                <section>
+                  <h3 className="text-xl font-bold text-blue-600 mb-3">🌳 Visualização em Árvore</h3>
+                  <p className="text-gray-700 mb-2">
+                    A visualização em árvore mostra toda a estrutura hierárquica de forma visual:
+                  </p>
+                  <ul className="space-y-2 ml-4">
+                    <li className="flex gap-2">
+                      <span>▶️</span>
+                      <p className="text-sm text-gray-700">Clique nas setas para expandir/recolher grupos</p>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>🔍</span>
+                      <p className="text-sm text-gray-700">Use a busca para filtrar itens por nome ou código</p>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="text-red-600">⚠️</span>
+                      <p className="text-sm text-gray-700">Itens inativos aparecem em <span className="text-red-600">vermelho</span> com "(inativo)"</p>
+                    </li>
+                  </ul>
+                </section>
+
+                {/* Formas de Pagamento */}
+                <section>
+                  <h3 className="text-xl font-bold text-blue-600 mb-3">💳 Formas de Pagamento</h3>
+                  <p className="text-gray-700 mb-2">
+                    Gerencie as formas de pagamento disponíveis no sistema:
+                  </p>
+                  <ul className="space-y-2 ml-4">
+                    <li className="flex gap-2">
+                      <span>✅</span>
+                      <p className="text-sm text-gray-700">Adicione formas como: Dinheiro, PIX, Cartão, etc.</p>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>🔄</span>
+                      <p className="text-sm text-gray-700">Ative/Desative formas sem excluí-las</p>
+                    </li>
+                    <li className="flex gap-2">
+                      <span>📝</span>
+                      <p className="text-sm text-gray-700">Edite nomes quando necessário</p>
+                    </li>
+                  </ul>
+                </section>
+
+                {/* Dicas */}
+                <section className="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-500">
+                  <h3 className="text-lg font-bold text-yellow-800 mb-2">💡 Dicas Importantes</h3>
+                  <ul className="space-y-1 text-sm text-yellow-800">
+                    <li>• Planeje bem sua hierarquia antes de criar muitos lançamentos</li>
+                    <li>• Use códigos numéricos crescentes para facilitar a organização</li>
+                    <li>• Desative itens em vez de excluí-los para manter histórico</li>
+                    <li>• Grupos devem ser DESPESA ou RECEITA</li>
+                    <li>• Classes podem ter palavras-chave para facilitar buscas</li>
+                  </ul>
+                </section>
+              </div>
+
+              <div className="sticky bottom-0 bg-gray-50 border-t p-4 flex justify-end">
+                <button
+                  onClick={() => setShowModalAjuda(false)}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg"
+                >
+                  Entendi!
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -490,6 +736,8 @@ function EntityModal({ mode, type, entity, grupos, subgrupos, onSave, onDelete, 
       if (!formData.descricao?.trim()) newErrors.descricao = 'Descrição é obrigatória';
       if (!formData.codigo?.trim()) newErrors.codigo = 'Código é obrigatório';
       if (!formData.subgrupo_id) newErrors.subgrupo_id = 'Subgrupo é obrigatório';
+    } else if (type === 'formaPagamento') {
+      if (!formData.nome?.trim()) newErrors.nome = 'Nome é obrigatório';
     }
 
     setErrors(newErrors);
@@ -647,6 +895,22 @@ function EntityModal({ mode, type, entity, grupos, subgrupos, onSave, onDelete, 
                   onChange={(e) => setFormData({ ...formData, palavras_chave: e.target.value.split(',').map(p => p.trim()) })}
                   className="w-full border border-gray-300 rounded px-3 py-2"
                 />
+              </div>
+            </>
+          )}
+
+          {type === 'formaPagamento' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
+                <input
+                  type="text"
+                  value={formData.nome || ''}
+                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                  className="w-full border border-gray-300 rounded px-3 py-2"
+                  placeholder="Ex: Dinheiro, PIX, Cartão..."
+                />
+                {errors.nome && <span className="text-red-600 text-sm">{errors.nome}</span>}
               </div>
             </>
           )}

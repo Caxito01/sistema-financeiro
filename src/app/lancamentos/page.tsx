@@ -29,7 +29,7 @@ export default function NovoLancamentoPage() {
   useEffect(() => {
     async function loadGrupos() {
       console.log('Carregando grupos...');
-      const { data, error } = await supabase.from('grupos').select('*').order('codigo', { ascending: true });
+      const { data, error } = await supabase.from('grupos').select('*').eq('ativo', true).order('codigo', { ascending: true });
       if (error) {
         console.error('Erro ao carregar grupos:', error);
       } else {
@@ -51,6 +51,7 @@ export default function NovoLancamentoPage() {
         .from('subgrupos')
         .select('*')
         .eq('grupo_id', formData.grupo_id)
+        .eq('ativo', true)
         .order('codigo');
       if (error) {
         console.error('Erro ao carregar subgrupos:', error);
@@ -73,6 +74,7 @@ export default function NovoLancamentoPage() {
         .from('classes')
         .select('*')
         .eq('subgrupo_id', formData.subgrupo_id)
+        .eq('ativo', true)
         .order('codigo');
       if (error) {
         console.error('Erro ao carregar classes:', error);
@@ -179,7 +181,7 @@ export default function NovoLancamentoPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Data *
+                {formData.tipo === 'RECEITA' ? 'Data *' : 'Data de Vencimento *'}
               </label>
               <input
                 type="date"
