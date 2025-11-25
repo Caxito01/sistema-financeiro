@@ -224,7 +224,45 @@ export default function RelatoriosPage() {
     return Object.values(grupos);
   }
 
-  const totalGeral = relatorio.reduce((sum, grupo) => sum + grupo.total, 0);
+  // Calcular total de receitas e despesas separadamente
+  const totalReceitas = relatorio
+    .filter(grupo => Object.values(grupo.subgrupos).some((sub: any) => 
+      Object.values(sub.classes).some((classe: any) => 
+        classe.lancamentos.some((l: any) => l.tipo === 'RECEITA')
+      )
+    ))
+    .reduce((sum, grupo) => {
+      const receitasDoGrupo = Object.values(grupo.subgrupos).reduce((subSum, subgrupo: any) => {
+        return subSum + Object.values(subgrupo.classes).reduce((classSum, classe: any) => {
+          const receitasDaClasse = classe.lancamentos
+            .filter((l: any) => l.tipo === 'RECEITA')
+            .reduce((lSum: number, l: any) => lSum + parseFloat(l.valor), 0);
+          return classSum + receitasDaClasse;
+        }, 0);
+      }, 0);
+      return sum + receitasDoGrupo;
+    }, 0);
+
+  const totalDespesas = relatorio
+    .filter(grupo => Object.values(grupo.subgrupos).some((sub: any) => 
+      Object.values(sub.classes).some((classe: any) => 
+        classe.lancamentos.some((l: any) => l.tipo === 'DESPESA')
+      )
+    ))
+    .reduce((sum, grupo) => {
+      const despesasDoGrupo = Object.values(grupo.subgrupos).reduce((subSum, subgrupo: any) => {
+        return subSum + Object.values(subgrupo.classes).reduce((classSum, classe: any) => {
+          const despesasDaClasse = classe.lancamentos
+            .filter((l: any) => l.tipo === 'DESPESA')
+            .reduce((lSum: number, l: any) => lSum + parseFloat(l.valor), 0);
+          return classSum + despesasDaClasse;
+        }, 0);
+      }, 0);
+      return sum + despesasDoGrupo;
+    }, 0);
+
+  // Total geral = receitas - despesas
+  const totalGeral = totalReceitas - totalDespesas;
   
   // Calcular total de lançamentos quitados
   const totalQuitados = relatorio.reduce((sum, grupo) => {
@@ -239,17 +277,25 @@ export default function RelatoriosPage() {
   }, 0);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-white p-8">
       <div className="max-w-7xl mx-auto">
         {/* Cabeçalho */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800">📊 Relatórios por Categoria</h1>
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg"
-          >
-            ← Voltar
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg"
+            >
+              ← Voltar
+            </button>
+            <button
+              onClick={() => router.push('/lancamentos')}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
+            >
+              ➕ Novo Lançamento
+            </button>
+          </div>
         </div>
 
         {/* Filtros */}
@@ -369,25 +415,45 @@ export default function RelatoriosPage() {
           </div>
         </div>
 
-        {/* Total Geral */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg shadow-md p-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm opacity-90">Total Geral do Período</p>
-                <p className="text-4xl font-bold mt-1">R$ {totalGeral.toFixed(2)}</p>
-              </div>
-              <div className="text-6xl opacity-20">💰</div>
-            </div>
-          </div>
-
+        {/* Resumo Financeiro */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           <div className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg shadow-md p-6">
             <div className="flex justify-between items-center">
               <div>
-                <p className="text-sm opacity-90">Total Quitado</p>
-                <p className="text-4xl font-bold mt-1">R$ {totalQuitados.toFixed(2)}</p>
+                <p className="text-sm opacity-90">Total Receitas</p>
+                <p className="text-3xl font-bold mt-1">R$ {totalReceitas.toFixed(2)}</p>
               </div>
-              <div className="text-6xl opacity-20">✓</div>
+              <div className="text-5xl opacity-20">📈</div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg shadow-md p-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm opacity-90">Total Despesas</p>
+                <p className="text-3xl font-bold mt-1">R$ {totalDespesas.toFixed(2)}</p>
+              </div>
+              <div className="text-5xl opacity-20">📉</div>
+            </div>
+          </div>
+
+          <div className={`bg-gradient-to-r ${totalGeral >= 0 ? 'from-blue-500 to-blue-600' : 'from-orange-500 to-orange-600'} text-white rounded-lg shadow-md p-6`}>
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm opacity-90">Saldo (Receitas - Despesas)</p>
+                <p className="text-3xl font-bold mt-1">R$ {totalGeral.toFixed(2)}</p>
+              </div>
+              <div className="text-5xl opacity-20">💰</div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg shadow-md p-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm opacity-90">Total Quitado</p>
+                <p className="text-3xl font-bold mt-1">R$ {totalQuitados.toFixed(2)}</p>
+              </div>
+              <div className="text-5xl opacity-20">✓</div>
             </div>
           </div>
         </div>
@@ -404,38 +470,38 @@ export default function RelatoriosPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-100 border-b-2 border-gray-300">
+                <thead className="bg-gradient-to-r from-blue-600 to-indigo-600">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Código</th>
-                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Descrição</th>
-                    <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">Valor Total</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Código</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider">Descrição</th>
+                    <th className="px-6 py-4 text-right text-xs font-bold text-white uppercase tracking-wider">Valor Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   {relatorio.map((grupo, gIdx) => (
                     <>
                       {/* GRUPO */}
-                      <tr key={`grupo-${gIdx}`} className="bg-gray-800 text-white font-bold">
-                        <td className="px-4 py-3">{grupo.codigo}</td>
-                        <td className="px-4 py-3 uppercase">{grupo.nome}</td>
-                        <td className="px-4 py-3 text-right">R$ {grupo.total.toFixed(2)}</td>
+                      <tr key={`grupo-${gIdx}`} className={`bg-gradient-to-r ${grupo.tipo === 'RECEITA' ? 'from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500' : 'from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500'} text-white font-bold transition-all`}>
+                        <td className="px-6 py-4">{grupo.codigo}</td>
+                        <td className="px-6 py-4 uppercase">{grupo.nome}</td>
+                        <td className="px-6 py-4 text-right">R$ {grupo.total.toFixed(2)}</td>
                       </tr>
 
                       {/* SUBGRUPOS */}
                       {Object.values(grupo.subgrupos).map((subgrupo: any, sIdx) => (
                         <>
-                          <tr key={`subgrupo-${gIdx}-${sIdx}`} className="bg-gray-200 font-semibold">
-                            <td className="px-4 py-2 pl-8">{subgrupo.codigo}</td>
-                            <td className="px-4 py-2">{subgrupo.nome}</td>
-                            <td className="px-4 py-2 text-right">R$ {subgrupo.total.toFixed(2)}</td>
+                          <tr key={`subgrupo-${gIdx}-${sIdx}`} className="bg-blue-50 hover:bg-blue-100 font-semibold text-blue-900 transition-colors">
+                            <td className="px-6 py-3 pl-12">{subgrupo.codigo}</td>
+                            <td className="px-6 py-3">{subgrupo.nome}</td>
+                            <td className="px-6 py-3 text-right">R$ {subgrupo.total.toFixed(2)}</td>
                           </tr>
 
                           {/* CLASSES */}
                           {Object.values(subgrupo.classes).map((classe: any, cIdx) => (
-                            <tr key={`classe-${gIdx}-${sIdx}-${cIdx}`} className={`hover:bg-gray-50 border-b border-gray-100 ${classe.quitado ? 'bg-gray-100' : ''}`}>
-                              <td className={`px-4 py-2 pl-12 text-sm ${classe.quitado ? 'text-gray-400' : 'text-gray-600'}`}>{classe.codigo}</td>
-                              <td className={`px-4 py-2 text-sm ${classe.quitado ? 'text-gray-400' : 'text-gray-700'}`}>{classe.nome}</td>
-                              <td className={`px-4 py-2 text-right text-sm font-medium ${classe.quitado ? 'text-gray-400' : 'text-gray-900'}`}>
+                            <tr key={`classe-${gIdx}-${sIdx}-${cIdx}`} className={`border-b border-slate-100 transition-colors ${classe.quitado ? 'bg-green-50 hover:bg-green-100' : 'bg-white hover:bg-slate-50'}`}>
+                              <td className={`px-6 py-3 pl-16 text-sm ${classe.quitado ? 'text-green-600' : 'text-slate-600'}`}>{classe.codigo}</td>
+                              <td className={`px-6 py-3 text-sm ${classe.quitado ? 'text-green-700' : 'text-slate-700'}`}>{classe.nome}</td>
+                              <td className={`px-6 py-3 text-right text-sm font-semibold ${classe.quitado ? 'text-green-700' : 'text-slate-900'}`}>
                                 R$ {classe.total.toFixed(2)}
                               </td>
                             </tr>
