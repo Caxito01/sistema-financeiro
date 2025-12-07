@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 
+export const dynamic = 'force-dynamic';
+
 export default function ListaLancamentosPage() {
   const router = useRouter();
   const supabase = createBrowserClient(
