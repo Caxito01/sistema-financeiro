@@ -143,7 +143,7 @@ Este projeto está sob a licença MIT.
 
 ## 👤 Autor
 
-Desenvolvido por **Luan** - Sistema Financeiro
+Desenvolvido por **Carlos Caxito** - Sistema Financeiro
 
 ---
 
