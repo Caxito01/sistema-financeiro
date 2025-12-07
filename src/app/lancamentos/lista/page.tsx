@@ -11,7 +11,7 @@ export default function ListaLancamentosPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  const [lancamentos, setLancamentos] = useState([]);
+  const [lancamentos, setLancamentos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtros, setFiltros] = useState({
     tipo: 'TODOS',
@@ -22,18 +22,18 @@ export default function ListaLancamentosPage() {
     statusQuitado: 'TODAS' // TODAS, QUITADAS, ABERTAS
   });
 
-  const [grupos, setGrupos] = useState([]);
-  const [subgrupos, setSubgrupos] = useState([]);
+  const [grupos, setGrupos] = useState<any[]>([]);
+  const [subgrupos, setSubgrupos] = useState<any[]>([]);
   const [fontSize, setFontSize] = useState(14);
   const [ocultarValores, setOcultarValores] = useState(false);
   const [showModalAjuda, setShowModalAjuda] = useState(false);
   
-  const [editandoValor, setEditandoValor] = useState(null);
+  const [editandoValor, setEditandoValor] = useState<any>(null);
   const [novoValor, setNovoValor] = useState('');
   
   const [showQuitadoModal, setShowQuitadoModal] = useState(false);
-  const [lancamentoParaQuitar, setLancamentoParaQuitar] = useState(null);
-  const [formasPagamento, setFormasPagamento] = useState([]);
+  const [lancamentoParaQuitar, setLancamentoParaQuitar] = useState<any>(null);
+  const [formasPagamento, setFormasPagamento] = useState<any[]>([]);
   const [dadosQuitacao, setDadosQuitacao] = useState({
     data_quitacao: new Date().toISOString().split('T')[0],
     forma_pagamento_id: ''
