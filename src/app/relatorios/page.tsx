@@ -11,7 +11,7 @@ export default function RelatoriosPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  const [relatorio, setRelatorio] = useState([]);
+  const [relatorio, setRelatorio] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtros, setFiltros] = useState({
     tipo: 'TODOS',
@@ -23,9 +23,9 @@ export default function RelatoriosPage() {
     palavraChave: ''
   });
 
-  const [grupos, setGrupos] = useState([]);
-  const [subgrupos, setSubgrupos] = useState([]);
-  const [classes, setClasses] = useState([]);
+  const [grupos, setGrupos] = useState<any[]>([]);
+  const [subgrupos, setSubgrupos] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
   const [showModalAjuda, setShowModalAjuda] = useState(false);
 
   useEffect(() => {
@@ -159,9 +159,8 @@ export default function RelatoriosPage() {
     if (filtros.palavraChave) {
       const palavraLower = filtros.palavraChave.toLowerCase();
       dadosFiltrados = dadosFiltrados.filter(lanc => {
-        const palavrasChave = lanc.classe?.palavras_chave || [];
-        return palavrasChave.some(p => p.toLowerCase().includes(palavraLower)) ||
-               lanc.descricao_complementar?.toLowerCase().includes(palavraLower);
+        return lanc.descricao_complementar?.toLowerCase().includes(palavraLower) ||
+               ((lanc.classe as any)?.descricao || '').toLowerCase().includes(palavraLower);
       });
     }
 
@@ -171,8 +170,8 @@ export default function RelatoriosPage() {
     setLoading(false);
   }
 
-  function agruparDados(lancamentos) {
-    const grupos = {};
+  function agruparDados(lancamentos: any[]) {
+    const grupos: any = {};
 
     lancamentos.forEach(lanc => {
       const grupoNome = lanc.classe?.subgrupo?.grupo?.nome || 'Sem Grupo';
@@ -232,9 +231,9 @@ export default function RelatoriosPage() {
         classe.lancamentos.some((l: any) => l.tipo === 'RECEITA')
       )
     ))
-    .reduce((sum, grupo) => {
-      const receitasDoGrupo = Object.values(grupo.subgrupos).reduce((subSum, subgrupo: any) => {
-        return subSum + Object.values(subgrupo.classes).reduce((classSum, classe: any) => {
+    .reduce((sum: number, grupo: any) => {
+      const receitasDoGrupo = Object.values(grupo.subgrupos).reduce((subSum: number, subgrupo: any) => {
+        return subSum + Object.values(subgrupo.classes).reduce((classSum: number, classe: any) => {
           const receitasDaClasse = classe.lancamentos
             .filter((l: any) => l.tipo === 'RECEITA')
             .reduce((lSum: number, l: any) => lSum + parseFloat(l.valor), 0);
@@ -250,9 +249,9 @@ export default function RelatoriosPage() {
         classe.lancamentos.some((l: any) => l.tipo === 'DESPESA')
       )
     ))
-    .reduce((sum, grupo) => {
-      const despesasDoGrupo = Object.values(grupo.subgrupos).reduce((subSum, subgrupo: any) => {
-        return subSum + Object.values(subgrupo.classes).reduce((classSum, classe: any) => {
+    .reduce((sum: number, grupo: any) => {
+      const despesasDoGrupo = Object.values(grupo.subgrupos).reduce((subSum: number, subgrupo: any) => {
+        return subSum + Object.values(subgrupo.classes).reduce((classSum: number, classe: any) => {
           const despesasDaClasse = classe.lancamentos
             .filter((l: any) => l.tipo === 'DESPESA')
             .reduce((lSum: number, l: any) => lSum + parseFloat(l.valor), 0);
@@ -266,9 +265,9 @@ export default function RelatoriosPage() {
   const totalGeral = totalReceitas - totalDespesas;
   
   // Calcular total de lançamentos quitados
-  const totalQuitados = relatorio.reduce((sum, grupo) => {
-    return sum + Object.values(grupo.subgrupos).reduce((subSum, subgrupo) => {
-      return subSum + Object.values(subgrupo.classes).reduce((classSum, classe) => {
+  const totalQuitados = relatorio.reduce((sum: number, grupo: any) => {
+    return sum + Object.values(grupo.subgrupos).reduce((subSum: number, subgrupo: any) => {
+      return subSum + Object.values(subgrupo.classes).reduce((classSum: number, classe: any) => {
         if (classe.quitado) {
           return classSum + classe.total;
         }

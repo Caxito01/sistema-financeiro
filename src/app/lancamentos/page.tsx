@@ -21,9 +21,9 @@ export default function NovoLancamentoPage() {
     classe_id: ''
   });
 
-  const [grupos, setGrupos] = useState([]);
-  const [subgrupos, setSubgrupos] = useState([]);
-  const [classes, setClasses] = useState([]);
+  const [grupos, setGrupos] = useState<any[]>([]);
+  const [subgrupos, setSubgrupos] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showModalAjuda, setShowModalAjuda] = useState(false);
 
@@ -87,7 +87,7 @@ export default function NovoLancamentoPage() {
     loadClasses();
   }, [formData.subgrupo_id]);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
 
@@ -106,7 +106,7 @@ export default function NovoLancamentoPage() {
       router.push('/lancamentos/lista');
     } catch (error) {
       console.error('Erro completo:', error);
-      alert('Erro ao criar lançamento: ' + error.message);
+      alert('Erro ao criar lançamento: ' + (error as any).message);
     } finally {
       setLoading(false);
     }
