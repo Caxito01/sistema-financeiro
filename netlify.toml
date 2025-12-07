@@ -1,0 +1,25 @@
+# Configuração do Netlify para Next.js
+
+[build]
+  command = "npm run build"
+  functions = "netlify/functions"
+  publish = ".next"
+
+[dev]
+  command = "npm run dev"
+  port = 3000
+
+# Configurar variáveis de ambiente
+[context.production.environment]
+  NEXT_PUBLIC_SUPABASE_URL = "your_supabase_url"
+  NEXT_PUBLIC_SUPABASE_ANON_KEY = "your_supabase_key"
+
+[context.deploy-preview.environment]
+  NEXT_PUBLIC_SUPABASE_URL = "your_supabase_url"
+  NEXT_PUBLIC_SUPABASE_ANON_KEY = "your_supabase_key"
+
+# Configurar redirecionamentos
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
