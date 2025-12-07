@@ -99,7 +99,7 @@ export default function ListaLancamentosPage() {
     setLoading(false);
   }
 
-  async function deletarLancamento(id) {
+  async function deletarLancamento(id: string | number) {
     if (!confirm('Tem certeza que deseja deletar este lançamento?')) return;
 
     const { error } = await supabase
@@ -115,7 +115,7 @@ export default function ListaLancamentosPage() {
     }
   }
 
-  function abrirModalQuitacao(lancamento) {
+  function abrirModalQuitacao(lancamento: any) {
     setLancamentoParaQuitar(lancamento);
     setDadosQuitacao({
       data_quitacao: new Date().toISOString().split('T')[0],
@@ -153,7 +153,7 @@ export default function ListaLancamentosPage() {
     }
   }
 
-  async function reabrirLancamento(id) {
+  async function reabrirLancamento(id: string | number) {
     if (!confirm('Tem certeza que deseja reabrir este lançamento?')) return;
 
     const { error } = await supabase
@@ -172,7 +172,7 @@ export default function ListaLancamentosPage() {
     }
   }
 
-  function iniciarEdicaoValor(lancamento) {
+  function iniciarEdicaoValor(lancamento: any) {
     setEditandoValor(lancamento.id);
     setNovoValor(parseFloat(lancamento.valor).toFixed(2));
   }
@@ -182,7 +182,7 @@ export default function ListaLancamentosPage() {
     setNovoValor('');
   }
 
-  async function salvarNovoValor(id) {
+  async function salvarNovoValor(id: string | number) {
     const valorNumerico = parseFloat(novoValor);
     
     if (isNaN(valorNumerico) || valorNumerico <= 0) {
