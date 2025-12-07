@@ -2,24 +2,9 @@ export let sentryLoaded = false;
 let Sentry: any = null;
 
 export async function initMonitor() {
-  if (typeof window === 'undefined') return;
-  const dsn = (process.env.NEXT_PUBLIC_SENTRY_DSN as string) || '';
-  if (!dsn) return;
-  try {
-    const sentryModule = await import('@sentry/browser').catch(() => null);
-    if (!sentryModule) {
-      console.info('Sentry not available, skipping monitor initialization');
-      return;
-    }
-    Sentry = sentryModule;
-    Sentry.init({ dsn });
-    sentryLoaded = true;
-    console.info('Monitor initialized (Sentry)');
-  } catch (err) {
-    // Sentry not installed or failed to load - fallback silently
-    // eslint-disable-next-line no-console
-    console.warn('Sentry not available (install @sentry/browser to enable).');
-  }
+  // Monitor initialization disabled for now
+  // Sentry is optional and not installed
+  sentryLoaded = false;
 }
 
 export function captureException(err: unknown) {
