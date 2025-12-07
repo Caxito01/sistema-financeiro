@@ -25,6 +25,7 @@ export default function NovoLancamentoPage() {
   const [subgrupos, setSubgrupos] = useState([]);
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [showModalAjuda, setShowModalAjuda] = useState(false);
 
   useEffect(() => {
     async function loadGrupos() {
@@ -114,10 +115,17 @@ export default function NovoLancamentoPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-2xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-gray-800">💰 Novo Lançamento</h1>
+          <button
+            onClick={() => setShowModalAjuda(true)}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
+            title="Ajuda"
+          >
+            ❓ Ajuda
+          </button>
+        </div>
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h1 className="text-3xl font-bold text-gray-800 mb-6">
-            💰 Novo Lançamento
-          </h1>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
@@ -272,6 +280,66 @@ export default function NovoLancamentoPage() {
           </form>
         </div>
       </div>
+
+      {/* Modal de Ajuda */}
+      {showModalAjuda && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b p-6 flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-gray-800">📚 Guia - Novo Lançamento</h2>
+              <button
+                onClick={() => setShowModalAjuda(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <section>
+                <h3 className="text-xl font-bold text-blue-600 mb-3">🎯 Como Adicionar um Lançamento</h3>
+                <ol className="space-y-3 text-gray-700">
+                  <li className="flex gap-3">
+                    <span className="font-bold text-blue-600 min-w-fit">1.</span>
+                    <p><strong>Escolha o Tipo:</strong> Selecione se é uma DESPESA ou RECEITA</p>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="font-bold text-blue-600 min-w-fit">2.</span>
+                    <p><strong>Selecione a Categoria:</strong> Escolha o Grupo → Subgrupo → Classe para classificar o lançamento</p>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="font-bold text-blue-600 min-w-fit">3.</span>
+                    <p><strong>Preencha os Dados:</strong> Data, Descrição (opcional) e Valor</p>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="font-bold text-blue-600 min-w-fit">4.</span>
+                    <p><strong>Confirme:</strong> Clique em "Adicionar Lançamento" para salvar</p>
+                  </li>
+                </ol>
+              </section>
+
+              <section>
+                <h3 className="text-xl font-bold text-blue-600 mb-3">💡 Dicas</h3>
+                <ul className="space-y-2 text-gray-700">
+                  <li>• A data padrão é hoje, mas você pode alterar para qualquer data</li>
+                  <li>• A descrição é opcional e útil para adicionar detalhes</li>
+                  <li>• As categorias são definidas em Configurações</li>
+                  <li>• Você pode visualizar todos os lançamentos em "Lançamentos → Lista"</li>
+                </ul>
+              </section>
+            </div>
+
+            <div className="sticky bottom-0 bg-gray-50 border-t p-4 flex justify-end">
+              <button
+                onClick={() => setShowModalAjuda(false)}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg"
+              >
+                Entendi!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

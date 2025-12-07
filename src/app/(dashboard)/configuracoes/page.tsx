@@ -362,6 +362,18 @@ export default function ConfiguracoesPage() {
               </div>
             </div>
 
+            {/* Dicas Importantes */}
+            <div className="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-500 mb-4">
+              <h3 className="text-sm font-bold text-yellow-800 mb-2">💡 Dicas Importantes</h3>
+              <ul className="space-y-1 text-xs text-yellow-800">
+                <li>• Planeje bem sua hierarquia antes de criar muitos lançamentos</li>
+                <li>• Use códigos numéricos crescentes para facilitar a organização</li>
+                <li>• Desative itens em vez de excluí-los para manter histórico</li>
+                <li>• Grupos devem ser DESPESA ou RECEITA</li>
+                <li>• Classes podem ter palavras-chave para facilitar buscas</li>
+              </ul>
+            </div>
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Grupo</label>
@@ -593,14 +605,15 @@ export default function ConfiguracoesPage() {
                 <section>
                   <h3 className="text-xl font-bold text-blue-600 mb-3">🎯 Visão Geral</h3>
                   <p className="text-gray-700 mb-2">
-                    A página de Configurações permite organizar seus lançamentos financeiros em uma estrutura hierárquica de 3 níveis:
+                    A página de Configurações permite organizar seus lançamentos financeiros em uma estrutura hierárquica de 3 níveis que pode ser organizado da forma que preferir:
                   </p>
                   <div className="bg-gray-50 p-4 rounded-lg border-l-4 border-blue-500">
                     <p className="font-mono text-sm">
                       <strong className="text-blue-600">Grupo</strong> → <strong className="text-green-600">Subgrupo</strong> → <strong className="text-purple-600">Classe</strong>
                     </p>
                     <p className="text-xs text-gray-600 mt-2">
-                      Exemplo: <span className="text-blue-600">DESPESAS</span> → <span className="text-green-600">IMÓVEL</span> → <span className="text-purple-600">Energia Elétrica</span>
+                      Exemplo1: <span className="text-blue-600">DESPESAS</span> → <span className="text-green-600">IMÓVEL</span> → <span className="text-purple-600">Energia Elétrica</span>
+                    <p/>Exemplo2: <span className="text-blue-600">DESPESAS COM FILHOS</span> → <span className="text-green-600">CARLOS EDU</span> → <span className="text-purple-600">Faculdade</span>
                     </p>
                   </div>
                 </section>
@@ -636,10 +649,10 @@ export default function ConfiguracoesPage() {
                 {/* Visualização em Árvore */}
                 <section>
                   <h3 className="text-xl font-bold text-blue-600 mb-3">🌳 Visualização em Árvore</h3>
-                  <p className="text-gray-700 mb-2">
+                  <p className="text-gray-700 mb-3">
                     A visualização em árvore mostra toda a estrutura hierárquica de forma visual:
                   </p>
-                  <ul className="space-y-2 ml-4">
+                  <ul className="space-y-2 ml-4 mb-4">
                     <li className="flex gap-2">
                       <span>▶️</span>
                       <p className="text-sm text-gray-700">Clique nas setas para expandir/recolher grupos</p>
@@ -653,6 +666,34 @@ export default function ConfiguracoesPage() {
                       <p className="text-sm text-gray-700">Itens inativos aparecem em <span className="text-red-600">vermelho</span> com "(inativo)"</p>
                     </li>
                   </ul>
+                  
+                  {/* Exemplo Visual */}
+                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mt-4">
+                    <p className="text-sm font-semibold text-gray-700 mb-3">Exemplo de Estrutura:</p>
+                    <div className="space-y-2 text-sm font-mono">
+                      <div className="flex items-center gap-2 p-2 bg-blue-50 rounded">
+                        <span>▼</span>
+                        <span className="font-medium">1 - DESPESAS</span>
+                      </div>
+                      <div className="ml-6 space-y-1">
+                        <div className="flex items-center gap-2 p-2 bg-green-50 rounded">
+                          <span>▶</span>
+                          <span className="text-sm">10 - IMÓVEL</span>
+                        </div>
+                        <div className="ml-6 space-y-1">
+                          <div className="p-1 text-gray-700">• ELET - Energia Elétrica</div>
+                          <div className="p-1 text-gray-700">• AGUA - Água</div>
+                          <div className="p-1 text-gray-700">• ALUG - Aluguel</div>
+                        </div>
+                      </div>
+                      <div className="ml-6 space-y-1">
+                        <div className="flex items-center gap-2 p-2 bg-green-50 rounded">
+                          <span>▶</span>
+                          <span className="text-sm">20 - PESSOAL</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </section>
 
                 {/* Formas de Pagamento */}
@@ -674,18 +715,6 @@ export default function ConfiguracoesPage() {
                       <span>📝</span>
                       <p className="text-sm text-gray-700">Edite nomes quando necessário</p>
                     </li>
-                  </ul>
-                </section>
-
-                {/* Dicas */}
-                <section className="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-500">
-                  <h3 className="text-lg font-bold text-yellow-800 mb-2">💡 Dicas Importantes</h3>
-                  <ul className="space-y-1 text-sm text-yellow-800">
-                    <li>• Planeje bem sua hierarquia antes de criar muitos lançamentos</li>
-                    <li>• Use códigos numéricos crescentes para facilitar a organização</li>
-                    <li>• Desative itens em vez de excluí-los para manter histórico</li>
-                    <li>• Grupos devem ser DESPESA ou RECEITA</li>
-                    <li>• Classes podem ter palavras-chave para facilitar buscas</li>
                   </ul>
                 </section>
               </div>

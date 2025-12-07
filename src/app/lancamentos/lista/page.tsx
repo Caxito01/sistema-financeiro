@@ -26,6 +26,7 @@ export default function ListaLancamentosPage() {
   const [subgrupos, setSubgrupos] = useState([]);
   const [fontSize, setFontSize] = useState(14);
   const [ocultarValores, setOcultarValores] = useState(false);
+  const [showModalAjuda, setShowModalAjuda] = useState(false);
   
   const [editandoValor, setEditandoValor] = useState(null);
   const [novoValor, setNovoValor] = useState('');
@@ -268,6 +269,13 @@ export default function ListaLancamentosPage() {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800">📋 Lançamentos</h1>
           <div className="flex gap-3 no-print">
+            <button
+              onClick={() => setShowModalAjuda(true)}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+              title="Ajuda"
+            >
+              ❓ Ajuda
+            </button>
             <button
               onClick={() => router.push('/dashboard')}
               className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg"
@@ -633,6 +641,80 @@ export default function ListaLancamentosPage() {
           }
         }
       `}</style>
+
+      {/* Modal de Ajuda */}
+      {showModalAjuda && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b p-6 flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-gray-800">📚 Guia - Lista de Lançamentos</h2>
+              <button
+                onClick={() => setShowModalAjuda(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <section>
+                <h3 className="text-xl font-bold text-blue-600 mb-3">🎯 Visão Geral</h3>
+                <p className="text-gray-700">
+                  A lista de lançamentos mostra todos os seus registros financeiros com opções de edição, exclusão e análise.
+                </p>
+              </section>
+
+              <section>
+                <h3 className="text-xl font-bold text-blue-600 mb-3">📊 Cards de Totais</h3>
+                <p className="text-gray-700 mb-2">Na parte superior aparecem 3 cards com:</p>
+                <ul className="space-y-1 text-gray-700">
+                  <li>• <strong>Total Despesas:</strong> Soma de todas as despesas</li>
+                  <li>• <strong>Total Receitas:</strong> Soma de todas as receitas</li>
+                  <li>• <strong>Saldo:</strong> Receitas menos Despesas</li>
+                </ul>
+              </section>
+
+              <section>
+                <h3 className="text-xl font-bold text-blue-600 mb-3">🔧 Ferramentas</h3>
+                <ul className="space-y-2 text-gray-700">
+                  <li><strong>Filtros:</strong> Filtre por tipo, data, grupo, status de quitação</li>
+                  <li><strong>Tamanho de Fonte:</strong> Ajuste o tamanho do texto da tabela</li>
+                  <li><strong>Ocultar Valores:</strong> Esconda valores para privacidade</li>
+                  <li><strong>Imprimir:</strong> Imprima a lista de lançamentos</li>
+                </ul>
+              </section>
+
+              <section>
+                <h3 className="text-xl font-bold text-blue-600 mb-3">⚙️ Ações na Tabela</h3>
+                <ul className="space-y-2 text-gray-700">
+                  <li><strong>✏️ Editar:</strong> Modifique os dados do lançamento</li>
+                  <li><strong>🗑️ Excluir:</strong> Remova um lançamento</li>
+                  <li><strong>✓ Quitar:</strong> Marque como pago/quitado</li>
+                </ul>
+              </section>
+
+              <section>
+                <h3 className="text-xl font-bold text-blue-600 mb-3">💡 Dicas</h3>
+                <ul className="space-y-2 text-gray-700">
+                  <li>• Clique no cabeçalho da coluna para ordenar</li>
+                  <li>• Use os filtros para encontrar lançamentos específicos</li>
+                  <li>• Marque como quitado para acompanhar pagamentos</li>
+                  <li>• Clique em "Novo Lançamento" para adicionar um novo item</li>
+                </ul>
+              </section>
+            </div>
+
+            <div className="sticky bottom-0 bg-gray-50 border-t p-4 flex justify-end">
+              <button
+                onClick={() => setShowModalAjuda(false)}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg"
+              >
+                Entendi!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

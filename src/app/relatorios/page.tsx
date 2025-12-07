@@ -26,6 +26,7 @@ export default function RelatoriosPage() {
   const [grupos, setGrupos] = useState([]);
   const [subgrupos, setSubgrupos] = useState([]);
   const [classes, setClasses] = useState([]);
+  const [showModalAjuda, setShowModalAjuda] = useState(false);
 
   useEffect(() => {
     loadGrupos();
@@ -284,6 +285,13 @@ export default function RelatoriosPage() {
           <h1 className="text-3xl font-bold text-gray-800">📊 Relatórios por Categoria</h1>
           <div className="flex gap-3">
             <button
+              onClick={() => setShowModalAjuda(true)}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+              title="Ajuda"
+            >
+              ❓ Ajuda
+            </button>
+            <button
               onClick={() => router.push('/dashboard')}
               className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg"
             >
@@ -516,6 +524,83 @@ export default function RelatoriosPage() {
           )}
         </div>
       </div>
+
+      {/* Modal de Ajuda */}
+      {showModalAjuda && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b p-6 flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-gray-800">📚 Guia - Relatórios</h2>
+              <button
+                onClick={() => setShowModalAjuda(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <section>
+                <h3 className="text-xl font-bold text-blue-600 mb-3">🎯 Visão Geral</h3>
+                <p className="text-gray-700 mb-3">
+                  A página de Relatórios permite visualizar todos os seus lançamentos financeiros de forma organizada e hierárquica, com filtros e resumo financeiro.
+                </p>
+              </section>
+
+              <section>
+                <h3 className="text-xl font-bold text-blue-600 mb-3">🔍 Filtros</h3>
+                <ul className="space-y-2 text-gray-700">
+                  <li><strong>Tipo:</strong> Filtra por DESPESA, RECEITA ou TODOS</li>
+                  <li><strong>Data:</strong> Selecione um período específico</li>
+                  <li><strong>Grupo/Subgrupo/Classe:</strong> Filtra por categorias</li>
+                  <li><strong>Palavra-chave:</strong> Busca por termos específicos</li>
+                </ul>
+              </section>
+
+              <section>
+                <h3 className="text-xl font-bold text-blue-600 mb-3">💰 Resumo Financeiro</h3>
+                <p className="text-gray-700 mb-2">Na parte superior aparecem 4 cards com:</p>
+                <ul className="space-y-1 text-gray-700">
+                  <li>• <strong>Total Receitas:</strong> Soma de todas as receitas</li>
+                  <li>• <strong>Total Despesas:</strong> Soma de todas as despesas</li>
+                  <li>• <strong>Saldo:</strong> Receitas menos Despesas</li>
+                  <li>• <strong>Total Quitado:</strong> Lançamentos já pagos</li>
+                </ul>
+              </section>
+
+              <section>
+                <h3 className="text-xl font-bold text-blue-600 mb-3">🌳 Visualização Hierárquica</h3>
+                <p className="text-gray-700 mb-2">A tabela mostra:</p>
+                <ul className="space-y-1 text-gray-700">
+                  <li>• <strong>Grupos:</strong> Linhas em gradiente (verde para receitas, vermelho para despesas)</li>
+                  <li>• <strong>Subgrupos:</strong> Linhas em azul claro</li>
+                  <li>• <strong>Classes:</strong> Linhas com detalhes dos lançamentos</li>
+                  <li>• <strong>Status Quitado:</strong> Fundo verde para itens já pagos</li>
+                </ul>
+              </section>
+
+              <section>
+                <h3 className="text-xl font-bold text-blue-600 mb-3">💡 Dicas</h3>
+                <ul className="space-y-2 text-gray-700">
+                  <li>• Os filtros são aplicados automaticamente</li>
+                  <li>• Use a busca para encontrar lançamentos rapidamente</li>
+                  <li>• Clique em "Novo Lançamento" para adicionar um novo item</li>
+                  <li>• O saldo é calculado como Receitas - Despesas</li>
+                </ul>
+              </section>
+            </div>
+
+            <div className="sticky bottom-0 bg-gray-50 border-t p-4 flex justify-end">
+              <button
+                onClick={() => setShowModalAjuda(false)}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg"
+              >
+                Entendi!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
