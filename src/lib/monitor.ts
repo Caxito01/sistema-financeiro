@@ -6,7 +6,12 @@ export async function initMonitor() {
   const dsn = (process.env.NEXT_PUBLIC_SENTRY_DSN as string) || '';
   if (!dsn) return;
   try {
-    Sentry = await import('@sentry/browser');
+    const sentryModule = await import('@sentry/browser').catch(() => null);
+    if (!sentryModule) {
+      console.info('Sentry not available, skipping monitor initialization');
+      return;
+    }
+    Sentry = sentryModule;
     Sentry.init({ dsn });
     sentryLoaded = true;
     console.info('Monitor initialized (Sentry)');
