@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     
     steps:
@@ -17,12 +17,15 @@ jobs:
           node-version: '18'
           cache: 'npm'
       
-      - run: npm ci
-      - run: npm run build
+      - name: Install dependencies
+        run: npm ci
       
-      - name: Deploy to GitHub Pages
+      - name: Build project
+        run: npm run build
+      
+      - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./out
-          cname: caxito01.github.io
+          force_orphan: true
