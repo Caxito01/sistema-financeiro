@@ -15,6 +15,7 @@
 
 # next.js
 /.next/
+# /out/  <- Removido para permitir push da pasta docs para GitHub Pages
 
 # production
 /build
