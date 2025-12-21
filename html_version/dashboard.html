@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Sistema Financeiro</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="navbar-content">
+      <a href="dashboard.html" class="navbar-brand">💰 Sistema Financeiro</a>
+      <div class="navbar-menu">
+        <a href="dashboard.html" class="navbar-link">Dashboard</a>
+        <a href="lancamentos.html" class="navbar-link">Novo Lançamento</a>
+        <a href="lista-lancamentos.html" class="navbar-link">Lançamentos</a>
+        <a href="relatorios.html" class="navbar-link">Relatórios</a>
+        <button onclick="handleLogout()" class="btn btn-secondary">Sair</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Container Principal -->
+  <div class="container">
+    <div class="flex-between mb-4">
+      <h1 style="font-size: 2rem; font-weight: 700; color: var(--gray-800);">📊 Dashboard</h1>
+      <button onclick="toggleValores()" class="btn btn-secondary" id="toggleBtn">
+        👁️ Ocultar Valores
+      </button>
+    </div>
+
+    <!-- Cards de Resumo -->
+    <div class="grid grid-cols-3 mb-4">
+      <div class="stat-card" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white;">
+        <div class="stat-title" style="color: rgba(255,255,255,0.9);">💸 Total Despesas</div>
+        <div class="stat-value" style="color: white;" id="totalDespesas">R$ 0,00</div>
+      </div>
+
+      <div class="stat-card" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white;">
+        <div class="stat-title" style="color: rgba(255,255,255,0.9);">💰 Total Receitas</div>
+        <div class="stat-value" style="color: white;" id="totalReceitas">R$ 0,00</div>
+      </div>
+
+      <div class="stat-card" id="saldoCard">
+        <div class="stat-title">📈 Saldo</div>
+        <div class="stat-value" id="saldo">R$ 0,00</div>
+      </div>
+    </div>
+
+    <!-- Botões de Ação -->
+    <div class="grid grid-cols-4 mb-4">
+      <button onclick="window.location.href='lancamentos.html'" class="btn btn-primary" style="padding: 1rem;">
+        ➕ Novo Lançamento
+      </button>
+      <button onclick="window.location.href='lista-lancamentos.html'" class="btn" style="background: #8b5cf6; color: white; padding: 1rem;">
+        📋 Ver Lançamentos
+      </button>
+      <button onclick="window.location.href='relatorios.html'" class="btn" style="background: #06b6d4; color: white; padding: 1rem;">
+        📊 Relatórios
+      </button>
+      <button onclick="window.location.href='configuracoes.html'" class="btn btn-secondary" style="padding: 1rem;">
+        ⚙️ Configurações
+      </button>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="grid grid-cols-2">
+      <!-- Gráfico de Pizza - Despesas por Subgrupo -->
+      <div class="card">
+        <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem;">Despesas por Subgrupo</h3>
+        <canvas id="chartSubgrupos" width="400" height="400"></canvas>
+      </div>
+
+      <!-- Gráfico de Barras - Top Classes -->
+      <div class="card">
+        <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem;">Top 10 Classes com Maiores Despesas</h3>
+        <canvas id="chartClasses" width="400" height="400"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="config/supabase-config.js"></script>
+  <script>
+    let valoresVisiveis = true;
+    let dashboardData = null;
+    let chartSubgrupos = null;
+    let chartClasses = null;
+
+    // Verificar autenticação
+    window.addEventListener('DOMContentLoaded', async () => {
+      // Aguardar um pouco para garantir que as bibliotecas foram carregadas
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      try {
+        await protectPage();
+        await carregarDados();
+      } catch (error) {
+        console.error('Erro na inicialização:', error);
+        alert('Erro ao carregar dashboard: ' + error.message);
+      }
+    });
+
+    async function handleLogout() {
+      try {
+        await logout();
+        window.location.href = 'login.html';
+      } catch (error) {
+        alert('Erro ao fazer logout: ' + error.message);
+      }
+    }
+
+    function toggleValores() {
+      valoresVisiveis = !valoresVisiveis;
+      const toggleBtn = document.getElementById('toggleBtn');
+      toggleBtn.textContent = valoresVisiveis ? '👁️ Ocultar Valores' : '👁️ Mostrar Valores';
+      atualizarDisplay();
+    }
+
+    function formatarMoeda(valor) {
+      if (!valoresVisiveis) return '••••••';
+      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+    }
+
+    async function carregarDados() {
+      try {
+        const supabase = createSupabaseClient();
+
+        // Buscar lançamentos
+        const { data: lancamentos, error: errorLanc } = await supabase
+          .from('lancamentos')
+          .select('*');
+        
+        if (errorLanc) {
+          console.error('Erro ao buscar lançamentos:', errorLanc);
+          throw errorLanc;
+        }
+
+        // Buscar classes, subgrupos e grupos
+        const { data: classes, error: errorClasses } = await supabase.from('classes').select('*');
+        if (errorClasses) {
+          console.error('Erro ao buscar classes:', errorClasses);
+        }
+        
+        const { data: subgrupos, error: errorSubgrupos } = await supabase.from('subgrupos').select('*');
+        if (errorSubgrupos) {
+          console.error('Erro ao buscar subgrupos:', errorSubgrupos);
+        }
+        
+        const { data: grupos, error: errorGrupos } = await supabase.from('grupos').select('*');
+        if (errorGrupos) {
+          console.error('Erro ao buscar grupos:', errorGrupos);
+        }
+
+        // Processar dados
+        const classesMap = new Map();
+        (classes || []).forEach(c => classesMap.set(c.id, c));
+
+        const subgruposMap = new Map();
+        (subgrupos || []).forEach(s => subgruposMap.set(s.id, s));
+
+        const gruposMap = new Map();
+        (grupos || []).forEach(g => gruposMap.set(g.id, g));
+
+        const despesas = (lancamentos || []).filter(l => l.tipo === 'DESPESA');
+        const receitas = (lancamentos || []).filter(l => l.tipo === 'RECEITA');
+
+        const totalDespesas = despesas.reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
+        const totalReceitas = receitas.reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
+        const saldo = totalReceitas - totalDespesas;
+
+        // Agregar por subgrupo
+        const subgruposSoma = new Map();
+        despesas.forEach(item => {
+          const classe = classesMap.get(item.classe_id);
+          if (!classe) return;
+
+          const subgrupo = subgruposMap.get(classe.subgrupo_id);
+          const subgrupoNome = subgrupo ? subgrupo.nome : 'Sem Subgrupo';
+          const valor = parseFloat(item.valor || 0);
+
+          subgruposSoma.set(subgrupoNome, (subgruposSoma.get(subgrupoNome) || 0) + valor);
+        });
+
+        // Agregar por classe
+        const classesSoma = new Map();
+        despesas.forEach(item => {
+          const classe = classesMap.get(item.classe_id);
+          if (!classe) return;
+
+          const nomeClasse = classe.descricao || classe.codigo || 'Sem Classe';
+          const valor = parseFloat(item.valor || 0);
+
+          classesSoma.set(nomeClasse, (classesSoma.get(nomeClasse) || 0) + valor);
+        });
+
+        dashboardData = {
+          totalDespesas,
+          totalReceitas,
+          saldo,
+          despesasPorSubgrupo: Array.from(subgruposSoma.entries()).map(([subgrupo, valor]) => ({ subgrupo, valor })),
+          despesasPorClasse: Array.from(classesSoma.entries())
+            .map(([classe, valor]) => ({ classe, valor }))
+            .sort((a, b) => b.valor - a.valor)
+            .slice(0, 10)
+        };
+
+        atualizarDisplay();
+        criarGraficos();
+      } catch (error) {
+        console.error('Erro completo:', error);
+        const errorMsg = error.message || error.toString();
+        alert('Erro ao carregar dados do dashboard:\n\n' + errorMsg + '\n\nVerifique o console (F12) para mais detalhes.');
+      }
+    }
+
+    function atualizarDisplay() {
+      if (!dashboardData) return;
+
+      document.getElementById('totalDespesas').textContent = formatarMoeda(dashboardData.totalDespesas);
+      document.getElementById('totalReceitas').textContent = formatarMoeda(dashboardData.totalReceitas);
+      document.getElementById('saldo').textContent = formatarMoeda(dashboardData.saldo);
+
+      const saldoCard = document.getElementById('saldoCard');
+      const saldoElement = document.getElementById('saldo');
+      
+      if (dashboardData.saldo >= 0) {
+        saldoCard.style.background = 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)';
+        saldoCard.style.color = 'white';
+        saldoElement.style.color = 'white';
+      } else {
+        saldoCard.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+        saldoCard.style.color = 'white';
+        saldoElement.style.color = 'white';
+      }
+
+      // Destruir gráficos antes de recriar
+      if (chartSubgrupos) {
+        chartSubgrupos.destroy();
+        chartSubgrupos = null;
+      }
+      if (chartClasses) {
+        chartClasses.destroy();
+        chartClasses = null;
+      }
+      
+      criarGraficos();
+    }
+
+    function criarGraficos() {
+      if (!dashboardData || !valoresVisiveis) {
+        if (chartSubgrupos) {
+          chartSubgrupos.destroy();
+          chartSubgrupos = null;
+        }
+        if (chartClasses) {
+          chartClasses.destroy();
+          chartClasses = null;
+        }
+        return;
+      }
+
+      const cores = [
+        '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
+        '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9',
+        '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef',
+        '#ec4899', '#f43f5e'
+      ];
+
+      // Destruir gráficos existentes antes de criar novos
+      if (chartSubgrupos) {
+        chartSubgrupos.destroy();
+        chartSubgrupos = null;
+      }
+      if (chartClasses) {
+        chartClasses.destroy();
+        chartClasses = null;
+      }
+
+      // Gráfico de Pizza - Subgrupos
+      const ctxSubgrupos = document.getElementById('chartSubgrupos').getContext('2d');
+      const topSubgrupos = dashboardData.despesasPorSubgrupo
+        .sort((a, b) => b.valor - a.valor)
+        .slice(0, 10);
+
+      chartSubgrupos = new Chart(ctxSubgrupos, {
+        type: 'pie',
+        data: {
+          labels: topSubgrupos.map(s => s.subgrupo),
+          datasets: [{
+            data: topSubgrupos.map(s => s.valor),
+            backgroundColor: cores,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: {
+              position: 'bottom',
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const label = context.label || '';
+                  const value = context.parsed || 0;
+                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                  const percentage = ((value / total) * 100).toFixed(1);
+                  return `${label}: R$ ${value.toFixed(2)} (${percentage}%)`;
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Gráfico de Barras - Classes
+      const ctxClasses = document.getElementById('chartClasses').getContext('2d');
+      
+      chartClasses = new Chart(ctxClasses, {
+        type: 'bar',
+        data: {
+          labels: dashboardData.despesasPorClasse.map(c => c.classe),
+          datasets: [{
+            label: 'Valor (R$)',
+            data: dashboardData.despesasPorClasse.map(c => c.valor),
+            backgroundColor: '#3b82f6',
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return `R$ ${context.parsed.y.toFixed(2)}`;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) {
+                  return 'R$ ' + value.toFixed(0);
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>

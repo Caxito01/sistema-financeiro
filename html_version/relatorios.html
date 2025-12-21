@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatórios - Sistema Financeiro</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-content">
+      <a href="dashboard.html" class="navbar-brand">💰 Sistema Financeiro</a>
+      <div class="navbar-menu">
+        <a href="dashboard.html" class="navbar-link">Dashboard</a>
+        <a href="lancamentos.html" class="navbar-link">Novo Lançamento</a>
+        <a href="lista-lancamentos.html" class="navbar-link">Lançamentos</a>
+        <a href="relatorios.html" class="navbar-link">Relatórios</a>
+        <button onclick="handleLogout()" class="btn btn-secondary">Sair</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 2rem;">📊 Relatórios Financeiros</h1>
+
+    <div class="grid grid-cols-2">
+      <div class="card">
+        <h3 style="font-weight: 600; margin-bottom: 1rem;">Evolução Mensal</h3>
+        <canvas id="chartMensal" width="400" height="300"></canvas>
+      </div>
+
+      <div class="card">
+        <h3 style="font-weight: 600; margin-bottom: 1rem;">Despesas por Categoria</h3>
+        <canvas id="chartCategorias" width="400" height="300"></canvas>
+      </div>
+    </div>
+
+    <div class="card mt-4">
+      <h3 style="font-weight: 600; margin-bottom: 1rem;">Resumo Anual</h3>
+      <div class="grid grid-cols-3">
+        <div class="stat-card">
+          <div class="stat-title">Total Despesas (Ano)</div>
+          <div class="stat-value negative" id="totalDespesasAno">R$ 0,00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">Total Receitas (Ano)</div>
+          <div class="stat-value positive" id="totalReceitasAno">R$ 0,00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">Saldo (Ano)</div>
+          <div class="stat-value" id="saldoAno">R$ 0,00</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="config/supabase-config.js"></script>
+  <script>
+    let chartMensal = null;
+    let chartCategorias = null;
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      await protectPage();
+      await carregarRelatorios();
+    });
+
+    async function handleLogout() {
+      await logout();
+      window.location.href = 'login.html';
+    }
+
+    async function carregarRelatorios() {
+      try {
+        const supabase = createSupabaseClient();
+        
+        const { data: lancamentos } = await supabase
+          .from('lancamentos')
+          .select(`
+            *,
+            classe:classes(id, codigo, descricao,
+              subgrupo:subgrupos(id, nome,
+                grupo:grupos(id, nome, tipo)
+              )
+            )
+          `);
+
+        const anoAtual = new Date().getFullYear();
+        const lancamentosAno = (lancamentos || []).filter(l => {
+          const ano = new Date(l.data).getFullYear();
+          return ano === anoAtual;
+        });
+
+        // Totais anuais
+        const totalDespesas = lancamentosAno.filter(l => l.tipo === 'DESPESA').reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
+        const totalReceitas = lancamentosAno.filter(l => l.tipo === 'RECEITA').reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
+        const saldo = totalReceitas - totalDespesas;
+
+        document.getElementById('totalDespesasAno').textContent = `R$ ${totalDespesas.toFixed(2)}`;
+        document.getElementById('totalReceitasAno').textContent = `R$ ${totalReceitas.toFixed(2)}`;
+        document.getElementById('saldoAno').textContent = `R$ ${saldo.toFixed(2)}`;
+        document.getElementById('saldoAno').style.color = saldo >= 0 ? 'var(--success)' : 'var(--danger)';
+
+        // Gráfico mensal
+        const dadosMensais = processarDadosMensais(lancamentosAno);
+        criarGraficoMensal(dadosMensais);
+
+        // Gráfico por categoria
+        const dadosCategorias = processarDadosCategorias(lancamentosAno);
+        criarGraficoCategorias(dadosCategorias);
+
+      } catch (error) {
+        console.error('Erro ao carregar relatórios:', error);
+        alert('Erro ao carregar relatórios');
+      }
+    }
+
+    function processarDadosMensais(lancamentos) {
+      const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+      const despesasPorMes = new Array(12).fill(0);
+      const receitasPorMes = new Array(12).fill(0);
+
+      lancamentos.forEach(lanc => {
+        const mes = new Date(lanc.data).getMonth();
+        const valor = parseFloat(lanc.valor || 0);
+        
+        if (lanc.tipo === 'DESPESA') {
+          despesasPorMes[mes] += valor;
+        } else if (lanc.tipo === 'RECEITA') {
+          receitasPorMes[mes] += valor;
+        }
+      });
+
+      return {
+        labels: meses,
+        despesas: despesasPorMes,
+        receitas: receitasPorMes
+      };
+    }
+
+    function processarDadosCategorias(lancamentos) {
+      const categoriasMap = new Map();
+      
+      lancamentos.filter(l => l.tipo === 'DESPESA').forEach(lanc => {
+        const categoria = lanc.classe?.subgrupo?.nome || 'Sem Categoria';
+        const valor = parseFloat(lanc.valor || 0);
+        categoriasMap.set(categoria, (categoriasMap.get(categoria) || 0) + valor);
+      });
+
+      const categorias = Array.from(categoriasMap.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
+
+      return {
+        labels: categorias.map(c => c[0]),
+        valores: categorias.map(c => c[1])
+      };
+    }
+
+    function criarGraficoMensal(dados) {
+      const ctx = document.getElementById('chartMensal').getContext('2d');
+      
+      if (chartMensal) {
+        chartMensal.destroy();
+      }
+
+      chartMensal = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: dados.labels,
+          datasets: [
+            {
+              label: 'Despesas',
+              data: dados.despesas,
+              borderColor: '#ef4444',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              tension: 0.4
+            },
+            {
+              label: 'Receitas',
+              data: dados.receitas,
+              borderColor: '#22c55e',
+              backgroundColor: 'rgba(34, 197, 94, 0.1)',
+              tension: 0.4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              position: 'bottom'
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return `${context.dataset.label}: R$ ${context.parsed.y.toFixed(2)}`;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) {
+                  return 'R$ ' + value.toFixed(0);
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function criarGraficoCategorias(dados) {
+      const ctx = document.getElementById('chartCategorias').getContext('2d');
+      
+      if (chartCategorias) {
+        chartCategorias.destroy();
+      }
+
+      const cores = [
+        '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
+        '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9'
+      ];
+
+      chartCategorias = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: dados.labels,
+          datasets: [{
+            data: dados.valores,
+            backgroundColor: cores
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              position: 'right'
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                  const percentage = ((context.parsed / total) * 100).toFixed(1);
+                  return `${context.label}: R$ ${context.parsed.toFixed(2)} (${percentage}%)`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>

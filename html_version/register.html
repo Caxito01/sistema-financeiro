@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro - Sistema Financeiro</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="auth-container">
+    <div class="card auth-card">
+      <div class="card-header text-center">
+        <h1 class="card-title">💰 Sistema Financeiro</h1>
+        <p class="card-description">Crie sua conta para começar</p>
+      </div>
+
+      <div id="errorMessage" class="alert alert-error hidden"></div>
+      <div id="successMessage" class="alert alert-success hidden"></div>
+
+      <form id="registerForm">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input 
+            type="email" 
+            id="email" 
+            name="email" 
+            placeholder="seu@email.com" 
+            required
+            autocomplete="email"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="password">Senha</label>
+          <input 
+            type="password" 
+            id="password" 
+            name="password" 
+            placeholder="••••••••" 
+            required
+            autocomplete="new-password"
+            minlength="6"
+          >
+          <small style="color: var(--gray-600); font-size: 0.75rem;">Mínimo 6 caracteres</small>
+        </div>
+
+        <div class="form-group">
+          <label for="confirmPassword">Confirmar Senha</label>
+          <input 
+            type="password" 
+            id="confirmPassword" 
+            name="confirmPassword" 
+            placeholder="••••••••" 
+            required
+            autocomplete="new-password"
+          >
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%;" id="submitBtn">
+          <span id="btnText">Criar Conta</span>
+          <span id="btnLoading" class="loading hidden"></span>
+        </button>
+      </form>
+
+      <div class="text-center mt-2">
+        <p style="font-size: 0.875rem; color: var(--gray-600);">
+          Já tem uma conta? 
+          <a href="login.html" style="color: var(--primary); font-weight: 500;">Faça login</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script src="config/supabase-config.js"></script>
+  <script>
+    const form = document.getElementById('registerForm');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+    const submitBtn = document.getElementById('submitBtn');
+    const btnText = document.getElementById('btnText');
+    const btnLoading = document.getElementById('btnLoading');
+    const errorMessage = document.getElementById('errorMessage');
+    const successMessage = document.getElementById('successMessage');
+
+    function showMessage(element, message) {
+      element.textContent = message;
+      element.classList.remove('hidden');
+    }
+
+    function hideMessages() {
+      errorMessage.classList.add('hidden');
+      successMessage.classList.add('hidden');
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      hideMessages();
+      
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+      const confirmPassword = confirmPasswordInput.value;
+
+      // Validações
+      if (password !== confirmPassword) {
+        showMessage(errorMessage, 'As senhas não coincidem!');
+        return;
+      }
+
+      if (password.length < 6) {
+        showMessage(errorMessage, 'A senha deve ter no mínimo 6 caracteres!');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      btnText.classList.add('hidden');
+      btnLoading.classList.remove('hidden');
+
+      try {
+        const data = await register(email, password);
+        
+        if (data.user) {
+          showMessage(successMessage, '✅ Conta criada com sucesso! Verifique seu email para confirmar. Redirecionando para login...');
+          
+          setTimeout(() => {
+            window.location.href = 'login.html';
+          }, 3000);
+        }
+      } catch (error) {
+        console.error('Erro no registro:', error);
+        showMessage(errorMessage, error.message || 'Erro ao criar conta. Tente novamente.');
+        submitBtn.disabled = false;
+        btnText.classList.remove('hidden');
+        btnLoading.classList.add('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

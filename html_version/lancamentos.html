@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Novo Lançamento - Sistema Financeiro</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="navbar-content">
+      <a href="dashboard.html" class="navbar-brand">💰 Sistema Financeiro</a>
+      <div class="navbar-menu">
+        <a href="dashboard.html" class="navbar-link">Dashboard</a>
+        <a href="lancamentos.html" class="navbar-link">Novo Lançamento</a>
+        <a href="lista-lancamentos.html" class="navbar-link">Lançamentos</a>
+        <a href="relatorios.html" class="navbar-link">Relatórios</a>
+        <button onclick="handleLogout()" class="btn btn-secondary">Sair</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="card" style="max-width: 800px; margin: 0 auto;">
+      <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 1.5rem;">💰 Novo Lançamento</h1>
+
+      <div id="errorMessage" class="alert alert-error hidden"></div>
+      <div id="successMessage" class="alert alert-success hidden"></div>
+
+      <form id="lancamentoForm">
+        <!-- Tipo -->
+        <div class="form-group">
+          <label>Tipo</label>
+          <div style="display: flex; gap: 1rem;">
+            <button 
+              type="button" 
+              id="btnDespesa" 
+              onclick="setTipo('DESPESA')"
+              class="btn btn-danger"
+              style="flex: 1; padding: 0.75rem;"
+            >
+              📉 Despesa
+            </button>
+            <button 
+              type="button" 
+              id="btnReceita" 
+              onclick="setTipo('RECEITA')"
+              class="btn btn-secondary"
+              style="flex: 1; padding: 0.75rem;"
+            >
+              📈 Receita
+            </button>
+          </div>
+        </div>
+
+        <!-- Descrição -->
+        <div class="form-group">
+          <label for="descricao">Descrição *</label>
+          <input 
+            type="text" 
+            id="descricao" 
+            name="descricao" 
+            placeholder="Ex: Compra no supermercado"
+            required
+          >
+        </div>
+
+        <!-- Valor e Data -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label for="valor">Valor *</label>
+            <input 
+              type="number" 
+              id="valor" 
+              name="valor" 
+              placeholder="0.00"
+              step="0.01"
+              min="0"
+              required
+            >
+          </div>
+
+          <div class="form-group">
+            <label for="data">Data *</label>
+            <input 
+              type="date" 
+              id="data" 
+              name="data" 
+              required
+            >
+          </div>
+        </div>
+
+        <!-- Grupo -->
+        <div class="form-group">
+          <label for="grupo">Grupo *</label>
+          <select id="grupo" name="grupo" required>
+            <option value="">Selecione um grupo</option>
+          </select>
+        </div>
+
+        <!-- Subgrupo -->
+        <div class="form-group">
+          <label for="subgrupo">Subgrupo *</label>
+          <select id="subgrupo" name="subgrupo" required disabled>
+            <option value="">Selecione um subgrupo</option>
+          </select>
+        </div>
+
+        <!-- Classe -->
+        <div class="form-group">
+          <label for="classe">Classe *</label>
+          <select id="classe" name="classe" required disabled>
+            <option value="">Selecione uma classe</option>
+          </select>
+        </div>
+
+        <!-- Botões -->
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+          <button type="button" onclick="window.location.href='dashboard.html'" class="btn btn-secondary" style="flex: 1;">
+            ← Voltar
+          </button>
+          <button type="button" onclick="window.location.href='lista-lancamentos.html'" class="btn btn-secondary" style="flex: 1;">
+            📋 Ver Lançamentos
+          </button>
+          <button type="submit" class="btn btn-success" style="flex: 1;" id="submitBtn">
+            <span id="btnText">💾 Salvar</span>
+            <span id="btnLoading" class="loading hidden"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="config/supabase-config.js"></script>
+  <script>
+    let tipoSelecionado = 'DESPESA';
+    let grupos = [];
+    let subgrupos = [];
+    let classes = [];
+
+    // Verificar autenticação
+    window.addEventListener('DOMContentLoaded', async () => {
+      await protectPage();
+      
+      // Definir data atual
+      const hoje = new Date().toISOString().split('T')[0];
+      document.getElementById('data').value = hoje;
+      
+      await carregarGrupos();
+    });
+
+    async function handleLogout() {
+      try {
+        await logout();
+        window.location.href = 'login.html';
+      } catch (error) {
+        alert('Erro ao fazer logout: ' + error.message);
+      }
+    }
+
+    function setTipo(tipo) {
+      tipoSelecionado = tipo;
+      
+      const btnDespesa = document.getElementById('btnDespesa');
+      const btnReceita = document.getElementById('btnReceita');
+
+      if (tipo === 'DESPESA') {
+        btnDespesa.className = 'btn btn-danger';
+        btnReceita.className = 'btn btn-secondary';
+      } else {
+        btnDespesa.className = 'btn btn-secondary';
+        btnReceita.className = 'btn btn-success';
+      }
+
+      // Limpar seleções
+      document.getElementById('grupo').value = '';
+      document.getElementById('subgrupo').value = '';
+      document.getElementById('classe').value = '';
+      
+      carregarGrupos();
+    }
+
+    async function carregarGrupos() {
+      try {
+        const data = await fetchData('grupos', {
+          eq: { ativo: true, tipo: tipoSelecionado },
+          order: { column: 'codigo', ascending: true }
+        });
+
+        grupos = data || [];
+        const selectGrupo = document.getElementById('grupo');
+        selectGrupo.innerHTML = '<option value="">Selecione um grupo</option>';
+        
+        grupos.forEach(grupo => {
+          const option = document.createElement('option');
+          option.value = grupo.id;
+          option.textContent = `${grupo.codigo} - ${grupo.nome}`;
+          selectGrupo.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Erro ao carregar grupos:', error);
+        showError('Erro ao carregar grupos');
+      }
+    }
+
+    async function carregarSubgrupos(grupoId) {
+      const selectSubgrupo = document.getElementById('subgrupo');
+      const selectClasse = document.getElementById('classe');
+      
+      if (!grupoId) {
+        selectSubgrupo.disabled = true;
+        selectSubgrupo.innerHTML = '<option value="">Selecione um subgrupo</option>';
+        selectClasse.disabled = true;
+        selectClasse.innerHTML = '<option value="">Selecione uma classe</option>';
+        return;
+      }
+
+      try {
+        const data = await fetchData('subgrupos', {
+          eq: { grupo_id: grupoId, ativo: true },
+          order: { column: 'codigo', ascending: true }
+        });
+
+        subgrupos = data || [];
+        selectSubgrupo.innerHTML = '<option value="">Selecione um subgrupo</option>';
+        selectSubgrupo.disabled = false;
+        
+        subgrupos.forEach(subgrupo => {
+          const option = document.createElement('option');
+          option.value = subgrupo.id;
+          option.textContent = `${subgrupo.codigo} - ${subgrupo.nome}`;
+          selectSubgrupo.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Erro ao carregar subgrupos:', error);
+        showError('Erro ao carregar subgrupos');
+      }
+    }
+
+    async function carregarClasses(subgrupoId) {
+      const selectClasse = document.getElementById('classe');
+      
+      if (!subgrupoId) {
+        selectClasse.disabled = true;
+        selectClasse.innerHTML = '<option value="">Selecione uma classe</option>';
+        return;
+      }
+
+      try {
+        const data = await fetchData('classes', {
+          eq: { subgrupo_id: subgrupoId, ativo: true },
+          order: { column: 'codigo', ascending: true }
+        });
+
+        classes = data || [];
+        selectClasse.innerHTML = '<option value="">Selecione uma classe</option>';
+        selectClasse.disabled = false;
+        
+        classes.forEach(classe => {
+          const option = document.createElement('option');
+          option.value = classe.id;
+          option.textContent = `${classe.codigo} - ${classe.descricao}`;
+          selectClasse.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Erro ao carregar classes:', error);
+        showError('Erro ao carregar classes');
+      }
+    }
+
+    // Event listeners
+    document.getElementById('grupo').addEventListener('change', (e) => {
+      carregarSubgrupos(e.target.value);
+    });
+
+    document.getElementById('subgrupo').addEventListener('change', (e) => {
+      carregarClasses(e.target.value);
+    });
+
+    // Submit form
+    document.getElementById('lancamentoForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      hideMessages();
+      
+      const submitBtn = document.getElementById('submitBtn');
+      const btnText = document.getElementById('btnText');
+      const btnLoading = document.getElementById('btnLoading');
+      
+      submitBtn.disabled = true;
+      btnText.classList.add('hidden');
+      btnLoading.classList.remove('hidden');
+
+      const formData = {
+        descricao_complementar: document.getElementById('descricao').value.trim(),
+        valor: parseFloat(document.getElementById('valor').value),
+        data: document.getElementById('data').value,
+        tipo: tipoSelecionado,
+        classe_id: parseInt(document.getElementById('classe').value)
+      };
+
+      try {
+        const supabase = createSupabaseClient();
+        const { data: session } = await supabase.auth.getSession();
+        
+        if (session.session) {
+          formData.user_id = session.session.user.id;
+        }
+
+        await insertData('lancamentos', formData);
+        
+        showSuccess('✅ Lançamento criado com sucesso! Redirecionando...');
+        
+        setTimeout(() => {
+          window.location.href = 'lista-lancamentos.html';
+        }, 1500);
+        
+      } catch (error) {
+        console.error('Erro ao criar lançamento:', error);
+        showError('Erro ao criar lançamento: ' + error.message);
+        
+        submitBtn.disabled = false;
+        btnText.classList.remove('hidden');
+        btnLoading.classList.add('hidden');
+      }
+    });
+
+    function showError(message) {
+      const errorDiv = document.getElementById('errorMessage');
+      errorDiv.textContent = message;
+      errorDiv.classList.remove('hidden');
+    }
+
+    function showSuccess(message) {
+      const successDiv = document.getElementById('successMessage');
+      successDiv.textContent = message;
+      successDiv.classList.remove('hidden');
+    }
+
+    function hideMessages() {
+      document.getElementById('errorMessage').classList.add('hidden');
+      document.getElementById('successMessage').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>

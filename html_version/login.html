@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Sistema Financeiro</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="auth-container">
+    <div class="card auth-card">
+      <div class="card-header text-center">
+        <h1 class="card-title">💰 Sistema Financeiro</h1>
+        <p class="card-description">Entre com suas credenciais para acessar</p>
+      </div>
+
+      <div id="debugInfo" class="alert alert-info hidden"></div>
+      <div id="errorMessage" class="alert alert-error hidden"></div>
+      <div id="successMessage" class="alert alert-success hidden"></div>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input 
+            type="email" 
+            id="email" 
+            name="email" 
+            placeholder="seu@email.com" 
+            required
+            autocomplete="email"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="password">Senha</label>
+          <input 
+            type="password" 
+            id="password" 
+            name="password" 
+            placeholder="••••••••" 
+            required
+            autocomplete="current-password"
+          >
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%;" id="submitBtn">
+          <span id="btnText">Entrar</span>
+          <span id="btnLoading" class="loading hidden"></span>
+        </button>
+      </form>
+
+      <div class="text-center mt-2">
+        <p style="font-size: 0.875rem; color: var(--gray-600);">
+          Não tem uma conta? 
+          <a href="register.html" style="color: var(--primary); font-weight: 500;">Cadastre-se</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script src="config/supabase-config.js"></script>
+  <script>
+    const form = document.getElementById('loginForm');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const submitBtn = document.getElementById('submitBtn');
+    const btnText = document.getElementById('btnText');
+    const btnLoading = document.getElementById('btnLoading');
+    const debugInfo = document.getElementById('debugInfo');
+    const errorMessage = document.getElementById('errorMessage');
+    const successMessage = document.getElementById('successMessage');
+
+    // Verificar se já está logado
+    window.addEventListener('DOMContentLoaded', async () => {
+      const session = await checkAuth();
+      if (session) {
+        window.location.href = 'dashboard.html';
+      }
+    });
+
+    // Função para mostrar mensagem
+    function showMessage(element, message) {
+      element.textContent = message;
+      element.classList.remove('hidden');
+    }
+
+    function hideMessages() {
+      debugInfo.classList.add('hidden');
+      errorMessage.classList.add('hidden');
+      successMessage.classList.add('hidden');
+    }
+
+    // Handler do formulário
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      hideMessages();
+      submitBtn.disabled = true;
+      btnText.classList.add('hidden');
+      btnLoading.classList.remove('hidden');
+
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      showMessage(debugInfo, '🔍 Iniciando login...');
+
+      try {
+        showMessage(debugInfo, '🔍 Chamando Supabase...');
+        
+        const data = await login(email, password);
+        
+        if (data.session) {
+          showMessage(successMessage, '✅ Login realizado com sucesso! Redirecionando...');
+          debugInfo.classList.add('hidden');
+          
+          setTimeout(() => {
+            window.location.href = 'dashboard.html';
+          }, 1000);
+        }
+      } catch (error) {
+        console.error('Erro no login:', error);
+        hideMessages();
+        showMessage(errorMessage, error.message || 'Credenciais inválidas. Verifique seu email e senha.');
+        submitBtn.disabled = false;
+        btnText.classList.remove('hidden');
+        btnLoading.classList.add('hidden');
+      }
+    });
+  </script>
+</body>
+</html>
