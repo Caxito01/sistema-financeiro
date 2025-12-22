@@ -1,9 +1,9 @@
 1:"$Sreact.fragment"
 2:I[47257,["/sistema-financeiro/_next/static/chunks/ff1a16fafef87110.js","/sistema-financeiro/_next/static/chunks/64c0a5e3a0354479.js"],"ClientPageRoot"]
-3:I[74731,["/sistema-financeiro/_next/static/chunks/c101eacfa342f779.js","/sistema-financeiro/_next/static/chunks/b567cbb53e062057.js"],"default"]
+3:I[74731,["/sistema-financeiro/_next/static/chunks/0f47f042b75ea535.js","/sistema-financeiro/_next/static/chunks/84659eb139c5efbc.js","/sistema-financeiro/_next/static/chunks/c101eacfa342f779.js"],"default"]
 6:I[97367,["/sistema-financeiro/_next/static/chunks/ff1a16fafef87110.js","/sistema-financeiro/_next/static/chunks/64c0a5e3a0354479.js"],"OutletBoundary"]
 7:"$Sreact.suspense"
-0:{"buildId":"XyYMJtUlCFWAFVutkj8Nc","rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],[["$","script","script-0",{"src":"/sistema-financeiro/_next/static/chunks/c101eacfa342f779.js","async":true}],["$","script","script-1",{"src":"/sistema-financeiro/_next/static/chunks/b567cbb53e062057.js","async":true}]],["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"loading":null,"isPartial":false}
+0:{"buildId":"iktbWF52bFHOQefJe8cXs","rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],[["$","script","script-0",{"src":"/sistema-financeiro/_next/static/chunks/c101eacfa342f779.js","async":true}]],["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"loading":null,"isPartial":false}
 4:{}
-5:"$0:rsc:props:children:0:props:serverProvidedParams:params"
+5:{}
 8:null
