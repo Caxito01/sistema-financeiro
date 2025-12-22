@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && mv out docs",
+    "build": "next build",
+    "postbuild": "if exist out (rmdir /s /q docs 2>nul) & ren out docs",
     "start": "next start",
     "lint": "eslint"
   },
