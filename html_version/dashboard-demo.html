@@ -518,8 +518,6 @@
       <div class="panel-label" style="margin-bottom:.6rem;">% no Subgrupo</div>
       <div class="panel-chart-wrap"><canvas id="cPanel"></canvas></div>
     </div>
-    <hr class="panel-divider" />
-    <button class="btn-quit" id="btnQuit" onclick="marcarQuitado()">✓ Marcar como Quitado</button>
   </aside>
 
 <script>
@@ -1048,15 +1046,6 @@ function openSidePanel(id) {
     ? '<span class="status-badge q">✓ Quitado</span>'
     : '<span class="status-badge p">⏳ Pendente</span>';
 
-  const btnQ = document.getElementById('btnQuit');
-  if (l.quitado) {
-    btnQ.textContent = '✓ Já está quitado';
-    btnQ.classList.add('already');
-  } else {
-    btnQ.textContent = '✓ Marcar como Quitado';
-    btnQ.classList.remove('already');
-  }
-
   // Mini pizza: proporção no subgrupo
   const subItems = LANCAMENTOS.filter(x => x.subgrupo === l.subgrupo && x.grupo === l.grupo);
   const labels   = subItems.map(x => x.descricao.length > 18 ? x.descricao.slice(0,18)+'…' : x.descricao);
@@ -1082,15 +1071,6 @@ function openSidePanel(id) {
 function closeSidePanel() {
   document.getElementById('sidePanel').classList.remove('open');
   document.getElementById('overlay').classList.remove('open');
-}
-
-function marcarQuitado() {
-  if (!selectedId) return;
-  const l = LANCAMENTOS.find(x => x.id === selectedId);
-  if (!l || l.quitado) return;
-  l.quitado = true;
-  openSidePanel(selectedId);
-  applyFilters();
 }
 
 /* ═══════════════════════════════════════════════════════════════
