@@ -238,16 +238,6 @@
   <div class="page-title">Olá, bem-vindo ao Portal 👋</div>
   <div class="page-date" id="pageDate"></div>
 
-  <!-- KPIs -->
-  <div class="kpi-grid" id="kpiGrid">
-    <div class="kpi k-desp"><div class="skel" style="height:14px;width:60%;margin-bottom:.5rem"></div><div class="skel" style="height:24px;width:80%"></div></div>
-    <div class="kpi k-rec"><div class="skel" style="height:14px;width:60%;margin-bottom:.5rem"></div><div class="skel" style="height:24px;width:80%"></div></div>
-    <div class="kpi k-pos"><div class="skel" style="height:14px;width:60%;margin-bottom:.5rem"></div><div class="skel" style="height:24px;width:80%"></div></div>
-    <div class="kpi k-quit"><div class="skel" style="height:14px;width:60%;margin-bottom:.5rem"></div><div class="skel" style="height:24px;width:80%"></div></div>
-    <div class="kpi k-pend"><div class="skel" style="height:14px;width:60%;margin-bottom:.5rem"></div><div class="skel" style="height:24px;width:80%"></div></div>
-    <div class="kpi k-gauge"><div class="skel" style="height:14px;width:60%;margin-bottom:.5rem"></div><div class="skel" style="height:24px;width:80%"></div></div>
-  </div>
-
   <!-- NAV CARDS -->
   <div class="section-title">📌 Módulos do Sistema</div>
   <div class="nav-grid">
@@ -464,7 +454,8 @@ async function loadAll() {
 
     if (lancRes.error) throw lancRes.error;
 
-    const lancamentos = lancRes.data || [];
+    // Normalizar tipo para maiúsculo (funciona com "RECEITA" e "receita")
+    const lancamentos = (lancRes.data || []).map(l => ({ ...l, tipo: (l.tipo || '').toUpperCase() }));
     const grupos      = grupoRes.data || [];
     const subgrupos   = subRes.data  || [];
     const classes     = classeRes.data || [];
@@ -472,7 +463,6 @@ async function loadAll() {
     setConnStatus('ok', 'Conectado');
     document.getElementById('connError').classList.remove('show');
 
-    renderKPIs(lancamentos);
     renderMiniStats(lancamentos, grupos, subgrupos, classes);
     renderMensalChart(lancamentos);
     renderTipoChart(lancamentos);

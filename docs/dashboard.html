@@ -1151,7 +1151,11 @@ async function carregarDados() {
     // Mapear formato Supabase → formato do dashboard
     LANCAMENTOS = (data || []).map(l => ({
       id:            l.id,
-      tipo:          (l.tipo || 'DESPESA').toLowerCase(),                         // "DESPESA" → "despesa"
+      tipo:          (() => {
+                       // Normaliza: aceita "RECEITA", "receita", ou grupo.tipo = "receita"
+                       const raw = (l.tipo || l.classe?.subgrupo?.grupo?.tipo || 'despesa').toLowerCase();
+                       return raw.includes('rec') ? 'receita' : 'despesa';
+                     })(),                                                      // "DESPESA"/"RECEITA" → "despesa"/"receita"
       grupo:         l.classe?.subgrupo?.grupo?.id       || 0,
       grupo_nome:    l.classe?.subgrupo?.grupo?.nome     || 'SEM GRUPO',
       subgrupo:      l.classe?.subgrupo?.id              || 0,
