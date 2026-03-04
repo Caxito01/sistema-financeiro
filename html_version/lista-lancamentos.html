@@ -10,6 +10,70 @@
     @media print {
       .no-print { display: none !important; }
     }
+
+    /* ── TOAST ── */
+    #toast-container {
+      position: fixed; bottom: 1.5rem; right: 1.5rem;
+      z-index: 9999; display: flex; flex-direction: column; gap: .5rem;
+    }
+    .toast {
+      min-width: 280px; max-width: 360px;
+      background: #1e293b; color: #f1f5f9;
+      padding: .85rem 1.1rem;
+      border-radius: 12px;
+      font-size: .88rem; font-weight: 500;
+      box-shadow: 0 8px 32px rgba(0,0,0,.22);
+      display: flex; align-items: center; gap: .65rem;
+      animation: toastIn .28s cubic-bezier(.4,0,.2,1) both;
+      border-left: 4px solid #64748b;
+    }
+    .toast.success { border-left-color: #22c55e; }
+    .toast.error   { border-left-color: #ef4444; }
+    .toast.warning { border-left-color: #f59e0b; }
+    .toast-icon { font-size: 1.15rem; flex-shrink: 0; }
+    .toast-msg  { flex: 1; line-height: 1.4; }
+    .toast-close {
+      background: none; border: none; color: #94a3b8;
+      cursor: pointer; font-size: 1rem; padding: 0; line-height: 1;
+      flex-shrink: 0;
+    }
+    .toast-close:hover { color: #f1f5f9; }
+    .toast.hiding { animation: toastOut .25s ease forwards; }
+    @keyframes toastIn  { from { opacity:0; transform:translateX(32px); } to { opacity:1; transform:translateX(0); } }
+    @keyframes toastOut { from { opacity:1; transform:translateX(0); }    to { opacity:0; transform:translateX(32px); } }
+
+    /* ── CUSTOM CONFIRM ── */
+    #confirm-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 9998;
+      display: flex; align-items: center; justify-content: center;
+      padding: 1rem;
+      animation: fadeIn .18s ease both;
+    }
+    #confirm-overlay.hidden { display: none; }
+    @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+    .confirm-box {
+      background: #fff; border-radius: 16px;
+      padding: 1.75rem 1.75rem 1.25rem;
+      max-width: 380px; width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,.2);
+      animation: popIn .22s cubic-bezier(.4,0,.2,1) both;
+    }
+    @keyframes popIn { from { opacity:0; transform:scale(.92); } to { opacity:1; transform:scale(1); } }
+    .confirm-icon { font-size: 2.2rem; margin-bottom: .65rem; }
+    .confirm-title { font-size: 1.05rem; font-weight: 700; color: #1e293b; margin-bottom: .35rem; }
+    .confirm-desc  { font-size: .84rem; color: #64748b; margin-bottom: 1.35rem; line-height: 1.5; }
+    .confirm-btns  { display: flex; gap: .65rem; justify-content: flex-end; }
+    .confirm-btn {
+      padding: .55rem 1.2rem; border-radius: 8px;
+      font-size: .85rem; font-weight: 600; cursor: pointer;
+      border: none; font-family: inherit; transition: filter .15s;
+    }
+    .confirm-btn:hover { filter: brightness(.93); }
+    .confirm-cancel { background: #f1f5f9; color: #475569; }
+    .confirm-ok     { background: #ef4444; color: #fff; }
+    .confirm-ok.green { background: #22c55e; }
   </style>
 </head>
 <body>
@@ -114,6 +178,22 @@
 
       <div id="semDados" class="hidden" style="text-align: center; padding: 2rem; color: var(--gray-600);">
         Nenhum lançamento encontrado
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+
+  <!-- Custom Confirm -->
+  <div id="confirm-overlay" class="hidden">
+    <div class="confirm-box">
+      <div class="confirm-icon">⚠️</div>
+      <div class="confirm-title" id="confirm-title"></div>
+      <div class="confirm-desc"  id="confirm-desc"></div>
+      <div class="confirm-btns">
+        <button class="confirm-btn confirm-cancel" id="confirm-cancel">Cancelar</button>
+        <button class="confirm-btn confirm-ok"     id="confirm-ok">Confirmar</button>
       </div>
     </div>
   </div>
@@ -333,7 +413,7 @@
       const dataQuitacao = document.getElementById('dataQuitacao').value;
 
       if (!formaPagamentoId) {
-        alert('Selecione uma forma de pagamento');
+        showToast('Selecione uma forma de pagamento', 'warning');
         return;
       }
 
@@ -344,16 +424,17 @@
           forma_pagamento_id: parseInt(formaPagamentoId)
         });
 
-        alert('✅ Lançamento quitado com sucesso!');
+        showToast('Lançamento quitado com sucesso!', 'success');
         fecharModal();
         await carregarLancamentos();
       } catch (error) {
-        alert('Erro ao quitar: ' + error.message);
+        showToast('Erro ao quitar: ' + error.message, 'error');
       }
     }
 
     async function reabrirLancamento(id) {
-      if (!confirm('Reabrir este lançamento?')) return;
+      const ok = await showConfirm('Reabrir lançamento?', 'O lançamento voltará para pendente.', 'Sim, reabrir', 'green');
+      if (!ok) return;
 
       try {
         await updateData('lancamentos', id, {
@@ -362,21 +443,23 @@
           forma_pagamento_id: null
         });
 
+        showToast('Lançamento reaberto!', 'success');
         await carregarLancamentos();
       } catch (error) {
-        alert('Erro ao reabrir: ' + error.message);
+        showToast('Erro ao reabrir: ' + error.message, 'error');
       }
     }
 
     async function deletarLancamento(id) {
-      if (!confirm('Deletar este lançamento?')) return;
+      const ok = await showConfirm('Deletar lançamento?', 'Esta ação não pode ser desfeita.', 'Sim, deletar');
+      if (!ok) return;
 
       try {
         await deleteData('lancamentos', id);
-        alert('✅ Lançamento deletado!');
+        showToast('Lançamento deletado!', 'success');
         await carregarLancamentos();
       } catch (error) {
-        alert('Erro ao deletar: ' + error.message);
+        showToast('Erro ao deletar: ' + error.message, 'error');
       }
     }
 
@@ -399,6 +482,44 @@
       link.href = URL.createObjectURL(blob);
       link.download = `lancamentos_${new Date().toISOString().split('T')[0]}.csv`;
       link.click();
+    }
+
+    /* ─── TOAST ──────────────────────────────────────── */
+    function showToast(msg, type = 'success', duration = 4000) {
+      const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+      const container = document.getElementById('toast-container');
+      const t = document.createElement('div');
+      t.className = `toast ${type}`;
+      t.innerHTML = `
+        <span class="toast-icon">${icons[type] || icons.info}</span>
+        <span class="toast-msg">${msg}</span>
+        <button class="toast-close" onclick="this.parentElement.remove()">✕</button>
+      `;
+      container.appendChild(t);
+      setTimeout(() => {
+        t.classList.add('hiding');
+        setTimeout(() => t.remove(), 260);
+      }, duration);
+    }
+
+    /* ─── CUSTOM CONFIRM ────────────────────────────── */
+    function showConfirm(title, desc, okLabel = 'Confirmar', okClass = '') {
+      return new Promise(resolve => {
+        document.getElementById('confirm-title').textContent = title;
+        document.getElementById('confirm-desc').textContent  = desc;
+        const okBtn = document.getElementById('confirm-ok');
+        okBtn.textContent = okLabel;
+        okBtn.className = 'confirm-btn confirm-ok ' + okClass;
+        const overlay = document.getElementById('confirm-overlay');
+        overlay.classList.remove('hidden');
+        const cleanup = (val) => {
+          overlay.classList.add('hidden');
+          resolve(val);
+        };
+        okBtn.onclick = () => cleanup(true);
+        document.getElementById('confirm-cancel').onclick = () => cleanup(false);
+        overlay.onclick = (e) => { if (e.target === overlay) cleanup(false); };
+      });
     }
   </script>
 </body>
