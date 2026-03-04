@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lista de Lançamentos - Sistema Financeiro</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+    }
+
+    /* ── TOAST ── */
+    #toast-container {
+      position: fixed; bottom: 1.5rem; right: 1.5rem;
+      z-index: 9999; display: flex; flex-direction: column; gap: .5rem;
+    }
+    .toast {
+      min-width: 280px; max-width: 360px;
+      background: #1e293b; color: #f1f5f9;
+      padding: .85rem 1.1rem;
+      border-radius: 12px;
+      font-size: .88rem; font-weight: 500;
+      box-shadow: 0 8px 32px rgba(0,0,0,.22);
+      display: flex; align-items: center; gap: .65rem;
+      animation: toastIn .28s cubic-bezier(.4,0,.2,1) both;
+      border-left: 4px solid #64748b;
+    }
+    .toast.success { border-left-color: #22c55e; }
+    .toast.error   { border-left-color: #ef4444; }
+    .toast.warning { border-left-color: #f59e0b; }
+    .toast-icon { font-size: 1.15rem; flex-shrink: 0; }
+    .toast-msg  { flex: 1; line-height: 1.4; }
+    .toast-close {
+      background: none; border: none; color: #94a3b8;
+      cursor: pointer; font-size: 1rem; padding: 0; line-height: 1;
+      flex-shrink: 0;
+    }
+    .toast-close:hover { color: #f1f5f9; }
+    .toast.hiding { animation: toastOut .25s ease forwards; }
+    @keyframes toastIn  { from { opacity:0; transform:translateX(32px); } to { opacity:1; transform:translateX(0); } }
+    @keyframes toastOut { from { opacity:1; transform:translateX(0); }    to { opacity:0; transform:translateX(32px); } }
+
+    /* ── CUSTOM CONFIRM ── */
+    #confirm-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 9998;
+      display: flex; align-items: center; justify-content: center;
+      padding: 1rem;
+      animation: fadeIn .18s ease both;
+    }
+    #confirm-overlay.hidden { display: none; }
+    @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+    .confirm-box {
+      background: #fff; border-radius: 16px;
+      padding: 1.75rem 1.75rem 1.25rem;
+      max-width: 380px; width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,.2);
+      animation: popIn .22s cubic-bezier(.4,0,.2,1) both;
+    }
+    @keyframes popIn { from { opacity:0; transform:scale(.92); } to { opacity:1; transform:scale(1); } }
+    .confirm-icon { font-size: 2.2rem; margin-bottom: .65rem; }
+    .confirm-title { font-size: 1.05rem; font-weight: 700; color: #1e293b; margin-bottom: .35rem; }
+    .confirm-desc  { font-size: .84rem; color: #64748b; margin-bottom: 1.35rem; line-height: 1.5; }
+    .confirm-btns  { display: flex; gap: .65rem; justify-content: flex-end; }
+    .confirm-btn {
+      padding: .55rem 1.2rem; border-radius: 8px;
+      font-size: .85rem; font-weight: 600; cursor: pointer;
+      border: none; font-family: inherit; transition: filter .15s;
+    }
+    .confirm-btn:hover { filter: brightness(.93); }
+    .confirm-cancel { background: #f1f5f9; color: #475569; }
+    .confirm-ok     { background: #ef4444; color: #fff; }
+    .confirm-ok.green { background: #22c55e; }
+  </style>
+</head>
+<body>
+  <nav class="navbar no-print">
+    <div class="navbar-content">
+      <a href="dashboard.html" class="navbar-brand">💰 Sistema Financeiro</a>
+      <div class="navbar-menu">
+        <a href="index.html" class="navbar-link">🏠 Portal</a>
+        <a href="dashboard.html" class="navbar-link">Dashboard</a>
+        <a href="lancamentos.html" class="navbar-link">Novo Lançamento</a>
+        <a href="lista-lancamentos.html" class="navbar-link">Lançamentos</a>
+        <a href="relatorios.html" class="navbar-link">Relatórios</a>
+        <button onclick="handleLogout()" class="btn btn-secondary">Sair</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="flex-between mb-4">
+      <h1 style="font-size: 2rem; font-weight: 700;">📋 Lançamentos</h1>
+      <div class="flex gap-2 no-print">
+        <button onclick="window.location.href='dashboard.html'" class="btn btn-secondary">← Voltar</button>
+        <button onclick="window.location.href='lancamentos.html'" class="btn btn-primary">➕ Novo</button>
+      </div>
+    </div>
+
+    <!-- Totais -->
+    <div class="grid grid-cols-3 mb-4">
+      <div class="stat-card" style="border-left: 4px solid var(--danger);">
+        <div class="stat-title">💸 Despesas Abertas</div>
+        <div class="stat-value negative" id="totalDespesas">R$ 0,00</div>
+      </div>
+      <div class="stat-card" style="border-left: 4px solid var(--success);">
+        <div class="stat-title">💰 Total Receitas</div>
+        <div class="stat-value positive" id="totalReceitas">R$ 0,00</div>
+      </div>
+      <div class="stat-card" style="border-left: 4px solid var(--primary);">
+        <div class="stat-title">📈 Saldo</div>
+        <div class="stat-value" id="saldo">R$ 0,00</div>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card no-print">
+      <h3 style="font-weight: 600; margin-bottom: 1rem;">🔍 Filtros</h3>
+      <div class="grid grid-cols-4">
+        <div class="form-group">
+          <label>Tipo</label>
+          <select id="filtroTipo">
+            <option value="TODOS">Todos</option>
+            <option value="DESPESA">Despesas</option>
+            <option value="RECEITA">Receitas</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Status Despesas</label>
+          <select id="filtroStatus">
+            <option value="TODAS">Todas</option>
+            <option value="ABERTAS">Abertas</option>
+            <option value="QUITADAS">Quitadas</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Data Início</label>
+          <input type="date" id="filtroDataInicio">
+        </div>
+        <div class="form-group">
+          <label>Data Fim</label>
+          <input type="date" id="filtroDataFim">
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="aplicarFiltros()" class="btn btn-primary">Filtrar</button>
+        <button onclick="limparFiltros()" class="btn btn-secondary">Limpar</button>
+        <button onclick="exportarCSV()" class="btn" style="background: var(--success); color: white;">📊 Exportar CSV</button>
+        <button onclick="window.print()" class="btn" style="background: var(--info); color: white;">🖨️ Imprimir</button>
+      </div>
+    </div>
+
+    <!-- Tabela -->
+    <div class="card" style="overflow-x: auto;">
+      <div id="loading" style="text-align: center; padding: 2rem;">
+        <div class="loading" style="width: 40px; height: 40px; border-width: 4px; border-color: var(--primary); border-top-color: transparent;"></div>
+        <p style="margin-top: 1rem; color: var(--gray-600);">Carregando...</p>
+      </div>
+
+      <table id="tabelaLancamentos" class="hidden">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Descrição</th>
+            <th>Grupo</th>
+            <th>Subgrupo</th>
+            <th>Classe</th>
+            <th>Valor</th>
+            <th class="no-print">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+        </tbody>
+      </table>
+
+      <div id="semDados" class="hidden" style="text-align: center; padding: 2rem; color: var(--gray-600);">
+        Nenhum lançamento encontrado
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+
+  <!-- Custom Confirm -->
+  <div id="confirm-overlay" class="hidden">
+    <div class="confirm-box">
+      <div class="confirm-icon">⚠️</div>
+      <div class="confirm-title" id="confirm-title"></div>
+      <div class="confirm-desc"  id="confirm-desc"></div>
+      <div class="confirm-btns">
+        <button class="confirm-btn confirm-cancel" id="confirm-cancel">Cancelar</button>
+        <button class="confirm-btn confirm-ok"     id="confirm-ok">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Quitação -->
+  <div id="modalQuitacao" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 999;">
+    <div class="card" style="max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;">
+      <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">💰 Quitar Lançamento</h3>
+      
+      <div style="background: var(--gray-50); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+        <p style="font-size: 0.875rem; color: var(--gray-600);">Descrição:</p>
+        <p id="modalDescricao" style="font-weight: 600;"></p>
+        <p style="font-size: 0.875rem; color: var(--gray-600); margin-top: 0.5rem;">Valor:</p>
+        <p id="modalValor" style="font-weight: 700; color: var(--danger);"></p>
+      </div>
+
+      <div class="form-group">
+        <label>Data da Quitação *</label>
+        <input type="date" id="dataQuitacao">
+      </div>
+
+      <div class="form-group">
+        <label>Forma de Pagamento *</label>
+        <select id="formaPagamento">
+          <option value="">Selecione...</option>
+        </select>
+      </div>
+
+      <div class="flex gap-2">
+        <button onclick="fecharModal()" class="btn btn-secondary" style="flex: 1;">Cancelar</button>
+        <button onclick="confirmarQuitacao()" class="btn btn-success" style="flex: 1;">✅ Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="config/supabase-config.js"></script>
+  <script>
+    let todosLancamentos = [];
+    let lancamentoParaQuitar = null;
+    let formasPagamento = [];
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      await protectPage();
+      await carregarFormasPagamento();
+      await carregarLancamentos();
+      
+      document.getElementById('dataQuitacao').value = new Date().toISOString().split('T')[0];
+    });
+
+    async function handleLogout() {
+      await logout();
+      window.location.href = 'login.html';
+    }
+
+    async function carregarFormasPagamento() {
+      try {
+        const data = await fetchData('formas_pagamento', {
+          eq: { ativo: true },
+          order: { column: 'nome', ascending: true }
+        });
+        formasPagamento = data || [];
+        
+        const select = document.getElementById('formaPagamento');
+        select.innerHTML = '<option value="">Selecione...</option>';
+        formasPagamento.forEach(fp => {
+          const option = document.createElement('option');
+          option.value = fp.id;
+          option.textContent = fp.nome;
+          select.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Erro ao carregar formas de pagamento:', error);
+      }
+    }
+
+    async function carregarLancamentos() {
+      try {
+        const supabase = createSupabaseClient();
+        
+        const { data: lancamentos } = await supabase
+          .from('lancamentos')
+          .select(`
+            *,
+            classe:classes(id, codigo, descricao,
+              subgrupo:subgrupos(id, nome,
+                grupo:grupos(id, nome, tipo)
+              )
+            )
+          `)
+          .order('data', { ascending: false });
+
+        todosLancamentos = lancamentos || [];
+        aplicarFiltros();
+        
+      } catch (error) {
+        console.error('Erro ao carregar lançamentos:', error);
+        document.getElementById('loading').innerHTML = '<p style="color: var(--danger);">Erro ao carregar dados</p>';
+      }
+    }
+
+    function aplicarFiltros() {
+      const tipo = document.getElementById('filtroTipo').value;
+      const status = document.getElementById('filtroStatus').value;
+      const dataInicio = document.getElementById('filtroDataInicio').value;
+      const dataFim = document.getElementById('filtroDataFim').value;
+
+      let filtrados = [...todosLancamentos];
+
+      if (tipo !== 'TODOS') {
+        filtrados = filtrados.filter(l => l.tipo === tipo);
+      }
+
+      if (status === 'QUITADAS') {
+        filtrados = filtrados.filter(l => l.tipo === 'DESPESA' && l.quitado === true);
+      } else if (status === 'ABERTAS') {
+        filtrados = filtrados.filter(l => l.tipo === 'DESPESA' && l.quitado === false);
+      }
+
+      if (dataInicio) {
+        filtrados = filtrados.filter(l => l.data >= dataInicio);
+      }
+
+      if (dataFim) {
+        filtrados = filtrados.filter(l => l.data <= dataFim);
+      }
+
+      renderizarTabela(filtrados);
+      atualizarTotais();
+    }
+
+    function renderizarTabela(lancamentos) {
+      const tbody = document.getElementById('tbody');
+      const tabela = document.getElementById('tabelaLancamentos');
+      const loading = document.getElementById('loading');
+      const semDados = document.getElementById('semDados');
+
+      loading.classList.add('hidden');
+
+      if (lancamentos.length === 0) {
+        tabela.classList.add('hidden');
+        semDados.classList.remove('hidden');
+        return;
+      }
+
+      semDados.classList.add('hidden');
+      tabela.classList.remove('hidden');
+
+      tbody.innerHTML = '';
+      
+      lancamentos.forEach(lanc => {
+        const tr = document.createElement('tr');
+        tr.style.opacity = lanc.quitado ? '0.6' : '1';
+        
+        const data = new Date(lanc.data).toLocaleDateString('pt-BR');
+        const valor = parseFloat(lanc.valor || 0);
+        const valorFormatado = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+        
+        tr.innerHTML = `
+          <td>${data}</td>
+          <td>${lanc.descricao_complementar || '-'}</td>
+          <td>${lanc.classe?.subgrupo?.grupo?.nome || '-'}</td>
+          <td>${lanc.classe?.subgrupo?.nome || '-'}</td>
+          <td>${lanc.classe?.descricao || '-'}${lanc.quitado ? ' (quitado)' : ''}</td>
+          <td style="font-weight: 600; color: ${lanc.tipo === 'DESPESA' ? 'var(--danger)' : 'var(--success)'}">
+            ${valorFormatado}
+          </td>
+          <td class="no-print">
+            ${lanc.tipo === 'DESPESA' && !lanc.quitado ? 
+              `<button onclick="abrirModalQuitacao(${lanc.id})" class="btn btn-success" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">✅ Quitar</button>` : 
+              ''}
+            ${lanc.quitado ? 
+              `<button onclick="reabrirLancamento(${lanc.id})" class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background: var(--warning); color: white;">↩️ Reabrir</button>` : 
+              ''}
+            <button onclick="deletarLancamento(${lanc.id})" class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">🗑️</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function atualizarTotais() {
+      const despesas = todosLancamentos.filter(l => l.tipo === 'DESPESA' && !l.quitado).reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
+      const receitas = todosLancamentos.filter(l => l.tipo === 'RECEITA').reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
+      const totalDespesasGeral = todosLancamentos.filter(l => l.tipo === 'DESPESA').reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
+      const saldo = receitas - totalDespesasGeral;
+
+      document.getElementById('totalDespesas').textContent = `R$ ${despesas.toFixed(2)}`;
+      document.getElementById('totalReceitas').textContent = `R$ ${receitas.toFixed(2)}`;
+      document.getElementById('saldo').textContent = `R$ ${saldo.toFixed(2)}`;
+      document.getElementById('saldo').style.color = saldo >= 0 ? 'var(--success)' : 'var(--danger)';
+    }
+
+    function limparFiltros() {
+      document.getElementById('filtroTipo').value = 'TODOS';
+      document.getElementById('filtroStatus').value = 'TODAS';
+      document.getElementById('filtroDataInicio').value = '';
+      document.getElementById('filtroDataFim').value = '';
+      aplicarFiltros();
+    }
+
+    function abrirModalQuitacao(id) {
+      lancamentoParaQuitar = todosLancamentos.find(l => l.id === id);
+      if (!lancamentoParaQuitar) return;
+
+      document.getElementById('modalDescricao').textContent = lancamentoParaQuitar.descricao_complementar || '-';
+      document.getElementById('modalValor').textContent = `R$ ${parseFloat(lancamentoParaQuitar.valor).toFixed(2)}`;
+      document.getElementById('modalQuitacao').classList.remove('hidden');
+    }
+
+    function fecharModal() {
+      document.getElementById('modalQuitacao').classList.add('hidden');
+      lancamentoParaQuitar = null;
+    }
+
+    async function confirmarQuitacao() {
+      const formaPagamentoId = document.getElementById('formaPagamento').value;
+      const dataQuitacao = document.getElementById('dataQuitacao').value;
+
+      if (!formaPagamentoId) {
+        showToast('Selecione uma forma de pagamento', 'warning');
+        return;
+      }
+
+      try {
+        await updateData('lancamentos', lancamentoParaQuitar.id, {
+          quitado: true,
+          data_quitacao: dataQuitacao,
+          forma_pagamento_id: parseInt(formaPagamentoId)
+        });
+
+        showToast('Lançamento quitado com sucesso!', 'success');
+        fecharModal();
+        await carregarLancamentos();
+      } catch (error) {
+        showToast('Erro ao quitar: ' + error.message, 'error');
+      }
+    }
+
+    async function reabrirLancamento(id) {
+      const ok = await showConfirm('Reabrir lançamento?', 'O lançamento voltará para pendente.', 'Sim, reabrir', 'green');
+      if (!ok) return;
+
+      try {
+        await updateData('lancamentos', id, {
+          quitado: false,
+          data_quitacao: null,
+          forma_pagamento_id: null
+        });
+
+        showToast('Lançamento reaberto!', 'success');
+        await carregarLancamentos();
+      } catch (error) {
+        showToast('Erro ao reabrir: ' + error.message, 'error');
+      }
+    }
+
+    async function deletarLancamento(id) {
+      const ok = await showConfirm('Deletar lançamento?', 'Esta ação não pode ser desfeita.', 'Sim, deletar');
+      if (!ok) return;
+
+      try {
+        await deleteData('lancamentos', id);
+        showToast('Lançamento deletado!', 'success');
+        await carregarLancamentos();
+      } catch (error) {
+        showToast('Erro ao deletar: ' + error.message, 'error');
+      }
+    }
+
+    function exportarCSV() {
+      let csv = 'Data;Descrição;Grupo;Subgrupo;Classe;Tipo;Valor\n';
+      todosLancamentos.forEach(lanc => {
+        const data = new Date(lanc.data).toLocaleDateString('pt-BR');
+        const desc = (lanc.descricao_complementar || '').replace(/"/g, '""');
+        const grupo = (lanc.classe?.subgrupo?.grupo?.nome || '-').replace(/"/g, '""');
+        const subgrupo = (lanc.classe?.subgrupo?.nome || '-').replace(/"/g, '""');
+        const classe = (lanc.classe?.descricao || '-').replace(/"/g, '""');
+        const tipo = lanc.tipo;
+        const valor = parseFloat(lanc.valor).toFixed(2).replace('.', ',');
+        csv += `"${data}";"${desc}";"${grupo}";"${subgrupo}";"${classe}";"${tipo}";"${valor}"\n`;
+      });
+
+      const BOM = '\uFEFF';
+      const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `lancamentos_${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+    }
+
+    /* ─── TOAST ──────────────────────────────────────── */
+    function showToast(msg, type = 'success', duration = 4000) {
+      const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+      const container = document.getElementById('toast-container');
+      const t = document.createElement('div');
+      t.className = `toast ${type}`;
+      t.innerHTML = `
+        <span class="toast-icon">${icons[type] || icons.info}</span>
+        <span class="toast-msg">${msg}</span>
+        <button class="toast-close" onclick="this.parentElement.remove()">✕</button>
+      `;
+      container.appendChild(t);
+      setTimeout(() => {
+        t.classList.add('hiding');
+        setTimeout(() => t.remove(), 260);
+      }, duration);
+    }
+
+    /* ─── CUSTOM CONFIRM ────────────────────────────── */
+    function showConfirm(title, desc, okLabel = 'Confirmar', okClass = '') {
+      return new Promise(resolve => {
+        document.getElementById('confirm-title').textContent = title;
+        document.getElementById('confirm-desc').textContent  = desc;
+        const okBtn = document.getElementById('confirm-ok');
+        okBtn.textContent = okLabel;
+        okBtn.className = 'confirm-btn confirm-ok ' + okClass;
+        const overlay = document.getElementById('confirm-overlay');
+        overlay.classList.remove('hidden');
+        const cleanup = (val) => {
+          overlay.classList.add('hidden');
+          resolve(val);
+        };
+        okBtn.onclick = () => cleanup(true);
+        document.getElementById('confirm-cancel').onclick = () => cleanup(false);
+        overlay.onclick = (e) => { if (e.target === overlay) cleanup(false); };
+      });
+    }
+  </script>
+</body>
+</html>
