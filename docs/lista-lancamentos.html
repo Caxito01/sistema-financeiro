@@ -1,17 +1,17 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lista de LanÃ§amentos - Sistema Financeiro</title>
+  <title>Lista de Lançamentos - Sistema Financeiro</title>
   <link rel="stylesheet" href="css/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-       @MEDIA PRINT â€” RELATÃ“RIO FINANCEIRO PROFISSIONAL
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+    /* ═══════════════════════════════════════════════════════════
+       @MEDIA PRINT — RELATÓRIO FINANCEIRO PROFISSIONAL
+    ═══════════════════════════════════════════════════════════ */
     @media print {
-      /* â”€â”€ Ocultar tudo que nÃ£o Ã© relatÃ³rio â”€â”€ */
+      /* ── Ocultar tudo que não é relatório ── */
       .no-print,
       .navbar,
       .filtros-section,
@@ -23,10 +23,10 @@
       .btn,
       button { display: none !important; }
 
-      /* â”€â”€ ConfiguraÃ§Ã£o da pÃ¡gina A4 landscape â”€â”€ */
+      /* ── Configuração da página A4 landscape ── */
       @page { size: A4 landscape; margin: 14mm 12mm 18mm 12mm; }
 
-      /* â”€â”€ Base â”€â”€ */
+      /* ── Base ── */
       *, *::before, *::after { box-sizing: border-box; }
       html, body {
         font-size: 9pt;
@@ -40,7 +40,7 @@
       .container { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
       h1 { display: none !important; }
 
-      /* â”€â”€ CabeÃ§alho de impressÃ£o â”€â”€ */
+      /* ── Cabeçalho de impressão ── */
       .print-header {
         display: block !important;
         margin-bottom: 8pt;
@@ -69,7 +69,7 @@
       }
       .print-filters-row span { font-weight: 600; }
 
-      /* â”€â”€ KPIs de impressÃ£o â”€â”€ */
+      /* ── KPIs de impressão ── */
       .print-kpis {
         display: flex !important;
         gap: 6pt;
@@ -84,7 +84,7 @@
       .kpi-label { font-size: 6.5pt; color: #555; text-transform: uppercase; letter-spacing: 0.05em; }
       .kpi-val   { font-size: 10.5pt; font-weight: bold; color: #000; margin-top: 1pt; }
 
-      /* â”€â”€ Tabela â”€â”€ */
+      /* ── Tabela ── */
       .card {
         box-shadow: none !important;
         border: none !important;
@@ -128,7 +128,7 @@
       tr.row-quitado td { color: #888 !important; }
       .val-despesa, .val-receita { color: #000 !important; font-weight: bold; }
 
-      /* â”€â”€ RodapÃ© de impressÃ£o â”€â”€ */
+      /* ── Rodapé de impressão ── */
       .print-footer {
         display: flex !important;
         justify-content: space-between;
@@ -142,12 +142,12 @@
       }
     }
 
-    /* Tela: ocultar elementos sÃ³ de impressÃ£o */
+    /* Tela: ocultar elementos só de impressão */
     .print-header,
     .print-kpis,
     .print-footer { display: none; }
 
-    /* â”€â”€ TOAST â”€â”€ */
+    /* ── TOAST ── */
     #toast-container {
       position: fixed; bottom: 1.5rem; right: 1.5rem;
       z-index: 9999; display: flex; flex-direction: column; gap: .5rem;
@@ -178,7 +178,7 @@
     @keyframes toastIn  { from { opacity:0; transform:translateX(32px); } to { opacity:1; transform:translateX(0); } }
     @keyframes toastOut { from { opacity:1; transform:translateX(0); }    to { opacity:0; transform:translateX(32px); } }
 
-    /* â”€â”€ CUSTOM CONFIRM â”€â”€ */
+    /* ── CUSTOM CONFIRM ── */
     #confirm-overlay {
       position: fixed; inset: 0;
       background: rgba(0,0,0,.45);
@@ -215,24 +215,24 @@
 <body>
   <nav class="navbar no-print">
     <div class="navbar-content">
-      <a href="dashboard.html" class="navbar-brand">ðŸ’° Sistema Financeiro</a>
+      <a href="dashboard.html" class="navbar-brand">💰 Sistema Financeiro</a>
       <div class="navbar-menu">
-        <a href="index.html" class="navbar-link">ðŸ  Portal</a>
+        <a href="index.html" class="navbar-link">🏠 Portal</a>
         <a href="dashboard.html" class="navbar-link">Dashboard</a>
-        <a href="lancamentos.html" class="navbar-link">Novo LanÃ§amento</a>
-        <a href="lista-lancamentos.html" class="navbar-link">LanÃ§amentos</a>
-        <a href="relatorios.html" class="navbar-link">RelatÃ³rios</a>
+        <a href="lancamentos.html" class="navbar-link">Novo Lançamento</a>
+        <a href="lista-lancamentos.html" class="navbar-link">Lançamentos</a>
+        <a href="relatorios.html" class="navbar-link">Relatórios</a>
         <button onclick="handleLogout()" class="btn btn-secondary">Sair</button>
       </div>
     </div>
   </nav>
 
-  <!-- â•â• CABEÃ‡ALHO IMPRESSÃƒO (oculto na tela) â•â• -->
+  <!-- ══ CABEÇALHO IMPRESSÃO (oculto na tela) ══ -->
   <div class="print-header" id="printHeader">
     <div class="print-header-top">
       <div>
-        <div class="print-title">RelatÃ³rio Financeiro â€” CECM</div>
-        <div class="print-subtitle" id="printPeriodo">PerÃ­odo: Todos os perÃ­odos</div>
+        <div class="print-title">Relatório Financeiro — CECM</div>
+        <div class="print-subtitle" id="printPeriodo">Período: Todos os períodos</div>
       </div>
       <div class="print-meta">
         <div id="printGeradoEm"></div>
@@ -242,64 +242,64 @@
     <div class="print-filters-row" id="printFiltersRow"></div>
   </div>
 
-  <!-- â•â• KPIs IMPRESSÃƒO (ocultos na tela) â•â• -->
+  <!-- ══ KPIs IMPRESSÃO (ocultos na tela) ══ -->
   <div class="print-kpis" id="printKpis">
     <div class="print-kpi-item">
       <div class="kpi-label">Despesas Abertas</div>
-      <div class="kpi-val" id="pkDespesas">â€”</div>
+      <div class="kpi-val" id="pkDespesas">—</div>
     </div>
     <div class="print-kpi-item">
       <div class="kpi-label">Total Receitas</div>
-      <div class="kpi-val" id="pkReceitas">â€”</div>
+      <div class="kpi-val" id="pkReceitas">—</div>
     </div>
     <div class="print-kpi-item">
-      <div class="kpi-label">Saldo (Rec âˆ’ Desp)</div>
-      <div class="kpi-val" id="pkSaldo">â€”</div>
+      <div class="kpi-label">Saldo (Rec − Desp)</div>
+      <div class="kpi-val" id="pkSaldo">—</div>
     </div>
     <div class="print-kpi-item">
-      <div class="kpi-label">Total LanÃ§amentos</div>
-      <div class="kpi-val" id="pkTotal">â€”</div>
+      <div class="kpi-label">Total Lançamentos</div>
+      <div class="kpi-val" id="pkTotal">—</div>
     </div>
     <div class="print-kpi-item">
       <div class="kpi-label">Despesas Quitadas</div>
-      <div class="kpi-val" id="pkQuitadas">â€”</div>
+      <div class="kpi-val" id="pkQuitadas">—</div>
     </div>
   </div>
 
-  <!-- â•â• RODAPÃ‰ IMPRESSÃƒO (oculto na tela) â•â• -->
+  <!-- ══ RODAPÉ IMPRESSÃO (oculto na tela) ══ -->
   <div class="print-footer" id="printFooter">
-    <span>CECM â€” Sistema Financeiro</span>
+    <span>CECM — Sistema Financeiro</span>
     <span id="printFooterDate"></span>
   </div>
 
   <div class="container">
     <div class="flex-between mb-4">
-      <h1 style="font-size: 2rem; font-weight: 700;">ðŸ“‹ LanÃ§amentos</h1>
+      <h1 style="font-size: 2rem; font-weight: 700;">📋 Lançamentos</h1>
       <div class="flex gap-2 no-print">
-        <button onclick="window.location.href='dashboard.html'" class="btn btn-secondary">â† Voltar</button>
-        <button onclick="window.location.href='lancamentos.html'" class="btn btn-primary">âž• Novo</button>
+        <button onclick="window.location.href='dashboard.html'" class="btn btn-secondary">← Voltar</button>
+        <button onclick="window.location.href='lancamentos.html'" class="btn btn-primary">➕ Novo</button>
       </div>
     </div>
 
     <!-- Totais -->
     <div class="grid grid-cols-3 mb-4">
       <div class="stat-card" style="border-left: 4px solid var(--danger);">
-        <div class="stat-title">ðŸ’¸ Despesas Abertas</div>
+        <div class="stat-title">💸 Despesas Abertas</div>
         <div class="stat-value negative" id="totalDespesas">R$ 0,00</div>
       </div>
       <div class="stat-card" style="border-left: 4px solid var(--success);">
-        <div class="stat-title">ðŸ’° Total Receitas</div>
+        <div class="stat-title">💰 Total Receitas</div>
         <div class="stat-value positive" id="totalReceitas">R$ 0,00</div>
       </div>
       <div class="stat-card" style="border-left: 4px solid var(--primary);">
-        <div class="stat-title">ðŸ“ˆ Saldo</div>
+        <div class="stat-title">📈 Saldo</div>
         <div class="stat-value" id="saldo">R$ 0,00</div>
       </div>
     </div>
 
     <!-- Filtros -->
     <div class="card no-print">
-      <h3 style="font-weight: 600; margin-bottom: 1rem;">ðŸ” Filtros</h3>
+      <h3 style="font-weight: 600; margin-bottom: 1rem;">🔍 Filtros</h3>
       <div class="grid grid-cols-4">
         <div class="form-group">
           <label>Tipo</label>
@@ -318,7 +318,7 @@
           </select>
         </div>
         <div class="form-group">
-          <label>Data InÃ­cio</label>
+          <label>Data Início</label>
           <input type="date" id="filtroDataInicio">
         </div>
         <div class="form-group">
@@ -329,8 +329,8 @@
       <div class="flex gap-2">
         <button onclick="aplicarFiltros()" class="btn btn-primary">Filtrar</button>
         <button onclick="limparFiltros()" class="btn btn-secondary">Limpar</button>
-        <button onclick="exportarCSV()" class="btn" style="background: var(--success); color: white;">ðŸ“Š Exportar CSV</button>
-        <button onclick="imprimirRelatorio()" class="btn" style="background: #1e40af; color: white;">ðŸ–¨ï¸ Imprimir RelatÃ³rio</button>
+        <button onclick="exportarCSV()" class="btn" style="background: var(--success); color: white;">📊 Exportar CSV</button>
+        <button onclick="imprimirRelatorio()" class="btn" style="background: #1e40af; color: white;">🖨️ Imprimir Relatório</button>
       </div>
     </div>
 
@@ -345,12 +345,12 @@
         <thead>
           <tr>
             <th>Data</th>
-            <th>DescriÃ§Ã£o</th>
+            <th>Descrição</th>
             <th>Grupo</th>
             <th>Subgrupo</th>
             <th>Classe</th>
             <th>Valor</th>
-            <th class="no-print">AÃ§Ãµes</th>
+            <th class="no-print">Ações</th>
           </tr>
         </thead>
         <tbody id="tbody">
@@ -358,7 +358,7 @@
       </table>
 
       <div id="semDados" class="hidden" style="text-align: center; padding: 2rem; color: var(--gray-600);">
-        Nenhum lanÃ§amento encontrado
+        Nenhum lançamento encontrado
       </div>
     </div>
   </div>
@@ -369,7 +369,7 @@
   <!-- Custom Confirm -->
   <div id="confirm-overlay" class="hidden">
     <div class="confirm-box">
-      <div class="confirm-icon">âš ï¸</div>
+      <div class="confirm-icon">⚠️</div>
       <div class="confirm-title" id="confirm-title"></div>
       <div class="confirm-desc"  id="confirm-desc"></div>
       <div class="confirm-btns">
@@ -379,20 +379,20 @@
     </div>
   </div>
 
-  <!-- Modal QuitaÃ§Ã£o -->
+  <!-- Modal Quitação -->
   <div id="modalQuitacao" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 999;">
     <div class="card" style="max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;">
-      <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">ðŸ’° Quitar LanÃ§amento</h3>
+      <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">💰 Quitar Lançamento</h3>
       
       <div style="background: var(--gray-50); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
-        <p style="font-size: 0.875rem; color: var(--gray-600);">DescriÃ§Ã£o:</p>
+        <p style="font-size: 0.875rem; color: var(--gray-600);">Descrição:</p>
         <p id="modalDescricao" style="font-weight: 600;"></p>
         <p style="font-size: 0.875rem; color: var(--gray-600); margin-top: 0.5rem;">Valor:</p>
         <p id="modalValor" style="font-weight: 700; color: var(--danger);"></p>
       </div>
 
       <div class="form-group">
-        <label>Data da QuitaÃ§Ã£o *</label>
+        <label>Data da Quitação *</label>
         <input type="date" id="dataQuitacao">
       </div>
 
@@ -405,7 +405,7 @@
 
       <div class="flex gap-2">
         <button onclick="fecharModal()" class="btn btn-secondary" style="flex: 1;">Cancelar</button>
-        <button onclick="confirmarQuitacao()" class="btn btn-success" style="flex: 1;">âœ… Confirmar</button>
+        <button onclick="confirmarQuitacao()" class="btn btn-success" style="flex: 1;">✅ Confirmar</button>
       </div>
     </div>
   </div>
@@ -470,7 +470,7 @@
         aplicarFiltros();
         
       } catch (error) {
-        console.error('Erro ao carregar lanÃ§amentos:', error);
+        console.error('Erro ao carregar lançamentos:', error);
         document.getElementById('loading').innerHTML = '<p style="color: var(--danger);">Erro ao carregar dados</p>';
       }
     }
@@ -537,7 +537,7 @@
         const valColor  = lanc.tipo === 'DESPESA' ? 'var(--danger)' : 'var(--success)';
         const quitadoTag = lanc.quitado ? ' <em style="font-size:.75em;color:#888">(quitado)</em>' : '';
 
-        // CÃ©lulas de dados (HTML seguro â€” sem IDs embutidos)
+        // Células de dados (HTML seguro — sem IDs embutidos)
         tr.innerHTML = `
           <td>${data}</td>
           <td>${lanc.descricao_complementar || '-'}${quitadoTag}</td>
@@ -547,7 +547,7 @@
           <td class="${valClass}" style="font-weight:600;color:${valColor}">${prefixo}${fmtVal}</td>
         `;
 
-        // CÃ©lula AÃ§Ãµes com botÃµes via createElement (sem onclick string â€” evita problema com UUID)
+        // Célula Ações com botões via createElement (sem onclick string — evita problema com UUID)
         const tdAcoes = document.createElement('td');
         tdAcoes.className = 'no-print';
         tdAcoes.style.cssText = 'white-space:nowrap';
@@ -556,7 +556,7 @@
           const btnQ = document.createElement('button');
           btnQ.className = 'btn btn-success';
           btnQ.style.cssText = 'padding:.25rem .5rem;font-size:.75rem;margin-right:.25rem';
-          btnQ.innerHTML = 'âœ… Quitar';
+          btnQ.innerHTML = '✅ Quitar';
           btnQ.addEventListener('click', () => abrirModalQuitacao(lanc.id));
           tdAcoes.appendChild(btnQ);
         }
@@ -565,7 +565,7 @@
           const btnR = document.createElement('button');
           btnR.className = 'btn';
           btnR.style.cssText = 'padding:.25rem .5rem;font-size:.75rem;margin-right:.25rem;background:var(--warning);color:white';
-          btnR.innerHTML = 'â†©ï¸ Reabrir';
+          btnR.innerHTML = '↩️ Reabrir';
           btnR.addEventListener('click', () => reabrirLancamento(lanc.id));
           tdAcoes.appendChild(btnR);
         }
@@ -573,7 +573,7 @@
         const btnD = document.createElement('button');
         btnD.className = 'btn btn-danger';
         btnD.style.cssText = 'padding:.25rem .5rem;font-size:.75rem';
-        btnD.innerHTML = 'ðŸ—‘ï¸';
+        btnD.innerHTML = '🗑️';
         btnD.addEventListener('click', () => deletarLancamento(lanc.id));
         tdAcoes.appendChild(btnD);
 
@@ -632,7 +632,7 @@
           forma_pagamento_id: parseInt(formaPagamentoId)
         });
 
-        showToast('LanÃ§amento quitado com sucesso!', 'success');
+        showToast('Lançamento quitado com sucesso!', 'success');
         fecharModal();
         await carregarLancamentos();
       } catch (error) {
@@ -641,7 +641,7 @@
     }
 
     async function reabrirLancamento(id) {
-      const ok = await showConfirm('Reabrir lanÃ§amento?', 'O lanÃ§amento voltarÃ¡ para pendente.', 'Sim, reabrir', 'green');
+      const ok = await showConfirm('Reabrir lançamento?', 'O lançamento voltará para pendente.', 'Sim, reabrir', 'green');
       if (!ok) return;
 
       try {
@@ -651,7 +651,7 @@
           forma_pagamento_id: null
         });
 
-        showToast('LanÃ§amento reaberto!', 'success');
+        showToast('Lançamento reaberto!', 'success');
         await carregarLancamentos();
       } catch (error) {
         showToast('Erro ao reabrir: ' + error.message, 'error');
@@ -659,36 +659,36 @@
     }
 
     async function deletarLancamento(id) {
-      const ok = await showConfirm('Deletar lanÃ§amento?', 'Esta aÃ§Ã£o nÃ£o pode ser desfeita.', 'Sim, deletar');
+      const ok = await showConfirm('Deletar lançamento?', 'Esta ação não pode ser desfeita.', 'Sim, deletar');
       if (!ok) return;
 
       try {
         await deleteData('lancamentos', id);
-        showToast('LanÃ§amento deletado!', 'success');
+        showToast('Lançamento deletado!', 'success');
         await carregarLancamentos();
       } catch (error) {
         showToast('Erro ao deletar: ' + error.message, 'error');
       }
     }
 
-    /* â”€â”€â”€ IMPRIMIR RELATÃ“RIO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ─── IMPRIMIR RELATÓRIO ────────────────────────────────── */
     function imprimirRelatorio() {
       const tipo   = document.getElementById('filtroTipo').value;
       const status = document.getElementById('filtroStatus').value;
       const di     = document.getElementById('filtroDataInicio').value;
       const df     = document.getElementById('filtroDataFim').value;
 
-      // PerÃ­odo
+      // Período
       const fmtData = d => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR');
-      const periodo = di && df ? `De: ${fmtData(di)}  atÃ©  ${fmtData(df)}`
+      const periodo = di && df ? `De: ${fmtData(di)}  até  ${fmtData(df)}`
                    : di ? `A partir de: ${fmtData(di)}`
-                   : df ? `AtÃ©: ${fmtData(df)}`
-                   : 'Todos os perÃ­odos';
-      document.getElementById('printPeriodo').textContent = 'PerÃ­odo: ' + periodo;
+                   : df ? `Até: ${fmtData(df)}`
+                   : 'Todos os períodos';
+      document.getElementById('printPeriodo').textContent = 'Período: ' + periodo;
 
-      // Data/hora de geraÃ§Ã£o
+      // Data/hora de geração
       const agora  = new Date();
-      const gerado = agora.toLocaleDateString('pt-BR') + ' Ã s ' +
+      const gerado = agora.toLocaleDateString('pt-BR') + ' às ' +
                      agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       document.getElementById('printGeradoEm').textContent = 'Gerado em: ' + gerado;
 
@@ -698,7 +698,7 @@
       const partes = [
         `Tipo: ${tipoLabel}`,
         `Status: ${statusLabel}`,
-        periodo !== 'Todos os perÃ­odos' ? `PerÃ­odo: ${periodo}` : null
+        periodo !== 'Todos os períodos' ? `Período: ${periodo}` : null
       ].filter(Boolean);
       document.getElementById('printFiltersRow').innerHTML =
         partes.map(p => `<span>${p}</span>`).join(' &nbsp;|&nbsp; ');
@@ -721,17 +721,17 @@
       document.getElementById('pkDespesas').textContent = fmtVal(despAbertas);
       document.getElementById('pkReceitas').textContent = fmtVal(receitas);
       document.getElementById('pkSaldo').textContent    = fmtVal(saldoVal);
-      document.getElementById('pkTotal').textContent    = listaAtual.length + ' lanÃ§amentos';
+      document.getElementById('pkTotal').textContent    = listaAtual.length + ' lançamentos';
       document.getElementById('pkQuitadas').textContent = fmtVal(quitadas);
 
-      // RodapÃ©
+      // Rodapé
       document.getElementById('printFooterDate').textContent = gerado;
 
       window.print();
     }
 
     function exportarCSV() {
-      let csv = 'Data;DescriÃ§Ã£o;Grupo;Subgrupo;Classe;Tipo;Valor\n';
+      let csv = 'Data;Descrição;Grupo;Subgrupo;Classe;Tipo;Valor\n';
       todosLancamentos.forEach(lanc => {
         const data = new Date(lanc.data).toLocaleDateString('pt-BR');
         const desc = (lanc.descricao_complementar || '').replace(/"/g, '""');
@@ -751,16 +751,16 @@
       link.click();
     }
 
-    /* â”€â”€â”€ TOAST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ─── TOAST ──────────────────────────────────────── */
     function showToast(msg, type = 'success', duration = 4000) {
-      const icons = { success: 'âœ…', error: 'âŒ', warning: 'âš ï¸', info: 'â„¹ï¸' };
+      const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
       const container = document.getElementById('toast-container');
       const t = document.createElement('div');
       t.className = `toast ${type}`;
       t.innerHTML = `
         <span class="toast-icon">${icons[type] || icons.info}</span>
         <span class="toast-msg">${msg}</span>
-        <button class="toast-close" onclick="this.parentElement.remove()">âœ•</button>
+        <button class="toast-close" onclick="this.parentElement.remove()">✕</button>
       `;
       container.appendChild(t);
       setTimeout(() => {
@@ -769,7 +769,7 @@
       }, duration);
     }
 
-    /* â”€â”€â”€ CUSTOM CONFIRM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ─── CUSTOM CONFIRM ────────────────────────────── */
     function showConfirm(title, desc, okLabel = 'Confirmar', okClass = '') {
       return new Promise(resolve => {
         document.getElementById('confirm-title').textContent = title;
