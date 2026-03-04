@@ -85,6 +85,28 @@
     }
     .theme-btn:hover { background: var(--border); }
 
+    /* ─── MAIN NAV ───────────────────────────────────────────────── */
+    .main-nav {
+      position: sticky; top: 60px; z-index: 99;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 1.5rem;
+      display: flex; align-items: center; gap: .1rem;
+      height: 42px;
+      overflow-x: auto;
+    }
+    .main-nav::-webkit-scrollbar { height: 0; }
+    .mnav-link {
+      display: inline-flex; align-items: center; gap: .3rem;
+      padding: .28rem .65rem; border-radius: var(--radius-sm);
+      font-size: .78rem; font-weight: 600; color: var(--text2);
+      text-decoration: none; white-space: nowrap;
+      transition: all var(--transition); flex-shrink: 0;
+    }
+    .mnav-link:hover { background: var(--surface2); color: var(--text); }
+    .mnav-link.active { background: #f0fdf4; color: #16a34a; }
+    [data-theme="dark"] .mnav-link.active { background: rgba(34,197,94,.15); color: #4ade80; }
+
     /* ─── LAYOUT ─────────────────────────────────────────────────── */
     .page { max-width: 1400px; margin: 0 auto; padding: 1.5rem; }
 
@@ -351,12 +373,21 @@
 
   <!-- HEADER -->
   <header class="header">
-    <a href="#" class="header-brand">💰 <span>Sistema</span> Financeiro</a>
+    <a href="portal.html" class="header-brand">💰 <span>Sistema</span> Financeiro</a>
     <div class="header-right">
       <span id="filterCount" style="font-size:.75rem;color:var(--text3);font-weight:500;"></span>
       <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">🌙 Escuro</button>
     </div>
   </header>
+
+  <nav class="main-nav">
+    <a href="portal.html" class="mnav-link">🏠 Portal</a>
+    <a href="#" class="mnav-link active">📊 Dashboard</a>
+    <a href="lancamentos.html" class="mnav-link">➕ Novo Lançamento</a>
+    <a href="lista-lancamentos.html" class="mnav-link">📋 Lista</a>
+    <a href="relatorios.html" class="mnav-link">📈 Relatórios</a>
+    <a href="login.html" class="mnav-link">🔐 Login</a>
+  </nav>
 
   <!-- PAGE -->
   <main class="page">
