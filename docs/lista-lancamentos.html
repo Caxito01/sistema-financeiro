@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -7,9 +7,145 @@
   <link rel="stylesheet" href="css/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
+    /* ═══════════════════════════════════════════════════════════
+       @MEDIA PRINT — RELATÓRIO FINANCEIRO PROFISSIONAL
+    ═══════════════════════════════════════════════════════════ */
     @media print {
-      .no-print { display: none !important; }
+      /* ── Ocultar tudo que não é relatório ── */
+      .no-print,
+      .navbar,
+      .filtros-section,
+      #toast-container,
+      #confirm-overlay,
+      #modalQuitacao,
+      .grid.grid-cols-3,
+      .stat-card,
+      .btn,
+      button { display: none !important; }
+
+      /* ── Configuração da página A4 landscape ── */
+      @page { size: A4 landscape; margin: 14mm 12mm 18mm 12mm; }
+
+      /* ── Base ── */
+      *, *::before, *::after { box-sizing: border-box; }
+      html, body {
+        font-size: 9pt;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #000 !important;
+        background: #fff !important;
+        margin: 0; padding: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .container { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+      h1 { display: none !important; }
+
+      /* ── Cabeçalho de impressão ── */
+      .print-header {
+        display: block !important;
+        margin-bottom: 8pt;
+        padding-bottom: 6pt;
+        border-bottom: 2px solid #222;
+      }
+      .print-header-top {
+        display: flex !important;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 4pt;
+      }
+      .print-title    { font-size: 14pt; font-weight: bold; color: #000; margin: 0; }
+      .print-subtitle { font-size: 8pt; color: #444; margin-top: 2pt; }
+      .print-meta     { text-align: right; font-size: 7.5pt; color: #444; line-height: 1.7; }
+      .print-filters-row {
+        display: flex !important;
+        flex-wrap: wrap;
+        gap: 6pt;
+        font-size: 7.5pt;
+        color: #333;
+        background: #f4f4f4;
+        padding: 4pt 8pt;
+        border-radius: 3pt;
+        margin-top: 4pt;
+      }
+      .print-filters-row span { font-weight: 600; }
+
+      /* ── KPIs de impressão ── */
+      .print-kpis {
+        display: flex !important;
+        gap: 6pt;
+        margin-bottom: 8pt;
+      }
+      .print-kpi-item {
+        flex: 1;
+        border: 0.75pt solid #ccc;
+        border-radius: 3pt;
+        padding: 5pt 8pt;
+      }
+      .kpi-label { font-size: 6.5pt; color: #555; text-transform: uppercase; letter-spacing: 0.05em; }
+      .kpi-val   { font-size: 10.5pt; font-weight: bold; color: #000; margin-top: 1pt; }
+
+      /* ── Tabela ── */
+      .card {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      #loading, #semDados { display: none !important; }
+      #tabelaLancamentos  { display: table !important; }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 8.5pt;
+        page-break-inside: auto;
+      }
+      thead { display: table-header-group; }
+      tbody tr { page-break-inside: avoid; }
+
+      th {
+        background: #2c2c2c !important;
+        color: #fff !important;
+        font-size: 7pt;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 5pt 6pt;
+        text-align: left;
+        border: none;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      th.no-print, td.no-print { display: none !important; }
+
+      td {
+        padding: 4pt 6pt;
+        border-bottom: 0.5pt solid #e0e0e0;
+        vertical-align: middle;
+        color: #000 !important;
+      }
+      tbody tr:nth-child(even) td { background: #f9f9f9; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      tr.row-quitado td { color: #888 !important; }
+      .val-despesa, .val-receita { color: #000 !important; font-weight: bold; }
+
+      /* ── Rodapé de impressão ── */
+      .print-footer {
+        display: flex !important;
+        justify-content: space-between;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        font-size: 7pt;
+        color: #666;
+        border-top: 0.75pt solid #bbb;
+        padding-top: 3pt;
+        background: #fff;
+      }
     }
+
+    /* Tela: ocultar elementos só de impressão */
+    .print-header,
+    .print-kpis,
+    .print-footer { display: none; }
 
     /* ── TOAST ── */
     #toast-container {
@@ -91,6 +227,51 @@
     </div>
   </nav>
 
+  <!-- ══ CABEÇALHO IMPRESSÃO (oculto na tela) ══ -->
+  <div class="print-header" id="printHeader">
+    <div class="print-header-top">
+      <div>
+        <div class="print-title">Relatório Financeiro — CECM</div>
+        <div class="print-subtitle" id="printPeriodo">Período: Todos os períodos</div>
+      </div>
+      <div class="print-meta">
+        <div id="printGeradoEm"></div>
+        <div id="printFiltrosAtivos"></div>
+      </div>
+    </div>
+    <div class="print-filters-row" id="printFiltersRow"></div>
+  </div>
+
+  <!-- ══ KPIs IMPRESSÃO (ocultos na tela) ══ -->
+  <div class="print-kpis" id="printKpis">
+    <div class="print-kpi-item">
+      <div class="kpi-label">Despesas Abertas</div>
+      <div class="kpi-val" id="pkDespesas">—</div>
+    </div>
+    <div class="print-kpi-item">
+      <div class="kpi-label">Total Receitas</div>
+      <div class="kpi-val" id="pkReceitas">—</div>
+    </div>
+    <div class="print-kpi-item">
+      <div class="kpi-label">Saldo (Rec − Desp)</div>
+      <div class="kpi-val" id="pkSaldo">—</div>
+    </div>
+    <div class="print-kpi-item">
+      <div class="kpi-label">Total Lançamentos</div>
+      <div class="kpi-val" id="pkTotal">—</div>
+    </div>
+    <div class="print-kpi-item">
+      <div class="kpi-label">Despesas Quitadas</div>
+      <div class="kpi-val" id="pkQuitadas">—</div>
+    </div>
+  </div>
+
+  <!-- ══ RODAPÉ IMPRESSÃO (oculto na tela) ══ -->
+  <div class="print-footer" id="printFooter">
+    <span>CECM — Sistema Financeiro</span>
+    <span id="printFooterDate"></span>
+  </div>
+
   <div class="container">
     <div class="flex-between mb-4">
       <h1 style="font-size: 2rem; font-weight: 700;">📋 Lançamentos</h1>
@@ -149,7 +330,7 @@
         <button onclick="aplicarFiltros()" class="btn btn-primary">Filtrar</button>
         <button onclick="limparFiltros()" class="btn btn-secondary">Limpar</button>
         <button onclick="exportarCSV()" class="btn" style="background: var(--success); color: white;">📊 Exportar CSV</button>
-        <button onclick="window.print()" class="btn" style="background: var(--info); color: white;">🖨️ Imprimir</button>
+        <button onclick="imprimirRelatorio()" class="btn" style="background: #1e40af; color: white;">🖨️ Imprimir Relatório</button>
       </div>
     </div>
 
@@ -345,20 +526,24 @@
       
       lancamentos.forEach(lanc => {
         const tr = document.createElement('tr');
-        tr.style.opacity = lanc.quitado ? '0.6' : '1';
+        if (lanc.quitado) tr.classList.add('row-quitado');
+        tr.style.opacity = lanc.quitado ? '0.65' : '1';
         
         const data = new Date(lanc.data).toLocaleDateString('pt-BR');
         const valor = parseFloat(lanc.valor || 0);
         const valorFormatado = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+        const prefixo = lanc.tipo === 'RECEITA' ? '+' : '';
+        const valClass = lanc.tipo === 'DESPESA' ? 'val-despesa' : 'val-receita';
+        const valColor = lanc.tipo === 'DESPESA' ? 'var(--danger)' : 'var(--success)';
         
         tr.innerHTML = `
           <td>${data}</td>
-          <td>${lanc.descricao_complementar || '-'}</td>
+          <td>${lanc.descricao_complementar || '-'}${lanc.quitado ? ' <em style="font-size:.75em;color:#888">(quitado)</em>' : ''}</td>
           <td>${lanc.classe?.subgrupo?.grupo?.nome || '-'}</td>
           <td>${lanc.classe?.subgrupo?.nome || '-'}</td>
-          <td>${lanc.classe?.descricao || '-'}${lanc.quitado ? ' (quitado)' : ''}</td>
-          <td style="font-weight: 600; color: ${lanc.tipo === 'DESPESA' ? 'var(--danger)' : 'var(--success)'}">
-            ${valorFormatado}
+          <td>${lanc.classe?.descricao || '-'}</td>
+          <td class="${valClass}" style="font-weight: 600; color: ${valColor}">
+            ${prefixo}${valorFormatado}
           </td>
           <td class="no-print">
             ${lanc.tipo === 'DESPESA' && !lanc.quitado ? 
@@ -461,6 +646,65 @@
       } catch (error) {
         showToast('Erro ao deletar: ' + error.message, 'error');
       }
+    }
+
+    /* ─── IMPRIMIR RELATÓRIO ────────────────────────────────── */
+    function imprimirRelatorio() {
+      const tipo   = document.getElementById('filtroTipo').value;
+      const status = document.getElementById('filtroStatus').value;
+      const di     = document.getElementById('filtroDataInicio').value;
+      const df     = document.getElementById('filtroDataFim').value;
+
+      // Período
+      const fmtData = d => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR');
+      const periodo = di && df ? `De: ${fmtData(di)}  até  ${fmtData(df)}`
+                   : di ? `A partir de: ${fmtData(di)}`
+                   : df ? `Até: ${fmtData(df)}`
+                   : 'Todos os períodos';
+      document.getElementById('printPeriodo').textContent = 'Período: ' + periodo;
+
+      // Data/hora de geração
+      const agora  = new Date();
+      const gerado = agora.toLocaleDateString('pt-BR') + ' às ' +
+                     agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('printGeradoEm').textContent = 'Gerado em: ' + gerado;
+
+      // Filtros ativos
+      const tipoLabel   = { TODOS: 'Todos', DESPESA: 'Despesa', RECEITA: 'Receita' }[tipo] || tipo;
+      const statusLabel = { TODAS: 'Todas', ABERTAS: 'Abertas', QUITADAS: 'Quitadas' }[status] || status;
+      const partes = [
+        `Tipo: ${tipoLabel}`,
+        `Status: ${statusLabel}`,
+        periodo !== 'Todos os períodos' ? `Período: ${periodo}` : null
+      ].filter(Boolean);
+      document.getElementById('printFiltersRow').innerHTML =
+        partes.map(p => `<span>${p}</span>`).join(' &nbsp;|&nbsp; ');
+      document.getElementById('printFiltrosAtivos').textContent =
+        'Filtros: ' + partes.join(' | ');
+
+      // KPIs
+      const fmtVal = v =>
+        new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+      const listaAtual   = todosLancamentos;
+      const despAbertas  = listaAtual.filter(l => l.tipo === 'DESPESA' && !l.quitado)
+                                     .reduce((s,l) => s + parseFloat(l.valor||0), 0);
+      const receitas     = listaAtual.filter(l => l.tipo === 'RECEITA')
+                                     .reduce((s,l) => s + parseFloat(l.valor||0), 0);
+      const despTotal    = listaAtual.filter(l => l.tipo === 'DESPESA')
+                                     .reduce((s,l) => s + parseFloat(l.valor||0), 0);
+      const quitadas     = listaAtual.filter(l => l.quitado)
+                                     .reduce((s,l) => s + parseFloat(l.valor||0), 0);
+      const saldoVal     = receitas - despTotal;
+      document.getElementById('pkDespesas').textContent = fmtVal(despAbertas);
+      document.getElementById('pkReceitas').textContent = fmtVal(receitas);
+      document.getElementById('pkSaldo').textContent    = fmtVal(saldoVal);
+      document.getElementById('pkTotal').textContent    = listaAtual.length + ' lançamentos';
+      document.getElementById('pkQuitadas').textContent = fmtVal(quitadas);
+
+      // Rodapé
+      document.getElementById('printFooterDate').textContent = gerado;
+
+      window.print();
     }
 
     function exportarCSV() {
