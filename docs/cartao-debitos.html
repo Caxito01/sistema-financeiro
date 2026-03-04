@@ -579,13 +579,13 @@
                 onChange={e => setF(p => ({ ...p, alias: e.target.value }))} />
             </div>
             <div style={S.field}>
-              <label style={S.label}>Limite da fatura (R$)</label>
+              <label style={S.label}>Valor da fatura (R$)</label>
               <input style={S.input} placeholder="ex: 4000,00" value={f.limit}
                 onChange={e => setF(p => ({ ...p, limit: e.target.value }))} />
             </div>
           </div>
           <div style={S.field}>
-            <label style={S.label}>Número do cartão (parcial já identifica a bandeira)</label>
+            <label style={S.label}>4 primeiros dígitos do cartão (já identifica a bandeira)</label>
             <div style={{ position: "relative" }}>
               <input style={{ ...S.input, paddingRight: 70 }} placeholder="**** **** **** ****"
                 value={f.number} onChange={e => setF(p => ({ ...p, number: maskCard(e.target.value) }))} />
