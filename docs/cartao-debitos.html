@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Novo Lançamento - Sistema Financeiro</title>
+  <title>Cartões - Sistema Financeiro</title>
   <link rel="stylesheet" href="css/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- React 18 + Babel para o módulo de Cartão de Crédito -->
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="config/supabase-config.js"></script>
 </head>
 <body>
   <!-- Navbar -->
@@ -17,7 +17,7 @@
     <div class="navbar-content">
       <a href="dashboard.html" class="navbar-brand">💰 Sistema Financeiro</a>
       <div class="navbar-menu">
-        <a href="portal.html" class="navbar-link">🏠 Portal</a>
+        <a href="index.html" class="navbar-link">🏠 Portal</a>
         <a href="dashboard.html" class="navbar-link">Dashboard</a>
         <a href="lancamentos.html" class="navbar-link">Novo Lançamento</a>
         <a href="lista-lancamentos.html" class="navbar-link">Lançamentos</a>
@@ -28,151 +28,11 @@
     </div>
   </nav>
 
-  <div class="container">
-    <div class="card" style="max-width: 800px; margin: 0 auto;">
-      <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 1.5rem;">💰 Novo Lançamento</h1>
+  <!-- Ponto de montagem do React -->
+  <div id="cartao-root"></div>
 
-      <div id="errorMessage" class="alert alert-error hidden"></div>
-      <div id="successMessage" class="alert alert-success hidden"></div>
-
-      <form id="lancamentoForm">
-        <!-- Tipo -->
-        <div class="form-group">
-          <label>Tipo</label>
-          <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-            <button 
-              type="button" 
-              id="btnDespesa" 
-              onclick="setTipo('DESPESA')"
-              class="btn btn-danger"
-              style="flex: 1; padding: 0.75rem; min-width: 130px;"
-            >
-              📉 Despesa
-            </button>
-            <button 
-              type="button" 
-              id="btnReceita" 
-              onclick="setTipo('RECEITA')"
-              class="btn btn-secondary"
-              style="flex: 1; padding: 0.75rem; min-width: 130px;"
-            >
-              📈 Receita
-            </button>
-            <button 
-              type="button" 
-              id="btnCartao" 
-              onclick="setTipo('CARTAO')"
-              class="btn btn-secondary"
-              style="flex: 1; padding: 0.75rem; min-width: 160px; background: #1a0d2e; border: 1px solid #7c3aed; color: #c4b5fd;"
-            >
-              💳 Cartão de Crédito
-            </button>
-          </div>
-        </div>
-
-        <!-- Descrição -->
-        <div class="form-group">
-          <label for="descricao">Descrição *</label>
-          <input 
-            type="text" 
-            id="descricao" 
-            name="descricao" 
-            placeholder="Ex: Compra no supermercado"
-            required
-          >
-        </div>
-
-        <!-- Valor e Data -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-          <div class="form-group">
-            <label for="valor">Valor *</label>
-            <input 
-              type="number" 
-              id="valor" 
-              name="valor" 
-              placeholder="0.00"
-              step="0.01"
-              min="0"
-              required
-            >
-          </div>
-
-          <div class="form-group">
-            <label for="data">Data *</label>
-            <input 
-              type="date" 
-              id="data" 
-              name="data" 
-              required
-            >
-          </div>
-        </div>
-
-        <!-- Grupo -->
-        <div class="form-group">
-          <label for="grupo">Grupo *</label>
-          <select id="grupo" name="grupo" required>
-            <option value="">Selecione um grupo</option>
-          </select>
-        </div>
-
-        <!-- Subgrupo -->
-        <div class="form-group">
-          <label for="subgrupo">Subgrupo *</label>
-          <select id="subgrupo" name="subgrupo" required disabled>
-            <option value="">Selecione um subgrupo</option>
-          </select>
-        </div>
-
-        <!-- Classe -->
-        <div class="form-group">
-          <label for="classe">Classe *</label>
-          <select id="classe" name="classe" required disabled>
-            <option value="">Selecione uma classe</option>
-          </select>
-        </div>
-
-        <!-- Botões -->
-        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-          <button type="button" onclick="window.location.href='dashboard.html'" class="btn btn-secondary" style="flex: 1;">
-            ← Voltar
-          </button>
-          <button type="button" onclick="window.location.href='lista-lancamentos.html'" class="btn btn-secondary" style="flex: 1;">
-            📋 Ver Lançamentos
-          </button>
-          <button type="submit" class="btn btn-success" style="flex: 1;" id="submitBtn">
-            <span id="btnText">💾 Salvar</span>
-            <span id="btnLoading" class="loading hidden"></span>
-          </button>
-        </div>
-      </form>
-    </div>
-
-    <!-- Módulo Cartão de Crédito (montado via React) -->
-    <div id="cartaoSection" style="display: none; margin-top: 0;">
-      <div id="cartaoRoot" style="width:100%;"></div>
-    </div>
-
-  </div>
-
-  <script src="config/supabase-config.js"></script>
+  <!-- Auth guard (vanilla JS, roda antes do Babel) -->
   <script>
-    let tipoSelecionado = 'DESPESA';
-    let grupos = [];
-    let subgrupos = [];
-    let classes = [];
-
-    // Verificar autenticação
-    window.addEventListener('DOMContentLoaded', async () => {
-      await protectPage();
-      
-      // Definir data atual
-      const hoje = new Date().toISOString().split('T')[0];
-      document.getElementById('data').value = hoje;
-      
-      await carregarGrupos();
-    });
-
     async function handleLogout() {
       try {
         await logout();
@@ -182,232 +42,22 @@
       }
     }
 
-    let cartaoMounted = false;
-
-    function setTipo(tipo) {
-      tipoSelecionado = tipo;
-
-      const btnDespesa = document.getElementById('btnDespesa');
-      const btnReceita = document.getElementById('btnReceita');
-      const btnCartao  = document.getElementById('btnCartao');
-      const lancamentoForm  = document.getElementById('lancamentoForm');
-      const cartaoSection   = document.getElementById('cartaoSection');
-
-      // Resetar estilos dos três botões
-      btnDespesa.className = 'btn btn-secondary';
-      btnDespesa.style = 'flex: 1; padding: 0.75rem; min-width: 130px;';
-      btnReceita.className = 'btn btn-secondary';
-      btnReceita.style = 'flex: 1; padding: 0.75rem; min-width: 130px;';
-      btnCartao.className  = 'btn btn-secondary';
-      btnCartao.style = 'flex: 1; padding: 0.75rem; min-width: 160px; background: #1a0d2e; border: 1px solid #7c3aed; color: #c4b5fd;';
-
-      if (tipo === 'CARTAO') {
-        // Destacar botão ativo
-        btnCartao.style = 'flex: 1; padding: 0.75rem; min-width: 160px; background: #7c3aed; border: 1px solid #7c3aed; color: #fff; font-weight: 700;';
-        // Ocultar formulário padrão (exceto o bloco de tipo)
-        Array.from(lancamentoForm.children).forEach((el, i) => {
-          if (i > 0) el.style.display = 'none';
-        });
-        cartaoSection.style.display = 'block';
-        if (!cartaoMounted) {
-          cartaoMounted = true;
-          const domContainer = document.getElementById('cartaoRoot');
-          const root = ReactDOM.createRoot(domContainer);
-          root.render(React.createElement(window.CartaoFaturas));
-        }
-        return;
-      }
-
-      // Mostrar formulário padrão novamente
-      Array.from(lancamentoForm.children).forEach(el => {
-        el.style.display = '';
-      });
-      cartaoSection.style.display = 'none';
-
-      if (tipo === 'DESPESA') {
-        btnDespesa.className = 'btn btn-danger';
-        btnDespesa.style = 'flex: 1; padding: 0.75rem; min-width: 130px;';
-      } else {
-        btnReceita.className = 'btn btn-success';
-        btnReceita.style = 'flex: 1; padding: 0.75rem; min-width: 130px;';
-      }
-
-      // Limpar seleções
-      document.getElementById('grupo').value = '';
-      document.getElementById('subgrupo').value = '';
-      document.getElementById('classe').value = '';
-
-      carregarGrupos();
-    }
-
-    async function carregarGrupos() {
+    window.addEventListener('DOMContentLoaded', async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
       try {
-        const data = await fetchData('grupos', {
-          eq: { ativo: true, tipo: tipoSelecionado },
-          order: { column: 'codigo', ascending: true }
-        });
-
-        grupos = data || [];
-        const selectGrupo = document.getElementById('grupo');
-        selectGrupo.innerHTML = '<option value="">Selecione um grupo</option>';
-        
-        grupos.forEach(grupo => {
-          const option = document.createElement('option');
-          option.value = grupo.id;
-          option.textContent = `${grupo.codigo} - ${grupo.nome}`;
-          selectGrupo.appendChild(option);
-        });
+        await protectPage();
       } catch (error) {
-        console.error('Erro ao carregar grupos:', error);
-        showError('Erro ao carregar grupos');
-      }
-    }
-
-    async function carregarSubgrupos(grupoId) {
-      const selectSubgrupo = document.getElementById('subgrupo');
-      const selectClasse = document.getElementById('classe');
-      
-      if (!grupoId) {
-        selectSubgrupo.disabled = true;
-        selectSubgrupo.innerHTML = '<option value="">Selecione um subgrupo</option>';
-        selectClasse.disabled = true;
-        selectClasse.innerHTML = '<option value="">Selecione uma classe</option>';
-        return;
-      }
-
-      try {
-        const data = await fetchData('subgrupos', {
-          eq: { grupo_id: grupoId, ativo: true },
-          order: { column: 'codigo', ascending: true }
-        });
-
-        subgrupos = data || [];
-        selectSubgrupo.innerHTML = '<option value="">Selecione um subgrupo</option>';
-        selectSubgrupo.disabled = false;
-        
-        subgrupos.forEach(subgrupo => {
-          const option = document.createElement('option');
-          option.value = subgrupo.id;
-          option.textContent = `${subgrupo.codigo} - ${subgrupo.nome}`;
-          selectSubgrupo.appendChild(option);
-        });
-      } catch (error) {
-        console.error('Erro ao carregar subgrupos:', error);
-        showError('Erro ao carregar subgrupos');
-      }
-    }
-
-    async function carregarClasses(subgrupoId) {
-      const selectClasse = document.getElementById('classe');
-      
-      if (!subgrupoId) {
-        selectClasse.disabled = true;
-        selectClasse.innerHTML = '<option value="">Selecione uma classe</option>';
-        return;
-      }
-
-      try {
-        const data = await fetchData('classes', {
-          eq: { subgrupo_id: subgrupoId, ativo: true },
-          order: { column: 'codigo', ascending: true }
-        });
-
-        classes = data || [];
-        selectClasse.innerHTML = '<option value="">Selecione uma classe</option>';
-        selectClasse.disabled = false;
-        
-        classes.forEach(classe => {
-          const option = document.createElement('option');
-          option.value = classe.id;
-          option.textContent = `${classe.codigo} - ${classe.descricao}`;
-          selectClasse.appendChild(option);
-        });
-      } catch (error) {
-        console.error('Erro ao carregar classes:', error);
-        showError('Erro ao carregar classes');
-      }
-    }
-
-    // Event listeners
-    document.getElementById('grupo').addEventListener('change', (e) => {
-      carregarSubgrupos(e.target.value);
-    });
-
-    document.getElementById('subgrupo').addEventListener('change', (e) => {
-      carregarClasses(e.target.value);
-    });
-
-    // Submit form
-    document.getElementById('lancamentoForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      hideMessages();
-      
-      const submitBtn = document.getElementById('submitBtn');
-      const btnText = document.getElementById('btnText');
-      const btnLoading = document.getElementById('btnLoading');
-      
-      submitBtn.disabled = true;
-      btnText.classList.add('hidden');
-      btnLoading.classList.remove('hidden');
-
-      const formData = {
-        descricao_complementar: document.getElementById('descricao').value.trim(),
-        valor: parseFloat(document.getElementById('valor').value),
-        data: document.getElementById('data').value,
-        tipo: tipoSelecionado,
-        classe_id: parseInt(document.getElementById('classe').value)
-      };
-
-      try {
-        const supabase = createSupabaseClient();
-        const { data: session } = await supabase.auth.getSession();
-        
-        if (session.session) {
-          formData.user_id = session.session.user.id;
-        }
-
-        await insertData('lancamentos', formData);
-        
-        showSuccess('✅ Lançamento criado com sucesso! Redirecionando...');
-        
-        setTimeout(() => {
-          window.location.href = 'lista-lancamentos.html';
-        }, 1500);
-        
-      } catch (error) {
-        console.error('Erro ao criar lançamento:', error);
-        showError('Erro ao criar lançamento: ' + error.message);
-        
-        submitBtn.disabled = false;
-        btnText.classList.remove('hidden');
-        btnLoading.classList.add('hidden');
+        console.error('Erro na autenticação:', error);
       }
     });
-
-    function showError(message) {
-      const errorDiv = document.getElementById('errorMessage');
-      errorDiv.textContent = message;
-      errorDiv.classList.remove('hidden');
-    }
-
-    function showSuccess(message) {
-      const successDiv = document.getElementById('successMessage');
-      successDiv.textContent = message;
-      successDiv.classList.remove('hidden');
-    }
-
-    function hideMessages() {
-      document.getElementById('errorMessage').classList.add('hidden');
-      document.getElementById('successMessage').classList.add('hidden');
-    }
   </script>
 
-  <!-- ═══════════════════════════════════════════════════════
-       Módulo: Controle de Faturas de Cartão de Crédito
-       Código preservado exatamente conforme cartao-debitos.jsx
-       Adaptação: import removido, export renomeado para CartaoFaturas
-       ═══════════════════════════════════════════════════════ -->
+  <!-- ═══════════════════════════════════════════════════════════
+       MÓDULO: Controle de Faturas de Cartão de Crédito
+       Código interno preservado integralmente conforme regras de integração.
+       Única adaptação estrutural: export default App → function CartaoFaturas
+       + substituição do import pelo destructuring do global React.
+  ════════════════════════════════════════════════════════════ -->
   <script type="text/babel">
     const { useState, useMemo, useRef } = React;
 
@@ -458,6 +108,7 @@
     // ════════════════════════════════════════════════════════════════
     // OFX PARSER
     // ════════════════════════════════════════════════════════════════
+
     function getTag(block, tag) {
       const re = new RegExp(`<${tag}[^>]*>\\s*([^<\\n\\r]+)`, "i");
       const m = block.match(re);
@@ -1191,7 +842,7 @@
     }
 
     // ════════════════════════════════════════════════════════════════
-    // APP — renomeado para CartaoFaturas para não conflitar
+    // APP  (renomeado de App → CartaoFaturas para evitar conflito)
     // ════════════════════════════════════════════════════════════════
     function CartaoFaturas() {
       const [step, setStep] = useState("setup");
@@ -1217,8 +868,9 @@
         setImportedFitids(prev => new Set([...prev, ...fitids]));
       }
 
+      // ── SETUP
       if (step === "setup") return (
-        <div style={{ ...S.root, minHeight: "auto" }}>
+        <div style={S.root}>
           <div style={S.setupWrapper}>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 38 }}>💳</div>
@@ -1252,8 +904,9 @@
         </div>
       );
 
+      // ── MAIN
       return (
-        <div style={{ ...S.root, minHeight: "auto" }}>
+        <div style={S.root}>
           <div style={S.container}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 4 }}>
               <h1 style={{ color: "#e8eaf0", fontSize: 17, fontWeight: 700, margin: 0, letterSpacing: 1 }}>
@@ -1288,18 +941,18 @@
 
             {cards.map(card => (
               <CardSection key={card.id} card={card} entries={entries}
-                onRemoveGroup={gid => {
-                  const removed = entries.filter(e => e.groupId === gid && e.fromOFX);
-                  if (removed.length > 0) {
-                    const removedFitids = new Set(removed.map(e => e.ofxFitid).filter(Boolean));
-                    setImportedFitids(prev => {
-                      const next = new Set(prev);
-                      removedFitids.forEach(f => next.delete(f));
-                      return next;
-                    });
-                  }
-                  setEntries(p => p.filter(e => e.groupId !== gid));
-                }} />
+              onRemoveGroup={gid => {
+                const removed = entries.filter(e => e.groupId === gid && e.fromOFX);
+                if (removed.length > 0) {
+                  const removedFitids = new Set(removed.map(e => e.ofxFitid).filter(Boolean));
+                  setImportedFitids(prev => {
+                    const next = new Set(prev);
+                    removedFitids.forEach(f => next.delete(f));
+                    return next;
+                  });
+                }
+                setEntries(p => p.filter(e => e.groupId !== gid));
+              }} />
             ))}
           </div>
         </div>
@@ -1310,7 +963,7 @@
     // STYLES
     // ════════════════════════════════════════════════════════════════
     const S = {
-      root: { background: "#080b12", fontFamily: "'Courier New', monospace", display: "flex", justifyContent: "center", padding: "28px 16px" },
+      root: { minHeight: "100vh", background: "#080b12", fontFamily: "'Courier New', monospace", display: "flex", justifyContent: "center", padding: "28px 16px" },
       container: { width: "100%", maxWidth: 720, display: "flex", flexDirection: "column", gap: 14 },
       setupWrapper: { width: "100%", maxWidth: 520, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 },
       setupTitle: { color: "#e8eaf0", fontSize: 22, fontWeight: 700, margin: "8px 0 0", letterSpacing: 1 },
@@ -1349,8 +1002,8 @@
       emptySmall: { color: "#2a3040", fontSize: 12, padding: "8px 0" },
     };
 
-    // Expõe o componente globalmente para o toggle do vanilla JS
-    window.CartaoFaturas = CartaoFaturas;
+    // Montar o app no ponto de montagem
+    ReactDOM.createRoot(document.getElementById('cartao-root')).render(<CartaoFaturas />);
   </script>
 </body>
 </html>

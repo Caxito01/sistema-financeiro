@@ -1,0 +1,992 @@
+import { useState, useMemo, useRef } from "react";
+
+// ════════════════════════════════════════════════════════════════
+// BRAND LOGOS
+// ════════════════════════════════════════════════════════════════
+function BrandLogo({ brand, size = 36 }) {
+  if (brand === "Mastercard") return (
+    <svg width={size} height={size * 0.62} viewBox="0 0 38 24">
+      <circle cx="14" cy="12" r="11" fill="#EB001B" />
+      <circle cx="24" cy="12" r="11" fill="#F79E1B" />
+      <path d="M19 3.2a11 11 0 0 1 0 17.6A11 11 0 0 1 19 3.2z" fill="#FF5F00" />
+    </svg>
+  );
+  if (brand === "Visa") return (
+    <svg width={size * 1.4} height={size * 0.45} viewBox="0 0 68 22">
+      <text x="0" y="18" fontFamily="Arial Black, sans-serif" fontSize="20" fontWeight="900" fontStyle="italic" fill="#1A1F71">VISA</text>
+    </svg>
+  );
+  if (brand === "Amex") return (
+    <svg width={size * 1.6} height={size * 0.55} viewBox="0 0 70 22">
+      <rect width="70" height="22" rx="3" fill="#007BC1" />
+      <text x="5" y="10" fontFamily="Arial, sans-serif" fontSize="7" fontWeight="700" fill="white" letterSpacing="0.5">AMERICAN</text>
+      <text x="5" y="18" fontFamily="Arial, sans-serif" fontSize="7" fontWeight="700" fill="white" letterSpacing="0.5">EXPRESS</text>
+    </svg>
+  );
+  if (brand === "Elo") return (
+    <svg width={size} height={size * 0.5} viewBox="0 0 42 20">
+      <rect width="42" height="20" rx="3" fill="#000" />
+      <text x="6" y="15" fontFamily="Arial Black, sans-serif" fontSize="12" fontWeight="900" fill="#FFCB05">elo</text>
+    </svg>
+  );
+  if (brand === "Hipercard") return (
+    <svg width={size * 1.6} height={size * 0.5} viewBox="0 0 68 20">
+      <rect width="68" height="20" rx="3" fill="#B3131A" />
+      <text x="4" y="14" fontFamily="Arial, sans-serif" fontSize="9" fontWeight="700" fill="white">HIPERCARD</text>
+    </svg>
+  );
+  if (brand === "Diners") return (
+    <svg width={size * 1.5} height={size * 0.5} viewBox="0 0 60 20">
+      <rect width="60" height="20" rx="3" fill="#004B87" />
+      <text x="4" y="13" fontFamily="Arial, sans-serif" fontSize="7" fontWeight="700" fill="white">DINERS CLUB</text>
+    </svg>
+  );
+  return <span style={{ color: "#556", fontSize: 11 }}>—</span>;
+}
+
+// ════════════════════════════════════════════════════════════════
+// OFX PARSER
+// ════════════════════════════════════════════════════════════════
+
+/**
+ * Extrai valor de uma tag OFX (SGML ou XML)
+ * Ex: <MEMO>Supermercado 01/06</MEMO>  →  "Supermercado 01/06"
+ */
+function getTag(block, tag) {
+  const re = new RegExp(`<${tag}[^>]*>\\s*([^<\\n\\r]+)`, "i");
+  const m = block.match(re);
+  return m ? m[1].trim() : "";
+}
+
+/**
+ * Converte data OFX (YYYYMMDDHHMMSS[tz]) para objeto Date
+ */
+function parseOFXDate(raw) {
+  if (!raw) return null;
+  const s = raw.replace(/\[.*\]/, "").trim();
+  const y = parseInt(s.substring(0, 4));
+  const mo = parseInt(s.substring(4, 6)) - 1;
+  const d = parseInt(s.substring(6, 8));
+  if (isNaN(y) || isNaN(mo) || isNaN(d)) return null;
+  return new Date(y, mo, d);
+}
+
+/**
+ * Detecta padrão de parcelamento no memo do banco brasileiro.
+ * Padrões suportados:
+ *   "01/06"  "1/6"  "PARC 01/06"  "PARCELA 1 DE 6"  "01 DE 06"
+ * Retorna { current, total } ou null
+ */
+function detectInstallment(memo) {
+  if (!memo) return null;
+  const u = memo.toUpperCase();
+
+  // Padrão XX/YY ou XX-YY (precedido opcionalmente por PARC/PARCELA)
+  const p1 = u.match(/(?:PARC(?:ELA)?\s+)?(\d{1,2})[\/\-](\d{1,2})(?:\s|$|[^0-9\/])/);
+  if (p1) {
+    const c = parseInt(p1[1]), t = parseInt(p1[2]);
+    if (c >= 1 && t >= 2 && c <= t && t <= 72) return { current: c, total: t };
+  }
+
+  // Padrão "XX DE YY"
+  const p2 = u.match(/(\d{1,2})\s+DE\s+(\d{1,2})/);
+  if (p2) {
+    const c = parseInt(p2[1]), t = parseInt(p2[2]);
+    if (c >= 1 && t >= 2 && c <= t && t <= 72) return { current: c, total: t };
+  }
+
+  return null;
+}
+
+/**
+ * Limpa o memo removendo o padrão de parcela e espaços duplos
+ */
+function cleanMemo(memo) {
+  return memo
+    .replace(/\s*(?:PARC(?:ELA)?\s+)?\d{1,2}[\/\-]\d{1,2}/gi, "")
+    .replace(/\s*\d{1,2}\s+DE\s+\d{1,2}/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+/**
+ * Parser principal do OFX.
+ * Suporta formato SGML (sem fechar tags) e XML (com </STMTTRN>).
+ * Retorna array de transações parseadas.
+ */
+function parseOFX(text) {
+  const content = text.replace(/\r/g, "\n");
+  const transactions = [];
+
+  // ── Tenta XML primeiro (com </STMTTRN>)
+  const xmlRe = /<STMTTRN>([\s\S]*?)<\/STMTTRN>/gi;
+  let match;
+  while ((match = xmlRe.exec(content)) !== null) {
+    const t = parseTrnBlock(match[1]);
+    if (t) transactions.push(t);
+  }
+
+  // ── Se não encontrou nada, tenta SGML (sem closing tag)
+  if (transactions.length === 0) {
+    const parts = content.split(/<STMTTRN>/i).slice(1);
+    for (const part of parts) {
+      // Termina no próximo bloco ou tag de fechamento de lista
+      const endRe = /<\/?(?:STMTTRN|BANKTRANLIST|CCSTMTRS|STMTRS|LEDGERBAL|AVAILBAL)/i;
+      const endIdx = part.search(endRe);
+      const block = endIdx > -1 ? part.substring(0, endIdx) : part;
+      const t = parseTrnBlock(block);
+      if (t) transactions.push(t);
+    }
+  }
+
+  // ── Extrai info do cabeçalho (número da conta, banco, período)
+  const acctId = getTag(content, "ACCTID") || getTag(content, "ACCTNUM") || "";
+  const bankId = getTag(content, "BANKID") || getTag(content, "ORG") || "";
+  const dtStart = parseOFXDate(getTag(content, "DTSTART"));
+  const dtEnd = parseOFXDate(getTag(content, "DTEND"));
+  const ledgerBal = parseFloat(getTag(content, "BALAMT")) || null;
+
+  return {
+    transactions: transactions.filter(t => t !== null),
+    meta: { acctId, bankId, dtStart, dtEnd, ledgerBal },
+  };
+}
+
+function parseTrnBlock(block) {
+  const amountStr = getTag(block, "TRNAMT");
+  const amount = parseFloat(amountStr.replace(",", "."));
+  if (isNaN(amount) || amount === 0) return null;
+
+  const memo = getTag(block, "MEMO") || getTag(block, "NAME") || "";
+  const fitid = getTag(block, "FITID");
+  const dtPosted = parseOFXDate(getTag(block, "DTPOSTED"));
+  const trntype = getTag(block, "TRNTYPE").toUpperCase();
+
+  const installment = detectInstallment(memo);
+  const cleanDesc = cleanMemo(memo) || memo;
+
+  return {
+    fitid,
+    amount: Math.abs(amount), // guardamos como positivo; crédito/débito via trntype
+    isCredit: trntype === "CREDIT" || amount > 0,
+    memo,
+    cleanDesc,
+    installment,   // { current, total } ou null
+    date: dtPosted,
+    trntype,
+  };
+}
+
+// ════════════════════════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════════════════════════
+function detectBrand(num) {
+  const n = num.replace(/\D/g, "");
+  if (!n) return null;
+  if (/^4/.test(n)) return "Visa";
+  if (/^(5[1-5]|2[2-7])/.test(n)) return "Mastercard";
+  if (/^3[47]/.test(n)) return "Amex";
+  if (/^(636368|4011|4312|4389|4514|4576|5041|5066|5067|509|6277|6362|6363|650[04]|6516|6550)/.test(n)) return "Elo";
+  if (/^606282/.test(n)) return "Hipercard";
+  if (/^(38|60)/.test(n)) return "Diners";
+  return null;
+}
+
+function luhn(num) {
+  const n = num.replace(/\D/g, "");
+  if (n.length < 13) return null;
+  let sum = 0;
+  for (let i = 0; i < n.length; i++) {
+    let d = parseInt(n[n.length - 1 - i]);
+    if (i % 2 === 1) { d *= 2; if (d > 9) d -= 9; }
+    sum += d;
+  }
+  return sum % 10 === 0;
+}
+
+function maskCard(val) {
+  return val.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
+}
+
+const fmt = (v) => (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const parseMoney = (v) => parseFloat((v || "").replace(",", ".")) || 0;
+
+function addMonths(base, n) {
+  const d = new Date(base);
+  d.setMonth(d.getMonth() + n);
+  return d;
+}
+
+function fmtDate(d) {
+  if (!d) return "—";
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function fmtDateShort(d) {
+  if (!d) return "—";
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+}
+
+const ACCENT = {
+  Visa: "#1A6CFF", Mastercard: "#F79E1B", Amex: "#0099DD",
+  Elo: "#FFCB05", Hipercard: "#ff4d4d", Diners: "#4B87CC",
+  default: "#00e5a0",
+};
+const getAccent = (brand) => ACCENT[brand] || ACCENT.default;
+
+// ════════════════════════════════════════════════════════════════
+// OFX IMPORTER COMPONENT
+// ════════════════════════════════════════════════════════════════
+function OFXImporter({ cards, onImport, onClose, importedFitids }) {
+  const [drag, setDrag] = useState(false);
+  const [parsed, setParsed] = useState(null);
+  const [selected, setSelected] = useState({});
+  const [targetCardId, setTargetCardId] = useState(cards[0]?.id ?? "");
+  const [error, setError] = useState("");
+  const fileRef = useRef();
+
+  const targetCard = cards.find(c => c.id === parseInt(targetCardId) || c.id === targetCardId);
+  const accent = getAccent(targetCard?.brand);
+
+  // Classifica cada transação como nova, duplicada ou crédito
+  const classified = useMemo(() => {
+    if (!parsed) return {};
+    const map = {};
+    parsed.transactions.forEach(t => {
+      if (importedFitids.has(t.fitid)) map[t.fitid] = "duplicate";
+      else if (t.isCredit) map[t.fitid] = "credit";
+      else map[t.fitid] = "new";
+    });
+    return map;
+  }, [parsed, importedFitids]);
+
+  const dupCount = Object.values(classified).filter(v => v === "duplicate").length;
+  const allDups = parsed && dupCount === parsed.transactions.length;
+
+  function handleFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const result = parseOFX(e.target.result);
+        if (result.transactions.length === 0) {
+          setError("Nenhuma transação encontrada no arquivo. Verifique se é um OFX válido.");
+          return;
+        }
+        setError("");
+        setParsed(result);
+        // Seleciona apenas novas, não-crédito
+        const sel = {};
+        result.transactions.forEach(t => {
+          sel[t.fitid] = !importedFitids.has(t.fitid) && !t.isCredit;
+        });
+        setSelected(sel);
+      } catch (err) {
+        setError("Erro ao ler o arquivo: " + err.message);
+      }
+    };
+    reader.readAsText(file, "latin1");
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    setDrag(false);
+    handleFile(e.dataTransfer.files[0]);
+  }
+
+  function toggleAll(val) {
+    const sel = {};
+    parsed.transactions.forEach(t => {
+      // Nunca seleciona duplicatas ao "selecionar tudo"
+      sel[t.fitid] = val && classified[t.fitid] !== "duplicate";
+    });
+    setSelected(sel);
+  }
+
+  function doImport() {
+    if (!targetCard) return;
+    const toImport = parsed.transactions.filter(t => selected[t.fitid]);
+    const newEntries = [];
+
+    toImport.forEach((t, idx) => {
+      const groupId = Date.now() + idx * 1000;
+      const inst = t.installment;
+      if (!inst) {
+        newEntries.push({
+          id: groupId, groupId, cardId: targetCard.id,
+          desc: t.cleanDesc, value: t.amount, total: t.amount,
+          installment: null, month: 0,
+          dueDate: addMonths(targetCard.dueDate, 0),
+          fromOFX: true, ofxDate: t.date, ofxFitid: t.fitid,
+        });
+      } else {
+        const remaining = inst.total - inst.current;
+        newEntries.push({
+          id: groupId, groupId, cardId: targetCard.id,
+          desc: t.cleanDesc, value: t.amount, total: t.amount * inst.total,
+          installment: `${inst.current}/${inst.total}`, month: 0,
+          dueDate: addMonths(targetCard.dueDate, 0),
+          fromOFX: true, ofxDate: t.date, ofxFitid: t.fitid,
+        });
+        for (let r = 1; r <= remaining; r++) {
+          newEntries.push({
+            id: groupId + r, groupId, cardId: targetCard.id,
+            desc: t.cleanDesc, value: t.amount, total: t.amount * inst.total,
+            installment: `${inst.current + r}/${inst.total}`, month: r,
+            dueDate: addMonths(targetCard.dueDate, r),
+            fromOFX: true, ofxDate: t.date, ofxFitid: t.fitid,
+          });
+        }
+      }
+    });
+
+    const importedIds = toImport.map(t => t.fitid);
+    onImport(newEntries, importedIds);
+    onClose();
+  }
+
+  const selectedCount = Object.values(selected).filter(Boolean).length;
+  const totalSelected = parsed?.transactions
+    .filter(t => selected[t.fitid])
+    .reduce((s, t) => s + t.amount, 0) || 0;
+
+  return (
+    <div style={S.importerCard}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h2 style={S.sectionTitle}>
+          <span style={{ color: accent }}>⬆</span> Importar OFX
+        </h2>
+        <button style={S.btnRemove} onClick={onClose}>✕ Fechar</button>
+      </div>
+
+      {/* Card selector */}
+      <div style={S.field}>
+        <label style={S.label}>Cartão de destino</label>
+        <select style={{ ...S.input, borderColor: accent + "66" }}
+          value={targetCardId}
+          onChange={e => setTargetCardId(e.target.value)}>
+          {cards.map(c => <option key={c.id} value={c.id}>{c.alias}{c.brand ? ` · ${c.brand}` : ""}</option>)}
+        </select>
+      </div>
+
+      {/* Drop zone */}
+      {!parsed && (
+        <div
+          style={{
+            ...S.dropZone,
+            borderColor: drag ? accent : "#1e2840",
+            background: drag ? accent + "11" : "#0a0d18",
+          }}
+          onDragOver={e => { e.preventDefault(); setDrag(true); }}
+          onDragLeave={() => setDrag(false)}
+          onDrop={handleDrop}
+          onClick={() => fileRef.current?.click()}
+        >
+          <input ref={fileRef} type="file" accept=".ofx,.OFX" style={{ display: "none" }}
+            onChange={e => handleFile(e.target.files[0])} />
+          <div style={{ fontSize: 32, marginBottom: 8 }}>📂</div>
+          <div style={{ color: "#e8eaf0", fontSize: 13, fontWeight: 600 }}>
+            Arraste o arquivo .OFX aqui
+          </div>
+          <div style={{ color: "#445", fontSize: 11, marginTop: 4 }}>
+            ou clique para selecionar
+          </div>
+          <div style={{ color: "#2a3040", fontSize: 10, marginTop: 8 }}>
+            Compatível com Nubank, Itaú, Bradesco, Santander, BB, Caixa, C6, Inter e outros
+          </div>
+        </div>
+      )}
+
+      {error && <div style={S.errorBox}>{error}</div>}
+
+      {/* Preview */}
+      {parsed && (
+        <>
+          {/* Meta do arquivo */}
+          <div style={S.metaBox}>
+            {parsed.meta.bankId && <span style={S.metaChip}>🏦 {parsed.meta.bankId}</span>}
+            {parsed.meta.acctId && <span style={S.metaChip}>💳 ****{parsed.meta.acctId.slice(-4)}</span>}
+            {parsed.meta.dtStart && <span style={S.metaChip}>📅 {fmtDate(parsed.meta.dtStart)} → {fmtDate(parsed.meta.dtEnd)}</span>}
+            {parsed.meta.ledgerBal != null && <span style={S.metaChip}>💰 Saldo OFX: {fmt(Math.abs(parsed.meta.ledgerBal))}</span>}
+            <span style={{ ...S.metaChip, color: accent }}>
+              {parsed.transactions.length} transação(ões) encontrada(s)
+            </span>
+          </div>
+
+          {/* Aviso de duplicatas */}
+          {dupCount > 0 && (
+            <div style={{
+              background: "#1a1200", border: "1px solid #f5a62344",
+              borderRadius: 8, padding: "10px 14px",
+              display: "flex", alignItems: "center", gap: 8,
+            }}>
+              <span style={{ fontSize: 16 }}>⚠️</span>
+              <div>
+                <div style={{ color: "#f5a623", fontSize: 12, fontWeight: 700 }}>
+                  {allDups
+                    ? "Este arquivo já foi importado anteriormente!"
+                    : `${dupCount} transação(ões) já importada(s) anteriormente`}
+                </div>
+                <div style={{ color: "#7a6030", fontSize: 11, marginTop: 2 }}>
+                  {allDups
+                    ? "Todas as transações deste extrato já constam no sistema. Nada novo a importar."
+                    : "As linhas em laranja foram bloqueadas automaticamente para evitar duplicidade."}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Ações */}
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button style={{ ...S.btnSecondary, fontSize: 10 }} onClick={() => toggleAll(true)}>Selecionar tudo</button>
+            <button style={{ ...S.btnSecondary, fontSize: 10 }} onClick={() => toggleAll(false)}>Desmarcar tudo</button>
+            <button style={{ ...S.btnSecondary, fontSize: 10 }} onClick={() => { setParsed(null); setError(""); }}>
+              Trocar arquivo
+            </button>
+            <span style={{ marginLeft: "auto", color: "#556", fontSize: 11 }}>
+              {selectedCount} selecionado(s) · {fmt(totalSelected)}
+            </span>
+          </div>
+
+          {/* Tabela de preview */}
+          <div style={{ overflowX: "auto" }}>
+            <table style={S.table}>
+              <thead>
+                <tr>
+                  <th style={S.th}></th>
+                  <th style={S.th}>Data</th>
+                  <th style={S.th}>Descrição</th>
+                  <th style={S.th}>Parcela</th>
+                  <th style={S.th}>Tipo</th>
+                  <th style={{ ...S.th, textAlign: "right" }}>Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {parsed.transactions.map(t => {
+                  const status = classified[t.fitid]; // "new" | "duplicate" | "credit"
+                  const isDup = status === "duplicate";
+                  const isSelected = !!selected[t.fitid];
+                  return (
+                    <tr key={t.fitid} style={{
+                      ...S.tr,
+                      opacity: isDup ? 1 : isSelected ? 1 : 0.35,
+                      cursor: isDup ? "not-allowed" : "pointer",
+                      background: isDup ? "#1a1000" : "transparent",
+                    }}
+                      onClick={() => {
+                        if (isDup) return; // bloqueia clique em duplicatas
+                        setSelected(p => ({ ...p, [t.fitid]: !p[t.fitid] }));
+                      }}>
+                      <td style={S.td}>
+                        {isDup ? (
+                          <span title="Já importado — duplicata bloqueada"
+                            style={{ color: "#f5a623", fontSize: 13 }}>⊘</span>
+                        ) : (
+                          <div style={{
+                            width: 14, height: 14, borderRadius: 3,
+                            border: `1.5px solid ${isSelected ? accent : "#2a3040"}`,
+                            background: isSelected ? accent : "transparent",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                          }}>
+                            {isSelected && <span style={{ color: "#000", fontSize: 9, fontWeight: 900 }}>✓</span>}
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ ...S.td, whiteSpace: "nowrap" }}>{fmtDateShort(t.date)}</td>
+                      <td style={{ ...S.td, maxWidth: 200 }}>
+                        <div style={{ color: isDup ? "#5a4a20" : "#c0ccdd", fontSize: 12 }}>{t.cleanDesc}</div>
+                        {t.cleanDesc !== t.memo && (
+                          <div style={{ color: "#334", fontSize: 10, marginTop: 1 }}>{t.memo}</div>
+                        )}
+                        {isDup && (
+                          <div style={{ color: "#f5a62388", fontSize: 10, marginTop: 1 }}>já importado</div>
+                        )}
+                      </td>
+                      <td style={S.td}>
+                        {t.installment ? (
+                          <span style={{ ...S.instBadge, background: isDup ? "#2a1a00" : accent + "22", color: isDup ? "#7a5010" : accent }}>
+                            {t.installment.current}/{t.installment.total}
+                            {!isDup && <span style={{ color: "#556", marginLeft: 3, fontSize: 9 }}>
+                              +{t.installment.total - t.installment.current} futuras
+                            </span>}
+                          </span>
+                        ) : (
+                          <span style={{ color: "#334", fontSize: 10 }}>à vista</span>
+                        )}
+                      </td>
+                      <td style={S.td}>
+                        <span style={{
+                          fontSize: 10, borderRadius: 3, padding: "1px 5px",
+                          background: t.isCredit ? "#1a3a1a" : "#2a1a1a",
+                          color: t.isCredit ? "#00cc66" : "#ff6b6b",
+                        }}>
+                          {t.isCredit ? "CRÉD" : "DÉB"}
+                        </span>
+                      </td>
+                      <td style={{ ...S.td, textAlign: "right", fontWeight: 600, color: isDup ? "#5a4a20" : t.isCredit ? "#00cc66" : "#ff6b6b" }}>
+                        {fmt(t.amount)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Botão importar */}
+          <button
+            style={{ ...S.btnPrimary, background: accent, opacity: (selectedCount > 0 && !allDups) ? 1 : 0.4 }}
+            onClick={doImport}
+            disabled={selectedCount === 0 || allDups}
+          >
+            ⬆ Importar {selectedCount} transação(ões) → {targetCard?.alias}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// CARD SETUP FORM
+// ════════════════════════════════════════════════════════════════
+function CardSetupForm({ onAdd }) {
+  const [f, setF] = useState({ alias: "", number: "", limit: "", day: "", month: "", year: "" });
+  const brand = detectBrand(f.number.replace(/\D/g, ""));
+  const luhnOk = f.number.replace(/\D/g, "").length >= 13 ? luhn(f.number) : null;
+  const accent = getAccent(brand);
+  const canAdd = f.alias && f.limit && f.day && f.month && f.year;
+
+  return (
+    <div style={S.addCardBox}>
+      <div style={S.grid2}>
+        <div style={S.field}>
+          <label style={S.label}>Apelido do cartão</label>
+          <input style={S.input} placeholder="ex: Nubank, Inter, C6..." value={f.alias}
+            onChange={e => setF(p => ({ ...p, alias: e.target.value }))} />
+        </div>
+        <div style={S.field}>
+          <label style={S.label}>Limite da fatura (R$)</label>
+          <input style={S.input} placeholder="ex: 4000,00" value={f.limit}
+            onChange={e => setF(p => ({ ...p, limit: e.target.value }))} />
+        </div>
+      </div>
+      <div style={S.field}>
+        <label style={S.label}>Número do cartão (parcial já identifica a bandeira)</label>
+        <div style={{ position: "relative" }}>
+          <input style={{ ...S.input, paddingRight: 70 }} placeholder="**** **** **** ****"
+            value={f.number} onChange={e => setF(p => ({ ...p, number: maskCard(e.target.value) }))} />
+          {brand && (
+            <div style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center" }}>
+              <BrandLogo brand={brand} size={28} />
+            </div>
+          )}
+        </div>
+        {brand && (
+          <span style={{ ...S.hint, color: accent }}>
+            ✓ {brand}{luhnOk === true ? " · Número válido (Luhn ✓)" : luhnOk === false ? " · Número inválido" : ""}
+          </span>
+        )}
+      </div>
+      <div style={S.field}>
+        <label style={S.label}>Vencimento da fatura</label>
+        <div style={{ display: "flex", gap: 8 }}>
+          {[["Dia", "day", 2, 60], ["Mês", "month", 2, 60], ["Ano", "year", 4, 80]].map(([ph, key, max, w]) => (
+            <input key={key} style={{ ...S.input, width: w, textAlign: "center" }} placeholder={ph} maxLength={max}
+              value={f[key]} onChange={e => setF(p => ({ ...p, [key]: e.target.value.replace(/\D/g, "") }))} />
+          ))}
+        </div>
+        <span style={S.hint}>Dia / Mês / Ano — replicado para parcelas futuras</span>
+      </div>
+      <button style={{ ...S.btnPrimary, background: accent, opacity: canAdd ? 1 : 0.4 }}
+        onClick={() => {
+          if (!canAdd) return;
+          onAdd({
+            id: Date.now(), alias: f.alias, number: f.number, brand,
+            limit: parseMoney(f.limit),
+            dueDate: new Date(parseInt(f.year), parseInt(f.month) - 1, parseInt(f.day)),
+          });
+          setF({ alias: "", number: "", limit: "", day: "", month: "", year: "" });
+        }}
+        disabled={!canAdd}>
+        + Adicionar Cartão
+      </button>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// BALANCE STRIP
+// ════════════════════════════════════════════════════════════════
+function BalanceStrip({ card, spent }) {
+  const pct = card.limit > 0 ? Math.min((spent / card.limit) * 100, 100) : 0;
+  const remaining = card.limit - spent;
+  const accent = getAccent(card.brand);
+  const barColor = pct > 85 ? "#ff4d4d" : pct > 60 ? "#f5a623" : accent;
+  return (
+    <div style={{ ...S.strip, borderColor: accent + "44" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          {card.brand && <BrandLogo brand={card.brand} size={38} />}
+          <div>
+            <div style={{ color: "#e8eaf0", fontWeight: 700, fontSize: 15 }}>{card.alias}</div>
+            <div style={{ color: "#445", fontSize: 11, marginTop: 2 }}>Vence {fmtDate(card.dueDate)}</div>
+          </div>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ color: "#445", fontSize: 10, textTransform: "uppercase", letterSpacing: 1 }}>Disponível</div>
+          <div style={{ color: remaining < 0 ? "#ff4d4d" : accent, fontWeight: 700, fontSize: 20 }}>
+            {fmt(remaining)}
+          </div>
+        </div>
+      </div>
+      <div style={S.barBg}>
+        <div style={{ ...S.barFill, width: `${pct}%`, background: barColor }} />
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <span style={{ color: "#ff6b6b", fontSize: 12 }}>Lançado: {fmt(spent)}</span>
+        <span style={{ color: "#2a3050", fontSize: 12 }}>Limite: {fmt(card.limit)}</span>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// LAUNCH FORM
+// ════════════════════════════════════════════════════════════════
+function LaunchForm({ cards, onLaunch }) {
+  const [f, setF] = useState({ cardId: cards[0]?.id ?? "", desc: "", value: "", installments: "1" });
+  const card = cards.find(c => c.id === f.cardId);
+  const accent = getAccent(card?.brand);
+  const inst = parseInt(f.installments) || 1;
+  const val = parseMoney(f.value);
+  const canLaunch = f.desc && val > 0 && card;
+
+  return (
+    <div style={S.formCard}>
+      <h2 style={S.sectionTitle}>Novo Lançamento Manual</h2>
+      <div style={S.field}>
+        <label style={S.label}>Cartão</label>
+        <select style={S.input} value={f.cardId}
+          onChange={e => setF(p => ({ ...p, cardId: parseInt(e.target.value) }))}>
+          {cards.map(c => <option key={c.id} value={c.id}>{c.alias}{c.brand ? ` · ${c.brand}` : ""}</option>)}
+        </select>
+      </div>
+      <div style={S.grid2}>
+        <div style={S.field}>
+          <label style={S.label}>Descrição</label>
+          <input style={S.input} placeholder="ex: Supermercado" value={f.desc}
+            onChange={e => setF(p => ({ ...p, desc: e.target.value }))} />
+        </div>
+        <div style={S.field}>
+          <label style={S.label}>Valor (R$)</label>
+          <input style={S.input} placeholder="ex: 300,00" value={f.value}
+            onChange={e => setF(p => ({ ...p, value: e.target.value }))} />
+        </div>
+      </div>
+      <div style={S.field}>
+        <label style={S.label}>Parcelas</label>
+        <select style={S.input} value={f.installments}
+          onChange={e => setF(p => ({ ...p, installments: e.target.value }))}>
+          {Array.from({ length: 12 }, (_, i) => i + 1).map(n => (
+            <option key={n} value={n}>{n}x {val ? `(${fmt(val / n)} cada)` : ""}</option>
+          ))}
+        </select>
+        {inst > 1 && val > 0 && (
+          <span style={{ ...S.hint, color: accent }}>
+            {inst}x de {fmt(val / inst)} — {inst - 1} parcela(s) nas faturas seguintes
+          </span>
+        )}
+      </div>
+      <button style={{ ...S.btnPrimary, background: accent, opacity: canLaunch ? 1 : 0.4 }}
+        onClick={() => {
+          if (!canLaunch) return;
+          onLaunch({ card, desc: f.desc, value: val, installments: inst });
+          setF(p => ({ ...p, desc: "", value: "", installments: "1" }));
+        }}
+        disabled={!canLaunch}>
+        + Lançar
+      </button>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// CARD SECTION
+// ════════════════════════════════════════════════════════════════
+function CardSection({ card, entries, onRemoveGroup }) {
+  const [collapsed, setCollapsed] = useState(false);
+  const accent = getAccent(card.brand);
+  const current = entries.filter(e => e.cardId === card.id && e.month === 0);
+  const future = entries.filter(e => e.cardId === card.id && e.month > 0);
+  const spent = current.reduce((s, e) => s + e.value, 0);
+  const ofxCount = current.filter(e => e.fromOFX).length;
+
+  const futureByMonth = useMemo(() => {
+    const g = {};
+    future.forEach(e => {
+      if (!g[e.month]) g[e.month] = { month: e.month, dueDate: e.dueDate, items: [] };
+      g[e.month].items.push(e);
+    });
+    return Object.values(g).sort((a, b) => a.month - b.month);
+  }, [future]);
+
+  return (
+    <div style={{ ...S.cardSection, borderColor: accent + "33" }}>
+      <BalanceStrip card={card} spent={spent} />
+
+      <button style={{ ...S.collapseBtn, color: accent }}
+        onClick={() => setCollapsed(c => !c)}>
+        {collapsed ? "▸ Ver lançamentos" : "▾ Ocultar lançamentos"}
+        {ofxCount > 0 && !collapsed && (
+          <span style={{ ...S.instBadge, marginLeft: 8, background: accent + "22", color: accent }}>
+            {ofxCount} via OFX
+          </span>
+        )}
+      </button>
+
+      {!collapsed && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div>
+            <div style={{ ...S.subLabel, color: accent, marginBottom: 6 }}>
+              Fatura Atual · {current.length} item(s)
+            </div>
+            {current.length === 0 ? (
+              <div style={S.emptySmall}>Nenhum lançamento nesta fatura ainda.</div>
+            ) : (
+              <>
+                <table style={S.table}>
+                  <thead>
+                    <tr>{["", "Descrição", "Parcela", "Valor", ""].map((h, i) =>
+                      <th key={i} style={S.th}>{h}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {current.map(e => (
+                      <tr key={e.id} style={S.tr}>
+                        <td style={{ ...S.td, width: 20 }}>
+                          {e.fromOFX && (
+                            <span title="Importado via OFX" style={{ color: accent, fontSize: 10 }}>⬆</span>
+                          )}
+                        </td>
+                        <td style={S.td}>
+                          {e.desc}
+                          {e.ofxDate && (
+                            <span style={{ color: "#334", fontSize: 10, marginLeft: 6 }}>
+                              {fmtDateShort(e.ofxDate)}
+                            </span>
+                          )}
+                        </td>
+                        <td style={S.td}>
+                          {e.installment
+                            ? <span style={S.instBadge}>{e.installment}</span>
+                            : <span style={{ color: "#334" }}>à vista</span>}
+                        </td>
+                        <td style={{ ...S.td, color: "#ff6b6b", fontWeight: 600 }}>{fmt(e.value)}</td>
+                        <td style={S.td}>
+                          <button style={S.btnRemove} title="Remover todas as parcelas"
+                            onClick={() => onRemoveGroup(e.groupId)}>✕</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{ textAlign: "right", color: "#ff6b6b", fontWeight: 700, fontSize: 13, marginTop: 8 }}>
+                  Subtotal: {fmt(spent)}
+                </div>
+              </>
+            )}
+          </div>
+
+          {futureByMonth.length > 0 && (
+            <div>
+              <div style={{ ...S.subLabel, color: "#334", marginBottom: 6 }}>Parcelas Futuras</div>
+              {futureByMonth.map(group => (
+                <div key={group.month} style={S.futureGroup}>
+                  <div style={S.futureGroupHeader}>
+                    <span style={{ color: accent, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>
+                      {group.dueDate ? fmtDate(group.dueDate) : `+${group.month} mês`}
+                    </span>
+                    <span style={{ color: "#e8eaf0", fontSize: 13, fontWeight: 700 }}>
+                      {fmt(group.items.reduce((s, e) => s + e.value, 0))}
+                    </span>
+                  </div>
+                  {group.items.map(e => (
+                    <div key={e.id} style={S.futureItem}>
+                      {e.fromOFX && <span style={{ color: accent, fontSize: 9 }} title="Via OFX">⬆</span>}
+                      <span>{e.desc}</span>
+                      <span style={S.instBadge}>{e.installment}</span>
+                      <span style={{ marginLeft: "auto", color: "#667" }}>{fmt(e.value)}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// APP
+// ════════════════════════════════════════════════════════════════
+export default function App() {
+  const [step, setStep] = useState("setup");
+  const [cards, setCards] = useState([]);
+  const [entries, setEntries] = useState([]);
+  const [showAddCard, setShowAddCard] = useState(false);
+  const [showOFX, setShowOFX] = useState(false);
+  const [importedFitids, setImportedFitids] = useState(new Set());
+
+  function handleLaunch({ card, desc, value, installments }) {
+    const groupId = Date.now();
+    const perInstall = value / installments;
+    setEntries(prev => [...prev, ...Array.from({ length: installments }, (_, i) => ({
+      id: groupId + i, groupId, cardId: card.id,
+      desc, value: perInstall, total: value,
+      installment: installments > 1 ? `${i + 1}/${installments}` : null,
+      month: i, dueDate: addMonths(card.dueDate, i),
+    }))]);
+  }
+
+  function handleOFXImport(newEntries, fitids) {
+    setEntries(prev => [...prev, ...newEntries]);
+    setImportedFitids(prev => new Set([...prev, ...fitids]));
+  }
+
+  // ── SETUP
+  if (step === "setup") return (
+    <div style={S.root}>
+      <div style={S.setupWrapper}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 38 }}>💳</div>
+          <h1 style={S.setupTitle}>Controle de Faturas</h1>
+          <p style={S.setupSub}>Adicione seus cartões. Cada um terá seu próprio controle de limite e parcelas.</p>
+        </div>
+
+        {cards.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {cards.map(c => (
+              <div key={c.id} style={{ ...S.addedCardChip, borderColor: getAccent(c.brand) + "44" }}>
+                {c.brand && <BrandLogo brand={c.brand} size={30} />}
+                <span style={{ color: "#e8eaf0", fontSize: 13, fontWeight: 600 }}>{c.alias}</span>
+                <span style={{ color: "#7a8aaa", fontSize: 12 }}>{fmt(c.limit)}</span>
+                <span style={{ color: "#334", fontSize: 11 }}>· vence {fmtDate(c.dueDate)}</span>
+                <button style={{ ...S.btnRemove, marginLeft: "auto" }}
+                  onClick={() => setCards(p => p.filter(x => x.id !== c.id))}>✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <CardSetupForm onAdd={c => setCards(p => [...p, c])} />
+
+        {cards.length > 0 && (
+          <button style={S.btnPrimary} onClick={() => setStep("main")}>
+            Ir para Lançamentos →
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  // ── MAIN
+  return (
+    <div style={S.root}>
+      <div style={S.container}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 4 }}>
+          <h1 style={{ color: "#e8eaf0", fontSize: 17, fontWeight: 700, margin: 0, letterSpacing: 1 }}>
+            💳 Controle de Faturas
+          </h1>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button style={{ ...S.btnSecondary, color: "#00e5a0", borderColor: "#00e5a033" }}
+              onClick={() => { setShowOFX(p => !p); setShowAddCard(false); }}>
+              {showOFX ? "✕" : "⬆ OFX"}
+            </button>
+            <button style={S.btnSecondary} onClick={() => { setShowAddCard(p => !p); setShowOFX(false); }}>
+              {showAddCard ? "✕" : "+ Cartão"}
+            </button>
+            <button style={S.btnSecondary} onClick={() => { setStep("setup"); setCards([]); setEntries([]); setImportedFitids(new Set()); }}>
+              Reiniciar
+            </button>
+          </div>
+        </div>
+
+        {showOFX && (
+          <OFXImporter cards={cards} onImport={handleOFXImport} onClose={() => setShowOFX(false)} importedFitids={importedFitids} />
+        )}
+
+        {showAddCard && (
+          <div style={S.formCard}>
+            <h2 style={S.sectionTitle}>Novo Cartão</h2>
+            <CardSetupForm onAdd={c => { setCards(p => [...p, c]); setShowAddCard(false); }} />
+          </div>
+        )}
+
+        <LaunchForm cards={cards} onLaunch={handleLaunch} />
+
+        {cards.map(card => (
+          <CardSection key={card.id} card={card} entries={entries}
+          onRemoveGroup={gid => {
+            const removed = entries.filter(e => e.groupId === gid && e.fromOFX);
+            if (removed.length > 0) {
+              // Pega o fitid do primeiro entry do grupo (todos compartilham a mesma origem)
+              // Recalcula: remove fitid só se não há outro entry com o mesmo fitid ainda presente
+              const removedFitids = new Set(removed.map(e => e.ofxFitid).filter(Boolean));
+              setImportedFitids(prev => {
+                const next = new Set(prev);
+                removedFitids.forEach(f => next.delete(f));
+                return next;
+              });
+            }
+            setEntries(p => p.filter(e => e.groupId !== gid));
+          }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// STYLES
+// ════════════════════════════════════════════════════════════════
+const S = {
+  root: { minHeight: "100vh", background: "#080b12", fontFamily: "'Courier New', monospace", display: "flex", justifyContent: "center", padding: "28px 16px" },
+  container: { width: "100%", maxWidth: 720, display: "flex", flexDirection: "column", gap: 14 },
+  setupWrapper: { width: "100%", maxWidth: 520, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 },
+  setupTitle: { color: "#e8eaf0", fontSize: 22, fontWeight: 700, margin: "8px 0 0", letterSpacing: 1 },
+  setupSub: { color: "#445", fontSize: 13, margin: "6px 0 0" },
+  addedCardChip: { background: "#111620", border: "1px solid", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 },
+  addCardBox: { background: "#111620", border: "1px solid #1e2840", borderRadius: 12, padding: 20, display: "flex", flexDirection: "column", gap: 14 },
+  importerCard: { background: "#0e1428", border: "1px solid #1e3a28", borderRadius: 14, padding: 20, display: "flex", flexDirection: "column", gap: 14 },
+  formCard: { background: "#111620", border: "1px solid #1e2840", borderRadius: 14, padding: 20, display: "flex", flexDirection: "column", gap: 14 },
+  cardSection: { background: "#0e1220", border: "1px solid", borderRadius: 14, padding: 20, display: "flex", flexDirection: "column", gap: 12 },
+  strip: { background: "#0a0d14", borderRadius: 10, padding: 16, display: "flex", flexDirection: "column", gap: 10, border: "1px solid" },
+  barBg: { background: "#1a2035", borderRadius: 99, height: 5, overflow: "hidden" },
+  barFill: { height: "100%", borderRadius: 99, transition: "width 0.4s ease" },
+  dropZone: { border: "1.5px dashed", borderRadius: 10, padding: "32px 20px", textAlign: "center", cursor: "pointer", transition: "all 0.2s" },
+  metaBox: { display: "flex", flexWrap: "wrap", gap: 6 },
+  metaChip: { background: "#111a2a", border: "1px solid #1e2840", borderRadius: 99, padding: "3px 10px", fontSize: 11, color: "#7a8aaa" },
+  errorBox: { background: "#2a1010", border: "1px solid #ff4d4d44", borderRadius: 8, padding: "10px 14px", color: "#ff6b6b", fontSize: 12 },
+  grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 },
+  field: { display: "flex", flexDirection: "column", gap: 6 },
+  label: { color: "#b0bdd4", fontSize: 10, textTransform: "uppercase", letterSpacing: 1 },
+  input: { background: "#0d1120", border: "1px solid #1e2840", borderRadius: 8, padding: "10px 12px", color: "#e8eaf0", fontSize: 13, fontFamily: "'Courier New', monospace", outline: "none", width: "100%", boxSizing: "border-box" },
+  hint: { fontSize: 11, color: "#6a7a90", marginTop: 2 },
+  btnPrimary: { background: "#00e5a0", color: "#000", border: "none", borderRadius: 8, padding: "12px 24px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Courier New', monospace", letterSpacing: 1, width: "100%", transition: "opacity 0.2s" },
+  btnSecondary: { background: "transparent", color: "#556", border: "1px solid #1e2840", borderRadius: 8, padding: "8px 14px", fontSize: 11, cursor: "pointer", fontFamily: "'Courier New', monospace", letterSpacing: 1 },
+  btnRemove: { background: "transparent", border: "none", color: "#334", cursor: "pointer", fontSize: 12, padding: 4 },
+  collapseBtn: { background: "transparent", border: "none", fontSize: 11, cursor: "pointer", fontFamily: "'Courier New', monospace", letterSpacing: 1, padding: 0, textAlign: "left", display: "flex", alignItems: "center" },
+  sectionTitle: { color: "#7a8aaa", fontSize: 11, textTransform: "uppercase", letterSpacing: 2, margin: 0, display: "flex", alignItems: "center", gap: 8 },
+  subLabel: { fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 700 },
+  table: { width: "100%", borderCollapse: "collapse", marginTop: 4 },
+  th: { color: "#2a3040", fontSize: 10, textTransform: "uppercase", letterSpacing: 1, padding: "6px 8px", borderBottom: "1px solid #1a2035", textAlign: "left" },
+  tr: { borderBottom: "1px solid #0d1020" },
+  td: { color: "#8a9acc", fontSize: 12, padding: "9px 8px" },
+  instBadge: { background: "#1a2840", color: "#7a9acc", borderRadius: 4, padding: "2px 7px", fontSize: 10, fontWeight: 600 },
+  futureGroup: { background: "#0a0d18", borderRadius: 8, padding: "10px 12px", display: "flex", flexDirection: "column", gap: 5, border: "1px solid #131825", marginBottom: 6 },
+  futureGroupHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 },
+  futureItem: { display: "flex", gap: 8, alignItems: "center", fontSize: 12, color: "#3a4558" },
+  emptySmall: { color: "#2a3040", fontSize: 12, padding: "8px 0" },
+};
