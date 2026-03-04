@@ -70,7 +70,25 @@
     </div>
   </div>
 
-  <script src="config/supabase-config.js"></script>
+  <script>
+    // ── Supabase inline config ──────────────────────────────────────
+    const SUPABASE_URL = 'https://yjaalhjqbiyguktsfqtq.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqYWFsaGpxYml5Z3VrdHNmcXRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1MDcyOTUsImV4cCI6MjA3OTA4MzI5NX0.7QFF_yAHrDZga140y3IbKwqS_hJeImahZsvuKBes5vg';
+    let supabaseClient = null;
+    function createSupabaseClient() {
+      if (!supabaseClient) supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      return supabaseClient;
+    }
+    async function checkAuth() {
+      const { data: { session } } = await createSupabaseClient().auth.getSession();
+      return session;
+    }
+    async function login(email, password) {
+      const { data, error } = await createSupabaseClient().auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      return data;
+    }
+  </script>
   <script>
     const form = document.getElementById('loginForm');
     const emailInput = document.getElementById('email');
