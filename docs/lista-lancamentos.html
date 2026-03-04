@@ -528,33 +528,56 @@
         const tr = document.createElement('tr');
         if (lanc.quitado) tr.classList.add('row-quitado');
         tr.style.opacity = lanc.quitado ? '0.65' : '1';
-        
-        const data = new Date(lanc.data).toLocaleDateString('pt-BR');
-        const valor = parseFloat(lanc.valor || 0);
-        const valorFormatado = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
-        const prefixo = lanc.tipo === 'RECEITA' ? '+' : '';
-        const valClass = lanc.tipo === 'DESPESA' ? 'val-despesa' : 'val-receita';
-        const valColor = lanc.tipo === 'DESPESA' ? 'var(--danger)' : 'var(--success)';
-        
+
+        const data      = new Date(lanc.data).toLocaleDateString('pt-BR');
+        const valor     = parseFloat(lanc.valor || 0);
+        const fmtVal    = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+        const prefixo   = lanc.tipo === 'RECEITA' ? '+' : '';
+        const valClass  = lanc.tipo === 'DESPESA' ? 'val-despesa' : 'val-receita';
+        const valColor  = lanc.tipo === 'DESPESA' ? 'var(--danger)' : 'var(--success)';
+        const quitadoTag = lanc.quitado ? ' <em style="font-size:.75em;color:#888">(quitado)</em>' : '';
+
+        // Células de dados (HTML seguro — sem IDs embutidos)
         tr.innerHTML = `
           <td>${data}</td>
-          <td>${lanc.descricao_complementar || '-'}${lanc.quitado ? ' <em style="font-size:.75em;color:#888">(quitado)</em>' : ''}</td>
+          <td>${lanc.descricao_complementar || '-'}${quitadoTag}</td>
           <td>${lanc.classe?.subgrupo?.grupo?.nome || '-'}</td>
           <td>${lanc.classe?.subgrupo?.nome || '-'}</td>
           <td>${lanc.classe?.descricao || '-'}</td>
-          <td class="${valClass}" style="font-weight: 600; color: ${valColor}">
-            ${prefixo}${valorFormatado}
-          </td>
-          <td class="no-print">
-            ${lanc.tipo === 'DESPESA' && !lanc.quitado ? 
-              `<button onclick="abrirModalQuitacao(${lanc.id})" class="btn btn-success" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">✅ Quitar</button>` : 
-              ''}
-            ${lanc.quitado ? 
-              `<button onclick="reabrirLancamento(${lanc.id})" class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background: var(--warning); color: white;">↩️ Reabrir</button>` : 
-              ''}
-            <button onclick="deletarLancamento(${lanc.id})" class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">🗑️</button>
-          </td>
+          <td class="${valClass}" style="font-weight:600;color:${valColor}">${prefixo}${fmtVal}</td>
         `;
+
+        // Célula Ações com botões via createElement (sem onclick string — evita problema com UUID)
+        const tdAcoes = document.createElement('td');
+        tdAcoes.className = 'no-print';
+        tdAcoes.style.cssText = 'white-space:nowrap';
+
+        if (lanc.tipo === 'DESPESA' && !lanc.quitado) {
+          const btnQ = document.createElement('button');
+          btnQ.className = 'btn btn-success';
+          btnQ.style.cssText = 'padding:.25rem .5rem;font-size:.75rem;margin-right:.25rem';
+          btnQ.innerHTML = '✅ Quitar';
+          btnQ.addEventListener('click', () => abrirModalQuitacao(lanc.id));
+          tdAcoes.appendChild(btnQ);
+        }
+
+        if (lanc.quitado) {
+          const btnR = document.createElement('button');
+          btnR.className = 'btn';
+          btnR.style.cssText = 'padding:.25rem .5rem;font-size:.75rem;margin-right:.25rem;background:var(--warning);color:white';
+          btnR.innerHTML = '↩️ Reabrir';
+          btnR.addEventListener('click', () => reabrirLancamento(lanc.id));
+          tdAcoes.appendChild(btnR);
+        }
+
+        const btnD = document.createElement('button');
+        btnD.className = 'btn btn-danger';
+        btnD.style.cssText = 'padding:.25rem .5rem;font-size:.75rem';
+        btnD.innerHTML = '🗑️';
+        btnD.addEventListener('click', () => deletarLancamento(lanc.id));
+        tdAcoes.appendChild(btnD);
+
+        tr.appendChild(tdAcoes);
         tbody.appendChild(tr);
       });
     }
