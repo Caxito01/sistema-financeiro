@@ -586,8 +586,12 @@
             </div>
             <div style={S.field}>
               <label style={S.label}>Valor da fatura (R$)</label>
-              <input style={S.input} placeholder="ex: 4000,00" value={f.limit}
-                onChange={e => setF(p => ({ ...p, limit: e.target.value }))} />
+              <input style={S.input} placeholder="ex: 8.000,00" value={f.limit}
+                onChange={e => setF(p => ({ ...p, limit: e.target.value.replace(/[^0-9,]/g, "") }))}
+                onBlur={() => {
+                  const raw = parseFloat(f.limit.replace(/\./g, "").replace(",", "."));
+                  if (!isNaN(raw)) setF(p => ({ ...p, limit: raw.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }));
+                }} />
             </div>
           </div>
           <div style={S.field}>
@@ -645,7 +649,7 @@
               if (!canAdd) return;
               onAdd({
                 id: Date.now(), alias: f.alias, number: f.number, brand,
-                limit: parseMoney(f.limit),
+                limit: parseFloat(f.limit.replace(/\./g, "").replace(",", ".")),
                 dueDate: new Date(parseInt(f.year), parseInt(f.month) - 1, parseInt(f.day)),
               });
               setF({ alias: "", number: "", limit: "", day: "", month: "", year: "" });
