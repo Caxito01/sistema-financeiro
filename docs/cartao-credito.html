@@ -88,9 +88,12 @@
         </svg>
       );
       if (brand === "Elo") return (
-        <svg width={size} height={size * 0.5} viewBox="0 0 42 20">
-          <rect width="42" height="20" rx="3" fill="#000" />
-          <text x="6" y="15" fontFamily="Arial Black, sans-serif" fontSize="12" fontWeight="900" fill="#FFCB05">elo</text>
+        <svg width={size * 2.2} height={size * 0.75} viewBox="0 0 66 22">
+          <path d="M 17.4,17.4 A 9,9 0 0,1 4.6,17.4" stroke="#EE3124" strokeWidth="3.5" fill="none" strokeLinecap="round"/>
+          <path d="M 4.6,17.4 A 9,9 0 0,1 6.5,3.2" stroke="#00A3E0" strokeWidth="3.5" fill="none" strokeLinecap="round"/>
+          <path d="M 6.5,3.2 A 9,9 0 0,1 17.4,4.6" stroke="#FFD100" strokeWidth="3.5" fill="none" strokeLinecap="round"/>
+          <circle cx="18.5" cy="7" r="2.2" fill="#1A1A1A"/>
+          <text x="26" y="17" fontFamily="Arial Black, sans-serif" fontSize="14" fontWeight="900" fill="#1A1A1A">elo</text>
         </svg>
       );
       if (brand === "Hipercard") return (
