@@ -571,7 +571,10 @@
       const brand = detectBrand(f.number.replace(/\D/g, ""));
       const luhnOk = f.number.replace(/\D/g, "").length >= 13 ? luhn(f.number) : null;
       const accent = getAccent(brand);
-      const canAdd = f.alias && f.limit && f.day && f.month && f.year;
+      const canAdd = f.alias && f.limit && f.day && f.month && f.year &&
+        parseInt(f.day) >= 1 && parseInt(f.day) <= 31 &&
+        parseInt(f.month) >= 1 && parseInt(f.month) <= 12 &&
+        parseInt(f.year) >= 2026;
 
       return (
         <div style={S.addCardBox}>
@@ -607,10 +610,33 @@
           <div style={S.field}>
             <label style={S.label}>Vencimento da fatura</label>
             <div style={{ display: "flex", gap: 8 }}>
-              {[["Dia", "day", 2, 60], ["Mês", "month", 2, 60], ["Ano", "year", 4, 80]].map(([ph, key, max, w]) => (
-                <input key={key} style={{ ...S.input, width: w, textAlign: "center" }} placeholder={ph} maxLength={max}
-                  value={f[key]} onChange={e => setF(p => ({ ...p, [key]: e.target.value.replace(/\D/g, "") }))} />
-              ))}
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <input style={{ ...S.input, width: 60, textAlign: "center",
+                  borderColor: f.day && (parseInt(f.day) < 1 || parseInt(f.day) > 31) ? "#ef4444" : undefined }}
+                  placeholder="Dia" maxLength={2} value={f.day}
+                  onChange={e => setF(p => ({ ...p, day: e.target.value.replace(/\D/g, "") }))} />
+                {f.day && (parseInt(f.day) < 1 || parseInt(f.day) > 31) && (
+                  <span style={{ color: "#ef4444", fontSize: 11 }}>1–31</span>
+                )}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <input style={{ ...S.input, width: 60, textAlign: "center",
+                  borderColor: f.month && (parseInt(f.month) < 1 || parseInt(f.month) > 12) ? "#ef4444" : undefined }}
+                  placeholder="Mês" maxLength={2} value={f.month}
+                  onChange={e => setF(p => ({ ...p, month: e.target.value.replace(/\D/g, "") }))} />
+                {f.month && (parseInt(f.month) < 1 || parseInt(f.month) > 12) && (
+                  <span style={{ color: "#ef4444", fontSize: 11 }}>1–12</span>
+                )}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <input style={{ ...S.input, width: 80, textAlign: "center",
+                  borderColor: f.year && f.year.length === 4 && parseInt(f.year) < 2026 ? "#ef4444" : undefined }}
+                  placeholder="Ano" maxLength={4} value={f.year}
+                  onChange={e => setF(p => ({ ...p, year: e.target.value.replace(/\D/g, "") }))} />
+                {f.year && f.year.length === 4 && parseInt(f.year) < 2026 && (
+                  <span style={{ color: "#ef4444", fontSize: 11 }}>Mín. 2026</span>
+                )}
+              </div>
             </div>
             <span style={S.hint}>Dia / Mês / Ano — replicado para parcelas futuras</span>
           </div>
