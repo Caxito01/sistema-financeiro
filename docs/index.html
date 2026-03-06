@@ -226,7 +226,7 @@
   <a href="lancamentos.html" class="mnav-link">➕ Novo Lançamento</a>
   <a href="lista-lancamentos.html" class="mnav-link">📋 Lista</a>
   <a href="relatorios.html" class="mnav-link">📈 Relatórios</a>
-  <a href="login.html" class="mnav-link">🔐 Login</a>
+  <a href="#" onclick="handleAuth();return false;" class="mnav-link" id="authNavLink">🔐 Login</a>
 </nav>
 <!-- ══ PAGE ══════════════════════════════════════════════════════ -->
 <main class="page">
@@ -268,10 +268,10 @@
       <div class="nav-desc">Análise hierárquica por período</div>
     </a>
 
-    <a class="nav-card" href="login.html" style="--accent:#64748b;--accent-bg:rgba(100,116,139,.06);">
-      <div class="nav-icon">🔐</div>
-      <div class="nav-name">Login / Auth</div>
-      <div class="nav-desc">Autenticação Supabase Auth</div>
+    <a class="nav-card" href="#" onclick="handleAuth();return false;" id="authNavCard" style="--accent:#64748b;--accent-bg:rgba(100,116,139,.06);">
+      <div class="nav-icon" id="authCardIcon">🔐</div>
+      <div class="nav-name" id="authCardName">Login / Auth</div>
+      <div class="nav-desc" id="authCardDesc">Verificando sessão…</div>
     </a>
 
   </div>
@@ -690,6 +690,43 @@ function renderTopSubgrupos(data) {
 /* ══════════════════════════════════════════════════════════════
    INIT
 ══════════════════════════════════════════════════════════════ */
+async function handleAuth() {
+  if (!sb) { window.location.href = 'login.html'; return; }
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      await sb.auth.signOut();
+      window.location.href = 'login.html';
+    } else {
+      window.location.href = 'login.html';
+    }
+  } catch(e) {
+    window.location.href = 'login.html';
+  }
+}
+
+async function updateAuthCard() {
+  if (!sb) return;
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const icon = document.getElementById('authCardIcon');
+    const name = document.getElementById('authCardName');
+    const desc = document.getElementById('authCardDesc');
+    const navLink = document.getElementById('authNavLink');
+    if (session) {
+      if (icon) icon.textContent = '🚪';
+      if (name) name.textContent = 'Sair';
+      if (desc) desc.textContent = 'Clique para encerrar a sessão';
+      if (navLink) navLink.textContent = '🚪 Sair';
+    } else {
+      if (icon) icon.textContent = '🔐';
+      if (name) name.textContent = 'Login';
+      if (desc) desc.textContent = 'Entrar no sistema';
+      if (navLink) navLink.textContent = '🔐 Login';
+    }
+  } catch(e) {}
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   // Date
   const now = new Date();
@@ -701,6 +738,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (cfg.url && cfg.key) {
     document.getElementById('setupOverlay').style.display = 'none';
     initSupabase(cfg.url, cfg.key);
+    setTimeout(updateAuthCard, 800);
   } else {
     document.getElementById('setupOverlay').style.display = 'flex';
     setConnStatus('err', 'Não configurado');
