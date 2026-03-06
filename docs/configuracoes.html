@@ -91,6 +91,44 @@
     .confirm-desc{font-size:.84rem;color:var(--text2);margin-bottom:1.25rem;line-height:1.5}
     .confirm-btns{display:flex;gap:.65rem;justify-content:flex-end}
     .footer{text-align:center;padding:1.5rem;font-size:.72rem;color:var(--text3);border-top:1px solid var(--border)}
+    .banner-ajuda{background:#eff6ff;border-left:4px solid #3b82f6;border-radius:var(--radius-sm);padding:1rem 1.1rem;margin-bottom:1.25rem;display:flex;justify-content:space-between;align-items:flex-start;gap:.75rem}
+    [data-theme="dark"] .banner-ajuda{background:#1e3a5f}
+    .banner-ajuda-icon{font-size:1.5rem;flex-shrink:0}
+    .banner-ajuda-title{font-size:.88rem;font-weight:700;color:#1d4ed8;margin-bottom:.35rem}
+    [data-theme="dark"] .banner-ajuda-title{color:#93c5fd}
+    .banner-ajuda-text{font-size:.8rem;color:#1e40af;line-height:1.5;margin-bottom:.3rem}
+    [data-theme="dark"] .banner-ajuda-text{color:#bfdbfe}
+    .banner-ajuda-list{list-style:none;padding:0}
+    .banner-ajuda-list li{font-size:.78rem;color:#1e40af;padding:.1rem 0}
+    [data-theme="dark"] .banner-ajuda-list li{color:#bfdbfe}
+    .banner-close{background:none;border:none;font-size:1.25rem;cursor:pointer;color:#3b82f6;font-weight:700;padding:0;font-family:inherit;flex-shrink:0}
+    .dicas-box{background:#fefce8;border-left:4px solid #eab308;border-radius:var(--radius-sm);padding:.85rem 1rem;margin-bottom:.85rem}
+    [data-theme="dark"] .dicas-box{background:#1c1a00;border-left-color:#ca8a04}
+    .dicas-box-title{font-size:.75rem;font-weight:700;color:#854d0e;margin-bottom:.5rem}
+    [data-theme="dark"] .dicas-box-title{color:#fde047}
+    .dicas-box-list{list-style:none;padding:0}
+    .dicas-box-list li{font-size:.73rem;color:#713f12;padding:.15rem 0}
+    [data-theme="dark"] .dicas-box-list li{color:#fef08a}
+    #modalAjuda{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:1rem;z-index:9996}
+    #modalAjuda.hidden{display:none!important}
+    .ajuda-box{background:var(--surface);border-radius:var(--radius);max-width:720px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);display:flex;flex-direction:column}
+    .ajuda-header{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--border);padding:1.25rem 1.5rem;display:flex;justify-content:space-between;align-items:center}
+    .ajuda-header-title{font-size:1.1rem;font-weight:700;color:var(--text)}
+    .ajuda-body{padding:1.5rem;display:flex;flex-direction:column;gap:1.5rem}
+    .ajuda-section-title{font-size:.95rem;font-weight:700;color:#3b82f6;margin-bottom:.65rem}
+    .ajuda-text{font-size:.84rem;color:var(--text2);line-height:1.6;margin-bottom:.35rem}
+    .ajuda-code-box{background:var(--surface2);border:1px solid var(--border);border-left:4px solid #3b82f6;border-radius:var(--radius-sm);padding:.85rem 1rem;font-size:.8rem;line-height:1.8}
+    .ajuda-item{display:flex;gap:.75rem;margin-bottom:.6rem}
+    .ajuda-item-icon{font-size:1.2rem;flex-shrink:0}
+    .ajuda-item-title{font-size:.84rem;font-weight:600;color:var(--text);margin-bottom:.1rem}
+    .ajuda-item-desc{font-size:.78rem;color:var(--text2);line-height:1.4}
+    .ajuda-tree{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1rem;font-size:.82rem;margin-top:.75rem}
+    .ajuda-tree-grupo{background:#eff6ff;padding:.35rem .65rem;border-radius:6px;margin-bottom:.4rem;font-weight:600;color:var(--text)}
+    [data-theme="dark"] .ajuda-tree-grupo{background:#1e3a5f}
+    .ajuda-tree-sub{background:#f0fdf4;padding:.3rem .65rem;border-radius:6px;margin-bottom:.3rem;margin-left:1.5rem;color:var(--text)}
+    [data-theme="dark"] .ajuda-tree-sub{background:#14401e}
+    .ajuda-tree-classe{padding:.2rem .65rem;margin-left:3rem;color:var(--text2);font-size:.78rem}
+    .ajuda-footer{position:sticky;bottom:0;background:var(--surface2);border-top:1px solid var(--border);padding:1rem 1.5rem;display:flex;justify-content:flex-end}
   </style>
 </head>
 <body>
@@ -114,13 +152,40 @@
     <div class="page-title">
       ⚙️ Configurações
       <div class="page-title-actions">
+        <button onclick="abrirAjuda()" class="btn btn-primary btn-sm">❓ Ajuda</button>
         <button onclick="window.location.href='dashboard.html'" class="btn btn-secondary btn-sm">← Voltar</button>
       </div>
+    </div>
+
+    <!-- BANNER DE AJUDA -->
+    <div id="bannerAjuda" class="banner-ajuda">
+      <span class="banner-ajuda-icon">💡</span>
+      <div style="flex:1">
+        <div class="banner-ajuda-title">Bem-vindo às Configurações!</div>
+        <p class="banner-ajuda-text">Aqui você gerencia a estrutura hierárquica do seu sistema financeiro: <strong>Grupos → Subgrupos → Classes</strong></p>
+        <ul class="banner-ajuda-list">
+          <li>• Use a <strong>navegação em árvore</strong> para criar e editar itens</li>
+          <li>• Clique no nome de um Grupo para ver seus Subgrupos, e assim por diante</li>
+          <li>• Gerencie <strong>Formas de Pagamento</strong> na seção abaixo</li>
+          <li>• Clique em <strong>❓ Ajuda</strong> para mais informações detalhadas</li>
+        </ul>
+      </div>
+      <button class="banner-close" onclick="fecharBanner()" title="Fechar">✕</button>
     </div>
 
     <!-- HIERARQUIA -->
     <div class="card">
       <div class="card-title">🗂️ Hierarquia — Grupos · Subgrupos · Classes</div>
+      <div class="dicas-box">
+        <div class="dicas-box-title">💡 Dicas Importantes</div>
+        <ul class="dicas-box-list">
+          <li>• Planeje bem sua hierarquia antes de criar muitos lançamentos</li>
+          <li>• Use códigos numéricos crescentes para facilitar a organização</li>
+          <li>• Desative itens em vez de excluí-los para manter histórico</li>
+          <li>• Grupos devem ser do tipo DESPESA ou RECEITA</li>
+          <li>• Classes podem ter palavras-chave para facilitar buscas</li>
+        </ul>
+      </div>
       <div class="hier-nav" id="hierNav">
         <span class="hier-crumb active" onclick="irParaGrupos()">Grupos</span>
       </div>
@@ -191,6 +256,59 @@
 
   <div id="toast-container"></div>
 
+  <!-- MODAL DE AJUDA -->
+  <div id="modalAjuda" class="hidden">
+    <div class="ajuda-box">
+      <div class="ajuda-header">
+        <div class="ajuda-header-title">📚 Guia de Configurações</div>
+        <button class="banner-close" onclick="fecharAjuda()">✕</button>
+      </div>
+      <div class="ajuda-body">
+        <section>
+          <div class="ajuda-section-title">🎯 Visão Geral</div>
+          <p class="ajuda-text">A página de Configurações permite organizar seus lançamentos financeiros em uma estrutura hierárquica de 3 níveis que pode ser organizado da forma que preferir:</p>
+          <div class="ajuda-code-box">
+            <strong style="color:#3b82f6">Grupo</strong> → <strong style="color:#16a34a">Subgrupo</strong> → <strong style="color:#7c3aed">Classe</strong><br/>
+            <span style="font-size:.75rem;color:var(--text2)">Exemplo 1: <span style="color:#3b82f6">DESPESAS</span> → <span style="color:#16a34a">IMÓVEL</span> → <span style="color:#7c3aed">Energia Elétrica</span></span><br/>
+            <span style="font-size:.75rem;color:var(--text2)">Exemplo 2: <span style="color:#3b82f6">DESPESAS COM FILHOS</span> → <span style="color:#16a34a">CARLOS EDU</span> → <span style="color:#7c3aed">Faculdade</span></span>
+          </div>
+        </section>
+        <section>
+          <div class="ajuda-section-title">🔧 Como usar a Hierarquia</div>
+          <div class="ajuda-item"><span class="ajuda-item-icon">➕</span><div><div class="ajuda-item-title">Criar Novo Item</div><div class="ajuda-item-desc">Clique no botão <strong>Novo Grupo / Novo Subgrupo / Nova Classe</strong> conforme o nível atual. Preencha o nome e salve.</div></div></div>
+          <div class="ajuda-item"><span class="ajuda-item-icon">✏️</span><div><div class="ajuda-item-title">Editar Item</div><div class="ajuda-item-desc">Passe o mouse sobre o item na lista e clique em <strong>✏️</strong> para abrir o formulário de edição.</div></div></div>
+          <div class="ajuda-item"><span class="ajuda-item-icon">🗑️</span><div><div class="ajuda-item-title">Excluir Item</div><div class="ajuda-item-desc">Clique em <strong>🗑️</strong>. Itens com dependências (subgrupos/classes vinculados) não podem ser excluídos.</div></div></div>
+          <div class="ajuda-item"><span class="ajuda-item-icon">⏸️</span><div><div class="ajuda-item-title">Ativar / Desativar</div><div class="ajuda-item-desc">Use <strong>⏸️</strong> para desativar ou <strong>▶️</strong> para reativar. Itens inativos não aparecem nos lançamentos.</div></div></div>
+        </section>
+        <section>
+          <div class="ajuda-section-title">🌳 Navegação em Árvore</div>
+          <p class="ajuda-text">A hierarquia funciona como uma árvore navegável:</p>
+          <div class="ajuda-item"><span class="ajuda-item-icon">▶️</span><div class="ajuda-item-desc">Clique no nome de um <strong>Grupo</strong> para ver seus Subgrupos</div></div>
+          <div class="ajuda-item"><span class="ajuda-item-icon">🔍</span><div class="ajuda-item-desc">Clique no nome de um <strong>Subgrupo</strong> para ver suas Classes</div></div>
+          <div class="ajuda-item"><span class="ajuda-item-icon">🔴</span><div class="ajuda-item-desc">Itens inativos aparecem com badge <strong>Inativo</strong> em cinza</div></div>
+          <div class="ajuda-tree">
+            <div class="ajuda-tree-grupo">▼ 1 - DESPESAS</div>
+            <div class="ajuda-tree-sub">▶ 10 - IMÓVEL</div>
+            <div class="ajuda-tree-classe">• ELET — Energia Elétrica</div>
+            <div class="ajuda-tree-classe">• AGUA — Água</div>
+            <div class="ajuda-tree-classe">• ALUG — Aluguel</div>
+            <div class="ajuda-tree-sub">▶ 20 - PESSOAL</div>
+          </div>
+        </section>
+        <section>
+          <div class="ajuda-section-title">💳 Formas de Pagamento</div>
+          <p class="ajuda-text">Gerencie as formas de pagamento disponíveis no sistema:</p>
+          <div class="ajuda-item"><span class="ajuda-item-icon">✅</span><div class="ajuda-item-desc">Adicione formas como: Dinheiro, PIX, Cartão de Crédito, Cartão de Débito, etc.</div></div>
+          <div class="ajuda-item"><span class="ajuda-item-icon">🔄</span><div class="ajuda-item-desc">Ative/Desative formas sem excluí-las — preserva o histórico dos lançamentos</div></div>
+          <div class="ajuda-item"><span class="ajuda-item-icon">📝</span><div class="ajuda-item-desc">Edite nomes quando necessário usando o botão <strong>✏️</strong></div></div>
+        </section>
+      </div>
+      <div class="ajuda-footer">
+        <button class="btn btn-primary" onclick="fecharAjuda()">Entendi!</button>
+      </div>
+    </div>
+  </div>
+
   <div id="confirm-overlay" class="hidden">
     <div class="confirm-box">
       <div class="confirm-icon">⚠️</div>
@@ -215,6 +333,10 @@
   </div>
 
   <script>
+    function fecharBanner(){document.getElementById('bannerAjuda').classList.add('hidden')}
+    function abrirAjuda(){document.getElementById('modalAjuda').classList.remove('hidden')}
+    function fecharAjuda(){document.getElementById('modalAjuda').classList.add('hidden')}
+    document.getElementById('modalAjuda').addEventListener('click',e=>{if(e.target===document.getElementById('modalAjuda'))fecharAjuda()});
     function toggleTheme(){const h=document.documentElement,d=h.getAttribute('data-theme')==='dark';h.setAttribute('data-theme',d?'light':'dark');document.getElementById('themeBtn').textContent=d?'🌙 Escuro':'☀️ Claro'}
 
     let nivel='grupos',grupoSelecionado=null,subgrupoSelecionado=null;
