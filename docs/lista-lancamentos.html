@@ -211,6 +211,19 @@
     .confirm-cancel { background: #f1f5f9; color: #475569; }
     .confirm-ok     { background: #ef4444; color: #fff; }
     .confirm-ok.green { background: #22c55e; }
+
+    /* ── SITE FOOTER ── */
+    .site-footer {
+      text-align: center;
+      padding: 1.5rem 1rem;
+      margin-top: 2rem;
+      color: #6b7280;
+      font-size: 0.8rem;
+      border-top: 1px solid #e5e7eb;
+    }
+    @media print {
+      .site-footer { display: none !important; }
+    }
   </style>
 </head>
 <body>
@@ -333,6 +346,8 @@
         <button onclick="limparFiltros()" class="btn btn-secondary">Limpar</button>
         <button onclick="exportarCSV()" class="btn" style="background: var(--success); color: white;">📊 Exportar CSV</button>
         <button onclick="imprimirRelatorio()" class="btn" style="background: #1e40af; color: white;">🖨️ Imprimir Relatório</button>
+        <button onclick="toggleOcultarValores()" id="btnOcultar" class="btn" style="background: #6366f1; color: white;">👁️ Ocultar</button>
+        <button onclick="salvarPDF()" class="btn" style="background: #dc2626; color: white;">📄 Salvar PDF</button>
       </div>
     </div>
 
@@ -412,11 +427,16 @@
     </div>
   </div>
 
+  <footer class="site-footer no-print">
+    Sistema Financeiro © 2026 — Carlos Caxito &nbsp;|&nbsp; Dados demonstrativos
+  </footer>
+
   <script src="config/supabase-config.js"></script>
   <script>
     let todosLancamentos = [];
     let lancamentoParaQuitar = null;
     let formasPagamento = [];
+    let ocultarValores = false;
 
     window.addEventListener('DOMContentLoaded', async () => {
       await protectPage();
@@ -546,7 +566,7 @@
           <td>${lanc.classe?.subgrupo?.grupo?.nome || '-'}</td>
           <td>${lanc.classe?.subgrupo?.nome || '-'}</td>
           <td>${lanc.classe?.descricao || '-'}</td>
-          <td class="${valClass}" style="font-weight:600;color:${valColor}">${prefixo}${fmtVal}</td>
+          <td class="${valClass}" style="font-weight:600;color:${valColor}">${ocultarValores ? '••••••' : prefixo+fmtVal}</td>
         `;
 
         // Célula Ações com botões via createElement (sem onclick string — evita problema com UUID)
@@ -590,9 +610,10 @@
       const totalDespesasGeral = todosLancamentos.filter(l => l.tipo === 'DESPESA').reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
       const saldo = receitas - totalDespesasGeral;
 
-      document.getElementById('totalDespesas').textContent = `R$ ${despesas.toFixed(2)}`;
-      document.getElementById('totalReceitas').textContent = `R$ ${receitas.toFixed(2)}`;
-      document.getElementById('saldo').textContent = `R$ ${saldo.toFixed(2)}`;
+      const mask = '••••••';
+      document.getElementById('totalDespesas').textContent = ocultarValores ? mask : `R$ ${despesas.toFixed(2)}`;
+      document.getElementById('totalReceitas').textContent = ocultarValores ? mask : `R$ ${receitas.toFixed(2)}`;
+      document.getElementById('saldo').textContent = ocultarValores ? mask : `R$ ${saldo.toFixed(2)}`;
       document.getElementById('saldo').style.color = saldo >= 0 ? 'var(--success)' : 'var(--danger)';
     }
 
@@ -671,6 +692,18 @@
       } catch (error) {
         showToast('Erro ao deletar: ' + error.message, 'error');
       }
+    }
+
+    /* ─── OCULTAR VALORES / PDF ──────────────────────────────── */
+    function toggleOcultarValores() {
+      ocultarValores = !ocultarValores;
+      const btn = document.getElementById('btnOcultar');
+      btn.innerHTML = ocultarValores ? '👁️ Mostrar' : '👁️ Ocultar';
+      aplicarFiltros();
+    }
+
+    function salvarPDF() {
+      imprimirRelatorio();
     }
 
     /* ─── IMPRIMIR RELATÓRIO ────────────────────────────────── */
