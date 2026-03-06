@@ -1,28 +1,56 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Relatórios - Sistema Financeiro</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root{--bg:#f1f5f9;--surface:#fff;--surface2:#f8fafc;--border:#e2e8f0;--text:#1e293b;--text2:#64748b;--text3:#94a3b8;--shadow:0 1px 3px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.06);--radius-sm:10px;--transition:.22s cubic-bezier(.4,0,.2,1)}
+    [data-theme="dark"]{--bg:#0f172a;--surface:#1e293b;--surface2:#273549;--border:#334155;--text:#f1f5f9;--text2:#94a3b8;--text3:#64748b}
+    body{font-family:'Poppins',sans-serif!important;background:var(--bg)!important;color:var(--text)!important}
+    [data-theme="dark"] .card{background:var(--surface)!important;border-color:var(--border)!important;color:var(--text)!important}
+    [data-theme="dark"] input,[data-theme="dark"] select,[data-theme="dark"] textarea{background:var(--surface2)!important;color:var(--text)!important;border-color:var(--border)!important}
+    [data-theme="dark"] label,[data-theme="dark"] h1,[data-theme="dark"] h2,[data-theme="dark"] h3{color:var(--text)!important}
+    [data-theme="dark"] .stat-card{background:var(--surface2)!important}[data-theme="dark"] .stat-title{color:var(--text2)!important}
+    [data-theme="dark"] .auth-card{background:var(--surface)!important;color:var(--text)!important}
+    .sf-header{position:sticky;top:0;z-index:100;background:var(--surface);border-bottom:1px solid var(--border);box-shadow:var(--shadow);padding:0 1.5rem;height:60px;display:flex;align-items:center;justify-content:space-between}
+    .sf-brand{font-weight:700;font-size:1.15rem;color:var(--text);display:flex;align-items:center;gap:.5rem;text-decoration:none}
+    .sf-brand span{color:#22c55e}
+    .sf-hr{display:flex;align-items:center;gap:.75rem}
+    .sf-theme-btn{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.35rem .75rem;font-size:.8rem;font-weight:600;cursor:pointer;color:var(--text2);transition:all var(--transition);font-family:inherit}
+    .sf-theme-btn:hover{background:var(--border)}
+    .sf-nav{position:sticky;top:60px;z-index:99;background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;gap:.1rem;height:42px;overflow-x:auto}
+    .sf-nav::-webkit-scrollbar{height:0}
+    .sf-nav a{display:inline-flex;align-items:center;gap:.3rem;padding:.28rem .65rem;border-radius:var(--radius-sm);font-size:.78rem;font-weight:600;color:var(--text2);text-decoration:none;white-space:nowrap;transition:all var(--transition);flex-shrink:0}
+    .sf-nav a:hover{background:var(--surface2);color:var(--text)}
+    .sf-nav a.active{background:#f0fdf4;color:#16a34a}
+    [data-theme="dark"] .sf-nav a.active{background:rgba(34,197,94,.15);color:#4ade80}
+    .sf-footer{text-align:center;padding:1.5rem;font-size:.72rem;color:var(--text3);border-top:1px solid var(--border);margin-top:1rem}
+  </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
-  <nav class="navbar">
-    <div class="navbar-content">
-      <a href="dashboard.html" class="navbar-brand">💰 Sistema Financeiro</a>
-      <div class="navbar-menu">
-        <a href="portal.html" class="navbar-link">🏠 Portal</a>
-        <a href="dashboard.html" class="navbar-link">Dashboard</a>
-        <a href="lancamentos.html" class="navbar-link">Novo Lançamento</a>
-        <a href="lista-lancamentos.html" class="navbar-link">Lançamentos</a>
-        <a href="relatorios.html" class="navbar-link">Relatórios</a>
-        <a href="cartao-credito.html" class="navbar-link">💳 Cartões</a>
-        <button onclick="handleLogout()" class="btn btn-secondary">Sair</button>
-      </div>
+  <header class="sf-header">
+    <a href="dashboard.html" class="sf-brand">💰 <span>Sistema</span> Financeiro</a>
+    <div class="sf-hr">
+      <button class="sf-theme-btn" onclick="sfToggleTheme()" id="sfThemeBtn">🌙 Escuro</button>
     </div>
+  </header>
+  <nav class="sf-nav">
+    <a href="portal.html">🏠 Portal</a>
+    <a href="dashboard.html">📊 Dashboard</a>
+    <a href="lancamentos.html">➕ Novo Lançamento</a>
+    <a href="lista-lancamentos.html">📋 Lista</a>
+    <a href="relatorios.html" class="active">📈 Relatórios</a>
+    <a href="cartao-credito.html">💳 Cartões</a>
+    <a href="configuracoes.html">⚙️ Configurações</a>
+    <a href="login.html">🔐 Login</a>
   </nav>
 
   <div class="container">
@@ -258,5 +286,7 @@
       });
     }
   </script>
+  <footer class="sf-footer">Sistema Financeiro © 2026 — Carlos Caxito &nbsp;|  Dados demonstrativos</footer>
+  <script>function sfToggleTheme(){const h=document.documentElement,d=h.getAttribute('data-theme')==='dark';h.setAttribute('data-theme',d?'light':'dark');document.getElementById('sfThemeBtn').textContent=d?'🌙 Escuro':'☀️ Claro'}</script>
 </body>
 </html>
