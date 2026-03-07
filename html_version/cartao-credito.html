@@ -1140,12 +1140,46 @@
     function CartaoFaturas() {
       const isDark = useTheme();
       const S = getS(isDark);
-      const [step, setStep] = useState("setup");
-      const [cards, setCards] = useState([]);
-      const [entries, setEntries] = useState([]);
+
+      // ── Carrega estado persistido do localStorage na inicializacao
+      const [cards, setCards] = useState(() => {
+        try {
+          return JSON.parse(localStorage.getItem("sf_cards") || "[]").map(c => ({
+            ...c, dueDate: c.dueDate ? new Date(c.dueDate) : null,
+          }));
+        } catch { return []; }
+      });
+      const [entries, setEntries] = useState(() => {
+        try {
+          return JSON.parse(localStorage.getItem("sf_entries") || "[]").map(e => ({
+            ...e,
+            dueDate: e.dueDate ? new Date(e.dueDate) : null,
+            ofxDate: e.ofxDate ? new Date(e.ofxDate) : null,
+          }));
+        } catch { return []; }
+      });
+      const [importedFitids, setImportedFitids] = useState(() => {
+        try { return new Set(JSON.parse(localStorage.getItem("sf_fitids") || "[]")); } catch { return new Set(); }
+      });
+      const [step, setStep] = useState(() => {
+        try {
+          const saved = JSON.parse(localStorage.getItem("sf_cards") || "[]");
+          return saved.length > 0 ? "main" : "setup";
+        } catch { return "setup"; }
+      });
       const [showAddCard, setShowAddCard] = useState(false);
       const [showOFX, setShowOFX] = useState(false);
-      const [importedFitids, setImportedFitids] = useState(new Set());
+
+      // ── Persiste automaticamente no localStorage ao alterar estado
+      useEffect(() => {
+        try { localStorage.setItem("sf_cards", JSON.stringify(cards)); } catch {}
+      }, [cards]);
+      useEffect(() => {
+        try { localStorage.setItem("sf_entries", JSON.stringify(entries)); } catch {}
+      }, [entries]);
+      useEffect(() => {
+        try { localStorage.setItem("sf_fitids", JSON.stringify([...importedFitids])); } catch {}
+      }, [importedFitids]);
 
       async function handleLaunch({ card, desc, value, installments, category }) {
         const groupId = Date.now();
@@ -1219,7 +1253,12 @@
                 <button style={S.btnSecondary} onClick={() => { setShowAddCard(p => !p); setShowOFX(false); }}>
                   {showAddCard ? "✕" : "+ Cartão"}
                 </button>
-                <button style={S.btnSecondary} onClick={() => { setStep("setup"); setCards([]); setEntries([]); setImportedFitids(new Set()); }}>
+                <button style={S.btnSecondary} onClick={() => {
+                  localStorage.removeItem("sf_cards");
+                  localStorage.removeItem("sf_entries");
+                  localStorage.removeItem("sf_fitids");
+                  setStep("setup"); setCards([]); setEntries([]); setImportedFitids(new Set());
+                }}>
                   Reiniciar
                 </button>
               </div>
