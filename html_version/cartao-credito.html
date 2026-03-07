@@ -87,7 +87,24 @@
        + substituição do import pelo destructuring do global React.
   ════════════════════════════════════════════════════════════ -->
   <script type="text/babel">
-    const { useState, useMemo, useRef } = React;
+    const { useState, useMemo, useRef, useEffect } = React;
+
+    // ════════════════════════════════════════════════════════════════
+    // THEME HOOK — observa data-theme no <html> e força re-render
+    // ════════════════════════════════════════════════════════════════
+    function useTheme() {
+      const [isDark, setIsDark] = useState(
+        document.documentElement.getAttribute('data-theme') === 'dark'
+      );
+      useEffect(() => {
+        const obs = new MutationObserver(() =>
+          setIsDark(document.documentElement.getAttribute('data-theme') === 'dark')
+        );
+        obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+        return () => obs.disconnect();
+      }, []);
+      return isDark;
+    }
 
     // ════════════════════════════════════════════════════════════════
     // BRAND LOGOS
@@ -133,7 +150,7 @@
           <text x="4" y="13" fontFamily="Arial, sans-serif" fontSize="7" fontWeight="700" fill="white">DINERS CLUB</text>
         </svg>
       );
-      return <span style={{ color: "var(--text3)", fontSize: 11 }}>—</span>;
+      return <span style={{ color: "#94a3b8", fontSize: 11 }}>—</span>;
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -293,6 +310,8 @@
     // OFX IMPORTER COMPONENT
     // ════════════════════════════════════════════════════════════════
     function OFXImporter({ cards, onImport, onClose, importedFitids }) {
+      const isDark = useTheme();
+      const S = getS(isDark);
       const [drag, setDrag] = useState(false);
       const [parsed, setParsed] = useState(null);
       const [selected, setSelected] = useState({});
@@ -424,8 +443,8 @@
             <div
               style={{
                 ...S.dropZone,
-                borderColor: drag ? accent : "var(--dropzone-border)",
-                background: drag ? accent + "11" : "var(--dropzone-bg)",
+                borderColor: drag ? accent : (isDark ? "#1e2840" : "#cbd5e1"),
+                background: drag ? accent + "11" : (isDark ? "#0a0d18" : "#f8fafc"),
               }}
               onDragOver={e => { e.preventDefault(); setDrag(true); }}
               onDragLeave={() => setDrag(false)}
@@ -435,13 +454,13 @@
               <input ref={fileRef} type="file" accept=".ofx,.OFX" style={{ display: "none" }}
                 onChange={e => handleFile(e.target.files[0])} />
               <div style={{ fontSize: 32, marginBottom: 8 }}>📂</div>
-              <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 600 }}>
+              <div style={{ color: isDark ? "#f1f5f9" : "#1e293b", fontSize: 13, fontWeight: 600 }}>
                 Arraste o arquivo .OFX aqui
               </div>
-              <div style={{ color: "var(--text2)", fontSize: 11, marginTop: 4 }}>
+              <div style={{ color: isDark ? "#94a3b8" : "#64748b", fontSize: 11, marginTop: 4 }}>
                 ou clique para selecionar
               </div>
-              <div style={{ color: "var(--text3)", fontSize: 10, marginTop: 8 }}>
+              <div style={{ color: isDark ? "#64748b" : "#94a3b8", fontSize: 10, marginTop: 8 }}>
                 Compatível com Nubank, Itaú, Bradesco, Santander, BB, Caixa, C6, Inter e outros
               </div>
             </div>
@@ -463,7 +482,7 @@
 
               {dupCount > 0 && (
                 <div style={{
-                  background: "var(--warn-bg)", border: "1px solid var(--warn-border)",
+                  background: isDark ? "#1a1200" : "#fffbeb", border: isDark ? "1px solid #f5a62344" : "1px solid #fde68a",
                   borderRadius: 8, padding: "10px 14px",
                   display: "flex", alignItems: "center", gap: 8,
                 }}>
@@ -489,7 +508,7 @@
                 <button style={{ ...S.btnSecondary, fontSize: 10 }} onClick={() => { setParsed(null); setError(""); }}>
                   Trocar arquivo
                 </button>
-                <span style={{ marginLeft: "auto", color: "var(--text3)", fontSize: 11 }}>
+                <span style={{ marginLeft: "auto", color: isDark ? "#64748b" : "#94a3b8", fontSize: 11 }}>
                   {selectedCount} selecionado(s) · {fmt(totalSelected)}
                 </span>
               </div>
@@ -516,7 +535,7 @@
                           ...S.tr,
                           opacity: isDup ? 1 : isSelected ? 1 : 0.35,
                           cursor: isDup ? "not-allowed" : "pointer",
-                          background: isDup ? "var(--dup-row)" : "transparent",
+                          background: isDup ? (isDark ? "#1a1000" : "#fff7ed") : "transparent",
                         }}
                           onClick={() => {
                             if (isDup) return;
@@ -529,7 +548,7 @@
                             ) : (
                               <div style={{
                                 width: 14, height: 14, borderRadius: 3,
-                                border: `1.5px solid ${isSelected ? accent : "var(--border)"}`,
+                                border: `1.5px solid ${isSelected ? accent : (isDark ? "#334155" : "#e2e8f0")}`,
                                 background: isSelected ? accent : "transparent",
                                 display: "flex", alignItems: "center", justifyContent: "center",
                               }}>
@@ -539,9 +558,9 @@
                           </td>
                           <td style={{ ...S.td, whiteSpace: "nowrap" }}>{fmtDateShort(t.date)}</td>
                           <td style={{ ...S.td, maxWidth: 200 }}>
-                            <div style={{ color: isDup ? "#92400e" : "var(--desc-text)", fontSize: 12 }}>{t.cleanDesc}</div>
+                            <div style={{ color: isDup ? "#92400e" : (isDark ? "#c0ccdd" : "#1e293b"), fontSize: 12 }}>{t.cleanDesc}</div>
                             {t.cleanDesc !== t.memo && (
-                              <div style={{ color: "var(--text3)", fontSize: 10, marginTop: 1 }}>{t.memo}</div>
+                              <div style={{ color: isDark ? "#64748b" : "#94a3b8", fontSize: 10, marginTop: 1 }}>{t.memo}</div>
                             )}
                             {isDup && (
                               <div style={{ color: "#f5a62388", fontSize: 10, marginTop: 1 }}>já importado</div>
@@ -549,26 +568,26 @@
                           </td>
                           <td style={S.td}>
                             {t.installment ? (
-                              <span style={{ ...S.instBadge, background: isDup ? "var(--dup-row)" : accent + "22", color: isDup ? "#92400e" : accent }}>
+                              <span style={{ ...S.instBadge, background: isDup ? (isDark ? "#1a1000" : "#fff7ed") : accent + "22", color: isDup ? "#92400e" : accent }}>
                                 {t.installment.current}/{t.installment.total}
-                                {!isDup && <span style={{ color: "var(--text3)", marginLeft: 3, fontSize: 9 }}>
+                                {!isDup && <span style={{ color: isDark ? "#64748b" : "#94a3b8", marginLeft: 3, fontSize: 9 }}>
                                   +{t.installment.total - t.installment.current} futuras
                                 </span>}
                               </span>
                             ) : (
-                              <span style={{ color: "var(--text3)", fontSize: 10 }}>à vista</span>
+                              <span style={{ color: isDark ? "#64748b" : "#94a3b8", fontSize: 10 }}>à vista</span>
                             )}
                           </td>
                           <td style={S.td}>
                             <span style={{
                               fontSize: 10, borderRadius: 3, padding: "1px 5px",
-                              background: t.isCredit ? "var(--credit-bg)" : "var(--debit-bg)",
-                              color: t.isCredit ? "var(--credit-text)" : "var(--debit-text)",
+                              background: t.isCredit ? (isDark ? "#1a3a1a" : "#dcfce7") : (isDark ? "#2a1a1a" : "#fee2e2"),
+                              color: t.isCredit ? (isDark ? "#00cc66" : "#16a34a") : (isDark ? "#ff6b6b" : "#ef4444"),
                             }}>
                               {t.isCredit ? "CRÉD" : "DÉB"}
                             </span>
                           </td>
-                          <td style={{ ...S.td, textAlign: "right", fontWeight: 600, color: isDup ? "#92400e" : t.isCredit ? "var(--credit-text)" : "#ff6b6b" }}>
+                          <td style={{ ...S.td, textAlign: "right", fontWeight: 600, color: isDup ? "#92400e" : t.isCredit ? (isDark ? "#00cc66" : "#16a34a") : "#ff6b6b" }}>
                             {fmt(t.amount)}
                           </td>
                         </tr>
@@ -595,6 +614,8 @@
     // CARD SETUP FORM
     // ════════════════════════════════════════════════════════════════
     function CardSetupForm({ onAdd }) {
+      const isDark = useTheme();
+      const S = getS(isDark);
       const [f, setF] = useState({ alias: "", number: "", limit: "", day: "", month: "", year: "" });
       const brand = detectBrand(f.number.replace(/\D/g, ""));
       const luhnOk = f.number.replace(/\D/g, "").length >= 13 ? luhn(f.number) : null;
@@ -693,6 +714,8 @@
     // BALANCE STRIP
     // ════════════════════════════════════════════════════════════════
     function BalanceStrip({ card, spent }) {
+      const isDark = useTheme();
+      const S = getS(isDark);
       const pct = card.limit > 0 ? Math.min((spent / card.limit) * 100, 100) : 0;
       const remaining = card.limit - spent;
       const accent = getAccent(card.brand);
@@ -703,12 +726,12 @@
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               {card.brand && <BrandLogo brand={card.brand} size={38} />}
               <div>
-                <div style={{ color: "var(--text)", fontWeight: 700, fontSize: 15 }}>{card.alias}</div>
-                <div style={{ color: "var(--text3)", fontSize: 11, marginTop: 2 }}>Vence {fmtDate(card.dueDate)}</div>
+                <div style={{ color: isDark ? "#f1f5f9" : "#1e293b", fontWeight: 700, fontSize: 15 }}>{card.alias}</div>
+                <div style={{ color: isDark ? "#64748b" : "#94a3b8", fontSize: 11, marginTop: 2 }}>Vence {fmtDate(card.dueDate)}</div>
               </div>
             </div>
             <div style={{ textAlign: "right" }}>
-              <div style={{ color: "var(--text3)", fontSize: 10, textTransform: "uppercase", letterSpacing: 1 }}>Disponível</div>
+              <div style={{ color: isDark ? "#64748b" : "#94a3b8", fontSize: 10, textTransform: "uppercase", letterSpacing: 1 }}>Disponível</div>
               <div style={{ color: remaining < 0 ? "#ff4d4d" : accent, fontWeight: 700, fontSize: 20 }}>
                 {fmt(remaining)}
               </div>
@@ -729,6 +752,8 @@
     // LAUNCH FORM
     // ════════════════════════════════════════════════════════════════
     function LaunchForm({ cards, onLaunch }) {
+      const isDark = useTheme();
+      const S = getS(isDark);
       const [f, setF] = useState({ cardId: cards[0]?.id ?? "", desc: "", value: "", installments: "1" });
       const card = cards.find(c => c.id === f.cardId);
       const accent = getAccent(card?.brand);
@@ -789,6 +814,8 @@
     // CARD SECTION
     // ════════════════════════════════════════════════════════════════
     function CardSection({ card, entries, onRemoveGroup }) {
+      const isDark = useTheme();
+      const S = getS(isDark);
       const [collapsed, setCollapsed] = useState(false);
       const accent = getAccent(card.brand);
       const current = entries.filter(e => e.cardId === card.id && e.month === 0);
@@ -845,7 +872,7 @@
                             <td style={S.td}>
                               {e.desc}
                               {e.ofxDate && (
-                                <span style={{ color: "var(--text3)", fontSize: 10, marginLeft: 6 }}>
+                                <span style={{ color: isDark ? "#64748b" : "#94a3b8", fontSize: 10, marginLeft: 6 }}>
                                   {fmtDateShort(e.ofxDate)}
                                 </span>
                               )}
@@ -853,7 +880,7 @@
                             <td style={S.td}>
                               {e.installment
                                 ? <span style={S.instBadge}>{e.installment}</span>
-                                : <span style={{ color: "var(--text3)" }}>à vista</span>}
+                                : <span style={{ color: isDark ? "#64748b" : "#94a3b8" }}>à vista</span>}
                             </td>
                             <td style={{ ...S.td, color: "#ff6b6b", fontWeight: 600 }}>{fmt(e.value)}</td>
                             <td style={S.td}>
@@ -873,14 +900,14 @@
 
               {futureByMonth.length > 0 && (
                 <div>
-                  <div style={{ ...S.subLabel, color: "var(--text3)", marginBottom: 6 }}>Parcelas Futuras</div>
+                  <div style={{ ...S.subLabel, color: isDark ? "#64748b" : "#94a3b8", marginBottom: 6 }}>Parcelas Futuras</div>
                   {futureByMonth.map(group => (
                     <div key={group.month} style={S.futureGroup}>
                       <div style={S.futureGroupHeader}>
                         <span style={{ color: accent, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>
                           {group.dueDate ? fmtDate(group.dueDate) : `+${group.month} mês`}
                         </span>
-                        <span style={{ color: "var(--text)", fontSize: 13, fontWeight: 700 }}>
+                        <span style={{ color: isDark ? "#f1f5f9" : "#1e293b", fontSize: 13, fontWeight: 700 }}>
                           {fmt(group.items.reduce((s, e) => s + e.value, 0))}
                         </span>
                       </div>
@@ -889,7 +916,7 @@
                           {e.fromOFX && <span style={{ color: accent, fontSize: 9 }} title="Via OFX">⬆</span>}
                           <span>{e.desc}</span>
                           <span style={S.instBadge}>{e.installment}</span>
-                          <span style={{ marginLeft: "auto", color: "var(--text2)" }}>{fmt(e.value)}</span>
+                          <span style={{ marginLeft: "auto", color: isDark ? "#94a3b8" : "#64748b" }}>{fmt(e.value)}</span>
                         </div>
                       ))}
                     </div>
@@ -906,6 +933,8 @@
     // APP  (renomeado de App → CartaoFaturas para evitar conflito)
     // ════════════════════════════════════════════════════════════════
     function CartaoFaturas() {
+      const isDark = useTheme();
+      const S = getS(isDark);
       const [step, setStep] = useState("setup");
       const [cards, setCards] = useState([]);
       const [entries, setEntries] = useState([]);
@@ -944,9 +973,9 @@
                 {cards.map(c => (
                   <div key={c.id} style={{ ...S.addedCardChip, borderColor: getAccent(c.brand) + "44" }}>
                     {c.brand && <BrandLogo brand={c.brand} size={30} />}
-                    <span style={{ color: "var(--text)", fontSize: 13, fontWeight: 600 }}>{c.alias}</span>
-                    <span style={{ color: "var(--text2)", fontSize: 12 }}>{fmt(c.limit)}</span>
-                    <span style={{ color: "var(--text3)", fontSize: 11 }}>· vence {fmtDate(c.dueDate)}</span>
+                    <span style={{ color: isDark ? "#f1f5f9" : "#1e293b", fontSize: 13, fontWeight: 600 }}>{c.alias}</span>
+                    <span style={{ color: isDark ? "#94a3b8" : "#64748b", fontSize: 12 }}>{fmt(c.limit)}</span>
+                    <span style={{ color: isDark ? "#64748b" : "#94a3b8", fontSize: 11 }}>· vence {fmtDate(c.dueDate)}</span>
                     <button style={{ ...S.btnRemove, marginLeft: "auto" }}
                       onClick={() => setCards(p => p.filter(x => x.id !== c.id))}>✕</button>
                   </div>
@@ -970,7 +999,7 @@
         <div style={S.root}>
           <div style={S.container}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 4 }}>
-              <h1 style={{ color: "var(--text)", fontSize: 20, fontWeight: 700, margin: 0, letterSpacing: 1 }}>
+              <h1 style={{ color: isDark ? "#f1f5f9" : "#1e293b", fontSize: 20, fontWeight: 700, margin: 0, letterSpacing: 1 }}>
                 💳 Controle de Faturas
               </h1>
               <div style={{ display: "flex", gap: 8 }}>
@@ -1023,45 +1052,54 @@
     // ════════════════════════════════════════════════════════════════
     // STYLES
     // ════════════════════════════════════════════════════════════════
-    const S = {
-      root: { minHeight: "100vh", background: "var(--bg)", fontFamily: "'Poppins', sans-serif", fontSize: 15, display: "flex", justifyContent: "center", padding: "28px 16px" },
-      container: { width: "100%", maxWidth: 720, display: "flex", flexDirection: "column", gap: 14 },
-      setupWrapper: { width: "100%", maxWidth: 520, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 },
-      setupTitle: { color: "var(--text)", fontSize: 26, fontWeight: 700, margin: "8px 0 0", letterSpacing: 1 },
-      setupSub: { color: "var(--text2)", fontSize: 15, margin: "6px 0 0" },
-      addedCardChip: { background: "var(--surface)", border: "1px solid", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 },
-      addCardBox: { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: 20, display: "flex", flexDirection: "column", gap: 14 },
-      importerCard: { background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 14, padding: 20, display: "flex", flexDirection: "column", gap: 14 },
-      formCard: { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: 20, display: "flex", flexDirection: "column", gap: 14 },
-      cardSection: { background: "var(--surface2)", border: "1px solid", borderRadius: 14, padding: 20, display: "flex", flexDirection: "column", gap: 12 },
-      strip: { background: "var(--surface)", borderRadius: 10, padding: 16, display: "flex", flexDirection: "column", gap: 10, border: "1px solid" },
-      barBg: { background: "var(--border)", borderRadius: 99, height: 7, overflow: "hidden" },
-      barFill: { height: "100%", borderRadius: 99, transition: "width 0.4s ease" },
-      dropZone: { border: "1.5px dashed", borderRadius: 10, padding: "32px 20px", textAlign: "center", cursor: "pointer", transition: "all 0.2s" },
-      metaBox: { display: "flex", flexWrap: "wrap", gap: 6 },
-      metaChip: { background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 99, padding: "4px 12px", fontSize: 13, color: "var(--text2)" },
-      errorBox: { background: "#fee2e2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", color: "#ef4444", fontSize: 14 },
-      grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 },
-      field: { display: "flex", flexDirection: "column", gap: 6 },
-      label: { color: "var(--text2)", fontSize: 12, textTransform: "uppercase", letterSpacing: 1, fontWeight: 600 },
-      input: { background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 8, padding: "11px 14px", color: "var(--text)", fontSize: 15, fontFamily: "'Poppins', sans-serif", outline: "none", width: "100%", boxSizing: "border-box" },
-      hint: { fontSize: 13, color: "var(--text3)", marginTop: 2 },
-      btnPrimary: { background: "linear-gradient(135deg,#22c55e,#16a34a)", color: "#fff", border: "none", borderRadius: 8, padding: "13px 24px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "'Poppins', sans-serif", letterSpacing: 0.5, width: "100%", transition: "opacity 0.2s" },
-      btnSecondary: { background: "var(--surface)", color: "var(--text2)", border: "1px solid var(--border)", borderRadius: 8, padding: "9px 16px", fontSize: 13, cursor: "pointer", fontFamily: "'Poppins', sans-serif", letterSpacing: 0.5 },
-      btnRemove: { background: "transparent", border: "none", color: "var(--text3)", cursor: "pointer", fontSize: 13, padding: 4 },
-      collapseBtn: { background: "transparent", border: "none", fontSize: 13, cursor: "pointer", fontFamily: "'Poppins', sans-serif", letterSpacing: 0.5, padding: 0, textAlign: "left", display: "flex", alignItems: "center" },
-      sectionTitle: { color: "var(--text3)", fontSize: 13, textTransform: "uppercase", letterSpacing: 2, margin: 0, display: "flex", alignItems: "center", gap: 8 },
-      subLabel: { fontSize: 12, textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 700 },
-      table: { width: "100%", borderCollapse: "collapse", marginTop: 4 },
-      th: { color: "var(--text3)", fontSize: 12, textTransform: "uppercase", letterSpacing: 1, padding: "8px 10px", borderBottom: "1px solid var(--border)", textAlign: "left" },
-      tr: { borderBottom: "1px solid var(--bg)" },
-      td: { color: "var(--text2)", fontSize: 14, padding: "10px 10px" },
-      instBadge: { background: "var(--surface2)", color: "#3b82f6", borderRadius: 4, padding: "3px 9px", fontSize: 12, fontWeight: 600 },
-      futureGroup: { background: "var(--surface2)", borderRadius: 8, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 5, border: "1px solid var(--border)", marginBottom: 6 },
-      futureGroupHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 },
-      futureItem: { display: "flex", gap: 8, alignItems: "center", fontSize: 14, color: "var(--text2)" },
-      emptySmall: { color: "var(--text3)", fontSize: 14, padding: "8px 0" },
-    };
+    function getS(isDark) {
+      const bg      = isDark ? "#0f172a" : "#f1f5f9";
+      const surface = isDark ? "#1e293b" : "#ffffff";
+      const surf2   = isDark ? "#273549" : "#f8fafc";
+      const border  = isDark ? "#334155" : "#e2e8f0";
+      const text    = isDark ? "#f1f5f9" : "#1e293b";
+      const text2   = isDark ? "#94a3b8" : "#64748b";
+      const text3   = isDark ? "#64748b" : "#94a3b8";
+      return {
+        root: { minHeight: "100vh", background: bg, fontFamily: "'Poppins', sans-serif", fontSize: 15, display: "flex", justifyContent: "center", padding: "28px 16px" },
+        container: { width: "100%", maxWidth: 720, display: "flex", flexDirection: "column", gap: 14 },
+        setupWrapper: { width: "100%", maxWidth: 520, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 },
+        setupTitle: { color: text, fontSize: 26, fontWeight: 700, margin: "8px 0 0", letterSpacing: 1 },
+        setupSub: { color: text2, fontSize: 15, margin: "6px 0 0" },
+        addedCardChip: { background: surface, border: "1px solid", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 },
+        addCardBox: { background: surface, border: `1px solid ${border}`, borderRadius: 12, padding: 20, display: "flex", flexDirection: "column", gap: 14 },
+        importerCard: { background: surf2, border: `1px solid ${border}`, borderRadius: 14, padding: 20, display: "flex", flexDirection: "column", gap: 14 },
+        formCard: { background: surface, border: `1px solid ${border}`, borderRadius: 14, padding: 20, display: "flex", flexDirection: "column", gap: 14 },
+        cardSection: { background: surf2, border: "1px solid", borderRadius: 14, padding: 20, display: "flex", flexDirection: "column", gap: 12 },
+        strip: { background: surface, borderRadius: 10, padding: 16, display: "flex", flexDirection: "column", gap: 10, border: "1px solid" },
+        barBg: { background: border, borderRadius: 99, height: 7, overflow: "hidden" },
+        barFill: { height: "100%", borderRadius: 99, transition: "width 0.4s ease" },
+        dropZone: { border: "1.5px dashed", borderRadius: 10, padding: "32px 20px", textAlign: "center", cursor: "pointer", transition: "all 0.2s" },
+        metaBox: { display: "flex", flexWrap: "wrap", gap: 6 },
+        metaChip: { background: bg, border: `1px solid ${border}`, borderRadius: 99, padding: "4px 12px", fontSize: 13, color: text2 },
+        errorBox: { background: "#fee2e2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", color: "#ef4444", fontSize: 14 },
+        grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 },
+        field: { display: "flex", flexDirection: "column", gap: 6 },
+        label: { color: text2, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, fontWeight: 600 },
+        input: { background: surf2, border: `1px solid ${border}`, borderRadius: 8, padding: "11px 14px", color: text, fontSize: 15, fontFamily: "'Poppins', sans-serif", outline: "none", width: "100%", boxSizing: "border-box" },
+        hint: { fontSize: 13, color: text3, marginTop: 2 },
+        btnPrimary: { background: "linear-gradient(135deg,#22c55e,#16a34a)", color: "#fff", border: "none", borderRadius: 8, padding: "13px 24px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "'Poppins', sans-serif", letterSpacing: 0.5, width: "100%", transition: "opacity 0.2s" },
+        btnSecondary: { background: surface, color: text2, border: `1px solid ${border}`, borderRadius: 8, padding: "9px 16px", fontSize: 13, cursor: "pointer", fontFamily: "'Poppins', sans-serif", letterSpacing: 0.5 },
+        btnRemove: { background: "transparent", border: "none", color: text3, cursor: "pointer", fontSize: 13, padding: 4 },
+        collapseBtn: { background: "transparent", border: "none", fontSize: 13, cursor: "pointer", fontFamily: "'Poppins', sans-serif", letterSpacing: 0.5, padding: 0, textAlign: "left", display: "flex", alignItems: "center" },
+        sectionTitle: { color: text3, fontSize: 13, textTransform: "uppercase", letterSpacing: 2, margin: 0, display: "flex", alignItems: "center", gap: 8 },
+        subLabel: { fontSize: 12, textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 700 },
+        table: { width: "100%", borderCollapse: "collapse", marginTop: 4 },
+        th: { color: text3, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, padding: "8px 10px", borderBottom: `1px solid ${border}`, textAlign: "left" },
+        tr: { borderBottom: `1px solid ${bg}` },
+        td: { color: text2, fontSize: 14, padding: "10px 10px" },
+        instBadge: { background: surf2, color: "#3b82f6", borderRadius: 4, padding: "3px 9px", fontSize: 12, fontWeight: 600 },
+        futureGroup: { background: surf2, borderRadius: 8, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 5, border: `1px solid ${border}`, marginBottom: 6 },
+        futureGroupHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 },
+        futureItem: { display: "flex", gap: 8, alignItems: "center", fontSize: 14, color: text2 },
+        emptySmall: { color: text3, fontSize: 14, padding: "8px 0" },
+      };
+    }
 
     // Montar o app no ponto de montagem
     ReactDOM.createRoot(document.getElementById('cartao-root')).render(<CartaoFaturas />);
