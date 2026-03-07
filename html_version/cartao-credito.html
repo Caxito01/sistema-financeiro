@@ -569,14 +569,6 @@
             </select>
           </div>
 
-          <div style={S.field}>
-            <label style={S.label}>Categoria das despesas importadas</label>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <CategoryPicker value={category} onChange={setCategory} />
-              {category && <span style={{ ...S.hint, color: "#3b82f6", margin: 0 }}>{category.label}</span>}
-            </div>
-          </div>
-
           {!parsed && (
             <div
               style={{
@@ -640,6 +632,20 @@
                 </div>
               )}
 
+              <div style={{
+                display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
+                background: isDark ? "#1a2744" : "#f0f9ff",
+                border: `1px solid ${isDark ? "#2d4a7a" : "#bae6fd"}`,
+                borderRadius: 8, padding: "10px 14px",
+              }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: isDark ? "#7dd3fc" : "#0284c7" }}>🏷️ Categoria:</span>
+                <CategoryPicker value={category} onChange={setCategory} />
+                {category
+                  ? <span style={{ fontSize: 12, color: "#3b82f6", fontWeight: 500 }}>{category.label}</span>
+                  : <span style={{ fontSize: 12, color: isDark ? "#475569" : "#94a3b8" }}>Nenhuma — será aplicada a todas as transações selecionadas</span>
+                }
+              </div>
+
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <button style={{ ...S.btnSecondary, fontSize: 10 }} onClick={() => toggleAll(true)}>Selecionar tudo</button>
                 <button style={{ ...S.btnSecondary, fontSize: 10 }} onClick={() => toggleAll(false)}>Desmarcar tudo</button>
@@ -659,6 +665,7 @@
                       <th style={S.th}>Data</th>
                       <th style={S.th}>Descrição</th>
                       <th style={S.th}>Parcela</th>
+                      <th style={S.th}>Categoria</th>
                       <th style={S.th}>Tipo</th>
                       <th style={{ ...S.th, textAlign: "right" }}>Valor</th>
                     </tr>
@@ -696,7 +703,7 @@
                           </td>
                           <td style={{ ...S.td, whiteSpace: "nowrap" }}>{fmtDateShort(t.date)}</td>
                           <td style={{ ...S.td, maxWidth: 200 }}>
-                            <div style={{ color: isDup ? "#92400e" : (isDark ? "#c0ccdd" : "#1e293b"), fontSize: 12 }}>{t.cleanDesc}</div>
+                            <div style={{ color: isDup ? "#92400e" : (isDark ? "#e2e8f0" : "#1e293b"), fontSize: 13, fontWeight: 500 }}>{t.cleanDesc}</div>
                             {t.cleanDesc !== t.memo && (
                               <div style={{ color: isDark ? "#64748b" : "#94a3b8", fontSize: 10, marginTop: 1 }}>{t.memo}</div>
                             )}
@@ -715,6 +722,14 @@
                             ) : (
                               <span style={{ color: isDark ? "#64748b" : "#94a3b8", fontSize: 10 }}>à vista</span>
                             )}
+                          </td>
+                          <td style={S.td}>
+                            {category
+                              ? <span style={{ fontSize: 11, background: isDark ? "#1e3a5f" : "#dbeafe", color: "#3b82f6", borderRadius: 4, padding: "2px 7px", whiteSpace: "nowrap" }}>
+                                  {category.label.split(" › ").pop()}
+                                </span>
+                              : <span style={{ color: isDark ? "#475569" : "#cbd5e1", fontSize: 11 }}>—</span>
+                            }
                           </td>
                           <td style={S.td}>
                             <span style={{
@@ -1248,7 +1263,7 @@
         table: { width: "100%", borderCollapse: "collapse", marginTop: 4 },
         th: { color: text3, fontSize: 12, textTransform: "uppercase", letterSpacing: 1, padding: "8px 10px", borderBottom: `1px solid ${border}`, textAlign: "left" },
         tr: { borderBottom: `1px solid ${bg}` },
-        td: { color: text2, fontSize: 14, padding: "10px 10px" },
+        td: { color: text, fontSize: 14, padding: "10px 10px" },
         instBadge: { background: surf2, color: "#3b82f6", borderRadius: 4, padding: "3px 9px", fontSize: 12, fontWeight: 600 },
         futureGroup: { background: surf2, borderRadius: 8, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 5, border: `1px solid ${border}`, marginBottom: 6 },
         futureGroupHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 },
