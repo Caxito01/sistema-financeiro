@@ -87,7 +87,7 @@
        + substituição do import pelo destructuring do global React.
   ════════════════════════════════════════════════════════════ -->
   <script type="text/babel">
-    const { useState, useMemo, useRef } = React;
+    const { useState, useMemo, useRef, useEffect } = React;
 
     // ════════════════════════════════════════════════════════════════
     // BRAND LOGOS
@@ -290,6 +290,110 @@
     const getAccent = (brand) => ACCENT[brand] || ACCENT.default;
 
     // ════════════════════════════════════════════════════════════════
+    // FETCH HELPER — Supabase
+    // ════════════════════════════════════════════════════════════════
+    async function fetchData(table, opts = {}) {
+      const supa = createSupabaseClient();
+      let q = supa.from(table).select("*");
+      if (opts.eq) Object.entries(opts.eq).forEach(([k, v]) => { q = q.eq(k, v); });
+      if (opts.order) q = q.order(opts.order.column, { ascending: opts.order.ascending });
+      const { data, error } = await q;
+      if (error) throw error;
+      return data;
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // CATEGORY PICKER — Hierarquia Grupo › Subgrupo › Classe
+    // ════════════════════════════════════════════════════════════════
+    function CategoryPicker({ value, onChange }) {
+      const [open, setOpen]       = useState(false);
+      const [level, setLevel]     = useState("grupos");
+      const [grupos, setGrupos]   = useState([]);
+      const [subgrupos, setSubs]  = useState([]);
+      const [classes, setClasses] = useState([]);
+      const [selG, setSelG]       = useState(null);
+      const [selS, setSelS]       = useState(null);
+      const [loading, setLoading] = useState(false);
+
+      useEffect(() => {
+        if (open && grupos.length === 0) {
+          setLoading(true);
+          fetchData("grupos", { eq: { ativo: true, tipo: "DESPESA" }, order: { column: "codigo", ascending: true } })
+            .then(d => { setGrupos(d || []); setLoading(false); })
+            .catch(() => setLoading(false));
+        }
+      }, [open]);
+
+      function pickGrupo(g) {
+        setSelG(g); setSelS(null); setLoading(true);
+        fetchData("subgrupos", { eq: { grupo_id: g.id, ativo: true }, order: { column: "codigo", ascending: true } })
+          .then(d => { setSubs(d || []); setLevel("subgrupos"); setLoading(false); })
+          .catch(() => setLoading(false));
+      }
+
+      function pickSub(sg) {
+        setSelS(sg); setLoading(true);
+        fetchData("classes", { eq: { subgrupo_id: sg.id, ativo: true }, order: { column: "codigo", ascending: true } })
+          .then(d => { setClasses(d || []); setLevel("classes"); setLoading(false); })
+          .catch(() => setLoading(false));
+      }
+
+      function pickClasse(cl) {
+        onChange({ grupoId: selG.id, subgrupoId: selS.id, classeId: cl.id,
+          label: `${selG.nome} › ${selS.nome} › ${cl.descricao || cl.codigo}` });
+        setOpen(false); setLevel("grupos"); setSelG(null); setSelS(null);
+      }
+
+      const dropStyle = {
+        position: "absolute", top: "110%", left: 0, zIndex: 300,
+        background: "#1e293b", border: "1px solid #334155", borderRadius: 10,
+        padding: 12, minWidth: 250, maxWidth: 320,
+        boxShadow: "0 8px 32px rgba(0,0,0,.4)", maxHeight: 280, overflowY: "auto",
+      };
+      const rowStyle = { cursor: "pointer", padding: "7px 10px", borderRadius: 6, fontSize: 13, color: "#f1f5f9" };
+
+      return (
+        <div style={{ position: "relative", display: "inline-block" }}>
+          <button type="button"
+            style={{ background: "#1e293b", color: value ? "#3b82f6" : "#94a3b8", border: `1px solid ${value ? "#3b82f655" : "#334155"}`,
+              borderRadius: 8, padding: "6px 10px", fontSize: 12, cursor: "pointer", fontFamily: "'Poppins', sans-serif" }}
+            onClick={() => setOpen(p => !p)}>
+            🏷️ {value ? "Mudar categoria" : "Categoria"}
+          </button>
+          {open && (
+            <div style={dropStyle}>
+              <div style={{ display: "flex", gap: 4, fontSize: 11, marginBottom: 8, color: "#94a3b8", flexWrap: "wrap", alignItems: "center" }}>
+                <span style={{ cursor: "pointer", color: "#3b82f6" }}
+                  onClick={() => { setLevel("grupos"); setSelG(null); setSelS(null); }}>Grupos</span>
+                {selG && <><span>›</span>
+                  <span style={{ cursor: selS ? "pointer" : "default", color: selS ? "#3b82f6" : "#f1f5f9" }}
+                    onClick={() => { if (selS) { setLevel("subgrupos"); setSelS(null); } }}>{selG.nome}</span></>}
+                {selS && <><span>›</span><span style={{ color: "#f1f5f9" }}>{selS.nome}</span></>}
+              </div>
+              {loading && <div style={{ color: "#94a3b8", fontSize: 12, padding: "8px 0" }}>⏳ Carregando...</div>}
+              {!loading && level === "grupos" && (grupos.length === 0
+                ? <div style={{ color: "#94a3b8", fontSize: 12 }}>Nenhum grupo de despesa ativo.</div>
+                : grupos.map(g => <div key={g.id} style={rowStyle} onClick={() => pickGrupo(g)}>{g.codigo} – {g.nome}</div>)
+              )}
+              {!loading && level === "subgrupos" && subgrupos.map(sg =>
+                <div key={sg.id} style={rowStyle} onClick={() => pickSub(sg)}>{sg.codigo} – {sg.nome}</div>
+              )}
+              {!loading && level === "classes" && classes.map(cl =>
+                <div key={cl.id} style={rowStyle} onClick={() => pickClasse(cl)}>{cl.codigo} – {cl.descricao}</div>
+              )}
+              <div style={{ marginTop: 8, borderTop: "1px solid #334155", paddingTop: 8, display: "flex", justifyContent: "space-between" }}>
+                {value && <button type="button" onClick={() => { onChange(null); setOpen(false); }}
+                  style={{ fontSize: 11, color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}>✕ Remover</button>}
+                <button type="button" onClick={() => setOpen(false)}
+                  style={{ fontSize: 11, color: "#94a3b8", background: "none", border: "none", cursor: "pointer", marginLeft: "auto" }}>Fechar</button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ════════════════════════════════════════════════════════════════
     // OFX IMPORTER COMPONENT
     // ════════════════════════════════════════════════════════════════
     function OFXImporter({ cards, onImport, onClose, importedFitids }) {
@@ -298,6 +402,7 @@
       const [selected, setSelected] = useState({});
       const [targetCardId, setTargetCardId] = useState(cards[0]?.id ?? "");
       const [error, setError] = useState("");
+      const [category, setCategory] = useState(null);
       const fileRef = useRef();
 
       const targetCard = cards.find(c => c.id === parseInt(targetCardId) || c.id === targetCardId);
@@ -370,6 +475,7 @@
               installment: null, month: 0,
               dueDate: addMonths(targetCard.dueDate, 0),
               fromOFX: true, ofxDate: t.date, ofxFitid: t.fitid,
+              classeId: category?.classeId || null, categoryLabel: category?.label || null,
             });
           } else {
             const remaining = inst.total - inst.current;
@@ -379,6 +485,7 @@
               installment: `${inst.current}/${inst.total}`, month: 0,
               dueDate: addMonths(targetCard.dueDate, 0),
               fromOFX: true, ofxDate: t.date, ofxFitid: t.fitid,
+              classeId: category?.classeId || null, categoryLabel: category?.label || null,
             });
             for (let r = 1; r <= remaining; r++) {
               newEntries.push({
@@ -387,6 +494,7 @@
                 installment: `${inst.current + r}/${inst.total}`, month: r,
                 dueDate: addMonths(targetCard.dueDate, r),
                 fromOFX: true, ofxDate: t.date, ofxFitid: t.fitid,
+                classeId: category?.classeId || null, categoryLabel: category?.label || null,
               });
             }
           }
@@ -418,6 +526,14 @@
               onChange={e => setTargetCardId(e.target.value)}>
               {cards.map(c => <option key={c.id} value={c.id}>{c.alias}{c.brand ? ` · ${c.brand}` : ""}</option>)}
             </select>
+          </div>
+
+          <div style={S.field}>
+            <label style={S.label}>Categoria das despesas importadas</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <CategoryPicker value={category} onChange={setCategory} />
+              {category && <span style={{ fontSize: 11, color: "#3b82f6" }}>{category.label}</span>}
+            </div>
           </div>
 
           {!parsed && (
@@ -729,7 +845,7 @@
     // LAUNCH FORM
     // ════════════════════════════════════════════════════════════════
     function LaunchForm({ cards, onLaunch }) {
-      const [f, setF] = useState({ cardId: cards[0]?.id ?? "", desc: "", value: "", installments: "1" });
+      const [f, setF] = useState({ cardId: cards[0]?.id ?? "", desc: "", value: "", installments: "1", category: null });
       const card = cards.find(c => c.id === f.cardId);
       const accent = getAccent(card?.brand);
       const inst = parseInt(f.installments) || 1;
@@ -759,6 +875,13 @@
             </div>
           </div>
           <div style={S.field}>
+            <label style={S.label}>Categoria</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <CategoryPicker value={f.category} onChange={cat => setF(p => ({ ...p, category: cat }))} />
+              {f.category && <span style={{ fontSize: 11, color: "#3b82f6" }}>{f.category.label}</span>}
+            </div>
+          </div>
+          <div style={S.field}>
             <label style={S.label}>Parcelas</label>
             <select style={S.input} value={f.installments}
               onChange={e => setF(p => ({ ...p, installments: e.target.value }))}>
@@ -775,8 +898,8 @@
           <button style={{ ...S.btnPrimary, background: accent, opacity: canLaunch ? 1 : 0.4 }}
             onClick={() => {
               if (!canLaunch) return;
-              onLaunch({ card, desc: f.desc, value: val, installments: inst });
-              setF(p => ({ ...p, desc: "", value: "", installments: "1" }));
+              onLaunch({ card, desc: f.desc, value: val, installments: inst, category: f.category });
+              setF(p => ({ ...p, desc: "", value: "", installments: "1", category: null }));
             }}
             disabled={!canLaunch}>
             + Lançar
@@ -831,7 +954,7 @@
                   <>
                     <table style={S.table}>
                       <thead>
-                        <tr>{["", "Descrição", "Parcela", "Valor", ""].map((h, i) =>
+                        <tr>{["", "Descrição", "Parcela", "Categoria", "Valor", ""].map((h, i) =>
                           <th key={i} style={S.th}>{h}</th>)}</tr>
                       </thead>
                       <tbody>
@@ -854,6 +977,13 @@
                               {e.installment
                                 ? <span style={S.instBadge}>{e.installment}</span>
                                 : <span style={{ color: "#334" }}>à vista</span>}
+                            </td>
+                            <td style={S.td}>
+                              {e.categoryLabel
+                                ? <span style={{ fontSize: 11, background: "#1e3a5f", color: "#3b82f6", borderRadius: 4, padding: "2px 7px", whiteSpace: "nowrap" }}>
+                                    {e.categoryLabel.split(" › ").pop()}
+                                  </span>
+                                : <span style={{ color: "#475569", fontSize: 11 }}>—</span>}
                             </td>
                             <td style={{ ...S.td, color: "#ff6b6b", fontWeight: 600 }}>{fmt(e.value)}</td>
                             <td style={S.td}>
@@ -913,7 +1043,7 @@
       const [showOFX, setShowOFX] = useState(false);
       const [importedFitids, setImportedFitids] = useState(new Set());
 
-      function handleLaunch({ card, desc, value, installments }) {
+      function handleLaunch({ card, desc, value, installments, category }) {
         const groupId = Date.now();
         const perInstall = value / installments;
         setEntries(prev => [...prev, ...Array.from({ length: installments }, (_, i) => ({
@@ -921,6 +1051,7 @@
           desc, value: perInstall, total: value,
           installment: installments > 1 ? `${i + 1}/${installments}` : null,
           month: i, dueDate: addMonths(card.dueDate, i),
+          classeId: category?.classeId || null, categoryLabel: category?.label || null,
         }))]);
       }
 
