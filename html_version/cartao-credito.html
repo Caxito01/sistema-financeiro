@@ -516,7 +516,7 @@
               installment: null, month: 0,
               dueDate: addMonths(targetCard.dueDate, 0),
               fromOFX: true, ofxDate: t.date, ofxFitid: t.fitid,
-              classeId: category?.classeId || null, cardAlias: targetCard.alias,
+              classeId: category?.classeId || null, categoryLabel: category?.label || null, cardAlias: targetCard.alias,
             });
           } else {
             const remaining = inst.total - inst.current;
@@ -526,7 +526,7 @@
               installment: `${inst.current}/${inst.total}`, month: 0,
               dueDate: addMonths(targetCard.dueDate, 0),
               fromOFX: true, ofxDate: t.date, ofxFitid: t.fitid,
-              classeId: category?.classeId || null, cardAlias: targetCard.alias,
+              classeId: category?.classeId || null, categoryLabel: category?.label || null, cardAlias: targetCard.alias,
             });
             for (let r = 1; r <= remaining; r++) {
               newEntries.push({
@@ -535,7 +535,7 @@
                 installment: `${inst.current + r}/${inst.total}`, month: r,
                 dueDate: addMonths(targetCard.dueDate, r),
                 fromOFX: true, ofxDate: t.date, ofxFitid: t.fitid,
-                classeId: category?.classeId || null, cardAlias: targetCard.alias,
+                classeId: category?.classeId || null, categoryLabel: category?.label || null, cardAlias: targetCard.alias,
               });
             }
           }
@@ -1003,7 +1003,7 @@
                   <>
                     <table style={S.table}>
                       <thead>
-                        <tr>{["", "Descrição", "Parcela", "Valor", ""].map((h, i) =>
+                        <tr>{["", "Descrição", "Parcela", "Categoria", "Valor", ""].map((h, i) =>
                           <th key={i} style={S.th}>{h}</th>)}</tr>
                       </thead>
                       <tbody>
@@ -1026,6 +1026,13 @@
                               {e.installment
                                 ? <span style={S.instBadge}>{e.installment}</span>
                                 : <span style={{ color: isDark ? "#64748b" : "#94a3b8" }}>à vista</span>}
+                            </td>
+                            <td style={S.td}>
+                              {e.categoryLabel
+                                ? <span style={{ fontSize: 11, background: isDark ? "#1e3a5f" : "#dbeafe", color: "#3b82f6", borderRadius: 4, padding: "2px 7px", whiteSpace: "nowrap" }}>
+                                    {e.categoryLabel.split(" › ").pop()}
+                                  </span>
+                                : <span style={{ color: isDark ? "#475569" : "#cbd5e1", fontSize: 11 }}>—</span>}
                             </td>
                             <td style={{ ...S.td, color: "#ff6b6b", fontWeight: 600 }}>{fmt(e.value)}</td>
                             <td style={S.td}>
@@ -1095,7 +1102,7 @@
           desc, value: perInstall, total: value,
           installment: installments > 1 ? `${i + 1}/${installments}` : null,
           month: i, dueDate: addMonths(card.dueDate, i),
-          classeId: category?.classeId || null, cardAlias: card.alias,
+          classeId: category?.classeId || null, categoryLabel: category?.label || null, cardAlias: card.alias,
         }));
         setEntries(prev => [...prev, ...newEntries]);
         await saveCartaoEntriesToSupabase(newEntries);
