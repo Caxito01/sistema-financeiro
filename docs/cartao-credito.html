@@ -443,11 +443,49 @@
       const [selected, setSelected] = useState({});
       const [targetCardId, setTargetCardId] = useState(cards[0]?.id ?? "");
       const [error, setError] = useState("");
-      const [category, setCategory] = useState(null);
+      const [rowCategories, setRowCategories] = useState({});
+      const [catSaved, setCatSaved] = useState(false);
       const fileRef = useRef();
 
       const targetCard = cards.find(c => c.id === parseInt(targetCardId) || c.id === targetCardId);
       const accent = getAccent(targetCard?.brand);
+
+      // Pré-preencher categorias do localStorage (memória por descrição)
+      useEffect(() => {
+        if (!parsed) return;
+        try {
+          const mem = JSON.parse(localStorage.getItem("sf_ofx_cat_memory") || "{}");
+          const init = {};
+          parsed.transactions.forEach(t => {
+            if (mem[t.cleanDesc]) init[t.fitid] = mem[t.cleanDesc];
+          });
+          setRowCategories(init);
+        } catch {}
+      }, [parsed]);
+
+      function setCatForRow(fitid, cat, cleanDesc) {
+        setRowCategories(p => ({ ...p, [fitid]: cat }));
+        setCatSaved(false);
+        try {
+          const mem = JSON.parse(localStorage.getItem("sf_ofx_cat_memory") || "{}");
+          if (cat) mem[cleanDesc] = cat;
+          else delete mem[cleanDesc];
+          localStorage.setItem("sf_ofx_cat_memory", JSON.stringify(mem));
+        } catch {}
+      }
+
+      function saveAllCategories() {
+        try {
+          const mem = JSON.parse(localStorage.getItem("sf_ofx_cat_memory") || "{}");
+          parsed.transactions.forEach(t => {
+            const cat = rowCategories[t.fitid];
+            if (cat) mem[t.cleanDesc] = cat;
+          });
+          localStorage.setItem("sf_ofx_cat_memory", JSON.stringify(mem));
+          setCatSaved(true);
+          setTimeout(() => setCatSaved(false), 2500);
+        } catch {}
+      }
 
       const classified = useMemo(() => {
         if (!parsed) return {};
@@ -516,7 +554,7 @@
               installment: null, month: 0,
               dueDate: addMonths(targetCard.dueDate, 0),
               fromOFX: true, ofxDate: t.date, ofxFitid: t.fitid,
-              classeId: category?.classeId || null, categoryLabel: category?.label || null, cardAlias: targetCard.alias,
+              classeId: rowCategories[t.fitid]?.classeId || null, categoryLabel: rowCategories[t.fitid]?.label || null, cardAlias: targetCard.alias,
             });
           } else {
             const remaining = inst.total - inst.current;
@@ -526,7 +564,7 @@
               installment: `${inst.current}/${inst.total}`, month: 0,
               dueDate: addMonths(targetCard.dueDate, 0),
               fromOFX: true, ofxDate: t.date, ofxFitid: t.fitid,
-              classeId: category?.classeId || null, categoryLabel: category?.label || null, cardAlias: targetCard.alias,
+              classeId: rowCategories[t.fitid]?.classeId || null, categoryLabel: rowCategories[t.fitid]?.label || null, cardAlias: targetCard.alias,
             });
             for (let r = 1; r <= remaining; r++) {
               newEntries.push({
@@ -535,7 +573,7 @@
                 installment: `${inst.current + r}/${inst.total}`, month: r,
                 dueDate: addMonths(targetCard.dueDate, r),
                 fromOFX: true, ofxDate: t.date, ofxFitid: t.fitid,
-                classeId: category?.classeId || null, categoryLabel: category?.label || null, cardAlias: targetCard.alias,
+                classeId: rowCategories[t.fitid]?.classeId || null, categoryLabel: rowCategories[t.fitid]?.label || null, cardAlias: targetCard.alias,
               });
             }
           }
@@ -632,25 +670,17 @@
                 </div>
               )}
 
-              <div style={{
-                display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
-                background: isDark ? "#1a2744" : "#f0f9ff",
-                border: `1px solid ${isDark ? "#2d4a7a" : "#bae6fd"}`,
-                borderRadius: 8, padding: "10px 14px",
-              }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: isDark ? "#7dd3fc" : "#0284c7" }}>🏷️ Categoria:</span>
-                <CategoryPicker value={category} onChange={setCategory} />
-                {category
-                  ? <span style={{ fontSize: 12, color: "#3b82f6", fontWeight: 500 }}>{category.label}</span>
-                  : <span style={{ fontSize: 12, color: isDark ? "#475569" : "#94a3b8" }}>Nenhuma — será aplicada a todas as transações selecionadas</span>
-                }
-              </div>
-
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <button style={{ ...S.btnSecondary, fontSize: 10 }} onClick={() => toggleAll(true)}>Selecionar tudo</button>
                 <button style={{ ...S.btnSecondary, fontSize: 10 }} onClick={() => toggleAll(false)}>Desmarcar tudo</button>
                 <button style={{ ...S.btnSecondary, fontSize: 10 }} onClick={() => { setParsed(null); setError(""); }}>
                   Trocar arquivo
+                </button>
+                <button
+                  style={{ ...S.btnSecondary, fontSize: 10, borderColor: catSaved ? "#22c55e" : undefined, color: catSaved ? "#22c55e" : undefined }}
+                  onClick={saveAllCategories}
+                  title="Salva o mapeamento descrição → categoria no navegador">
+                  {catSaved ? "✓ Salvo!" : "💾 Salvar categorias"}
                 </button>
                 <span style={{ marginLeft: "auto", color: isDark ? "#64748b" : "#94a3b8", fontSize: 11 }}>
                   {selectedCount} selecionado(s) · {fmt(totalSelected)}
@@ -723,12 +753,20 @@
                               <span style={{ color: isDark ? "#64748b" : "#94a3b8", fontSize: 10 }}>à vista</span>
                             )}
                           </td>
-                          <td style={S.td}>
-                            {category
-                              ? <span style={{ fontSize: 11, background: isDark ? "#1e3a5f" : "#dbeafe", color: "#3b82f6", borderRadius: 4, padding: "2px 7px", whiteSpace: "nowrap" }}>
-                                  {category.label.split(" › ").pop()}
-                                </span>
-                              : <span style={{ color: isDark ? "#475569" : "#cbd5e1", fontSize: 11 }}>—</span>
+                          <td style={{ ...S.td, minWidth: 120 }} onClick={e => e.stopPropagation()}>
+                            {isDup
+                              ? <span style={{ color: isDark ? "#475569" : "#cbd5e1", fontSize: 11 }}>—</span>
+                              : <div>
+                                  <CategoryPicker
+                                    value={rowCategories[t.fitid] || null}
+                                    onChange={cat => setCatForRow(t.fitid, cat, t.cleanDesc)}
+                                  />
+                                  {rowCategories[t.fitid] && (
+                                    <div style={{ fontSize: 10, color: "#3b82f6", marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 120 }}>
+                                      {rowCategories[t.fitid].label.split(" › ").pop()}
+                                    </div>
+                                  )}
+                                </div>
                             }
                           </td>
                           <td style={S.td}>
