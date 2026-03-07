@@ -10,8 +10,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css">
   <style>
-    :root{--bg:#f1f5f9;--surface:#fff;--surface2:#f8fafc;--border:#e2e8f0;--text:#1e293b;--text2:#64748b;--text3:#94a3b8;--shadow:0 1px 3px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.06);--radius-sm:10px;--transition:.22s cubic-bezier(.4,0,.2,1)}
-    [data-theme="dark"]{--bg:#0f172a;--surface:#1e293b;--surface2:#273549;--border:#334155;--text:#f1f5f9;--text2:#94a3b8;--text3:#64748b}
+    :root{--bg:#f1f5f9;--surface:#fff;--surface2:#f8fafc;--border:#e2e8f0;--text:#1e293b;--text2:#64748b;--text3:#94a3b8;--shadow:0 1px 3px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.06);--radius-sm:10px;--transition:.22s cubic-bezier(.4,0,.2,1);--warn-bg:#fffbeb;--warn-border:#fde68a44;--dup-row:#fff7ed;--credit-bg:#dcfce7;--credit-text:#16a34a;--debit-bg:#fee2e2;--debit-text:#ef4444;--dropzone-bg:#f8fafc;--dropzone-border:#cbd5e1;--desc-text:#1e293b}
+    [data-theme="dark"]{--bg:#0f172a;--surface:#1e293b;--surface2:#273549;--border:#334155;--text:#f1f5f9;--text2:#94a3b8;--text3:#64748b;--warn-bg:#1a1200;--warn-border:#f5a62344;--dup-row:#1a1000;--credit-bg:#1a3a1a;--credit-text:#00cc66;--debit-bg:#2a1a1a;--debit-text:#ff6b6b;--dropzone-bg:#0a0d18;--dropzone-border:#1e2840;--desc-text:#c0ccdd}
     body{font-family:'Poppins',sans-serif!important;background:var(--bg)!important;color:var(--text)!important}
     [data-theme="dark"] .card{background:var(--surface)!important;border-color:var(--border)!important;color:var(--text)!important}
     [data-theme="dark"] input,[data-theme="dark"] select,[data-theme="dark"] textarea{background:var(--surface2)!important;color:var(--text)!important;border-color:var(--border)!important}
@@ -133,7 +133,7 @@
           <text x="4" y="13" fontFamily="Arial, sans-serif" fontSize="7" fontWeight="700" fill="white">DINERS CLUB</text>
         </svg>
       );
-      return <span style={{ color: "#556", fontSize: 11 }}>—</span>;
+      return <span style={{ color: "var(--text3)", fontSize: 11 }}>—</span>;
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -424,8 +424,8 @@
             <div
               style={{
                 ...S.dropZone,
-                borderColor: drag ? accent : "#1e2840",
-                background: drag ? accent + "11" : "#0a0d18",
+                borderColor: drag ? accent : "var(--dropzone-border)",
+                background: drag ? accent + "11" : "var(--dropzone-bg)",
               }}
               onDragOver={e => { e.preventDefault(); setDrag(true); }}
               onDragLeave={() => setDrag(false)}
@@ -435,13 +435,13 @@
               <input ref={fileRef} type="file" accept=".ofx,.OFX" style={{ display: "none" }}
                 onChange={e => handleFile(e.target.files[0])} />
               <div style={{ fontSize: 32, marginBottom: 8 }}>📂</div>
-              <div style={{ color: "#e8eaf0", fontSize: 13, fontWeight: 600 }}>
+              <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 600 }}>
                 Arraste o arquivo .OFX aqui
               </div>
-              <div style={{ color: "#445", fontSize: 11, marginTop: 4 }}>
+              <div style={{ color: "var(--text2)", fontSize: 11, marginTop: 4 }}>
                 ou clique para selecionar
               </div>
-              <div style={{ color: "#2a3040", fontSize: 10, marginTop: 8 }}>
+              <div style={{ color: "var(--text3)", fontSize: 10, marginTop: 8 }}>
                 Compatível com Nubank, Itaú, Bradesco, Santander, BB, Caixa, C6, Inter e outros
               </div>
             </div>
@@ -463,7 +463,7 @@
 
               {dupCount > 0 && (
                 <div style={{
-                  background: "#1a1200", border: "1px solid #f5a62344",
+                  background: "var(--warn-bg)", border: "1px solid var(--warn-border)",
                   borderRadius: 8, padding: "10px 14px",
                   display: "flex", alignItems: "center", gap: 8,
                 }}>
@@ -489,7 +489,7 @@
                 <button style={{ ...S.btnSecondary, fontSize: 10 }} onClick={() => { setParsed(null); setError(""); }}>
                   Trocar arquivo
                 </button>
-                <span style={{ marginLeft: "auto", color: "#556", fontSize: 11 }}>
+                <span style={{ marginLeft: "auto", color: "var(--text3)", fontSize: 11 }}>
                   {selectedCount} selecionado(s) · {fmt(totalSelected)}
                 </span>
               </div>
@@ -516,7 +516,7 @@
                           ...S.tr,
                           opacity: isDup ? 1 : isSelected ? 1 : 0.35,
                           cursor: isDup ? "not-allowed" : "pointer",
-                          background: isDup ? "#1a1000" : "transparent",
+                          background: isDup ? "var(--dup-row)" : "transparent",
                         }}
                           onClick={() => {
                             if (isDup) return;
@@ -529,7 +529,7 @@
                             ) : (
                               <div style={{
                                 width: 14, height: 14, borderRadius: 3,
-                                border: `1.5px solid ${isSelected ? accent : "#2a3040"}`,
+                                border: `1.5px solid ${isSelected ? accent : "var(--border)"}`,
                                 background: isSelected ? accent : "transparent",
                                 display: "flex", alignItems: "center", justifyContent: "center",
                               }}>
@@ -539,9 +539,9 @@
                           </td>
                           <td style={{ ...S.td, whiteSpace: "nowrap" }}>{fmtDateShort(t.date)}</td>
                           <td style={{ ...S.td, maxWidth: 200 }}>
-                            <div style={{ color: isDup ? "#5a4a20" : "#c0ccdd", fontSize: 12 }}>{t.cleanDesc}</div>
+                            <div style={{ color: isDup ? "#92400e" : "var(--desc-text)", fontSize: 12 }}>{t.cleanDesc}</div>
                             {t.cleanDesc !== t.memo && (
-                              <div style={{ color: "#334", fontSize: 10, marginTop: 1 }}>{t.memo}</div>
+                              <div style={{ color: "var(--text3)", fontSize: 10, marginTop: 1 }}>{t.memo}</div>
                             )}
                             {isDup && (
                               <div style={{ color: "#f5a62388", fontSize: 10, marginTop: 1 }}>já importado</div>
@@ -549,26 +549,26 @@
                           </td>
                           <td style={S.td}>
                             {t.installment ? (
-                              <span style={{ ...S.instBadge, background: isDup ? "#2a1a00" : accent + "22", color: isDup ? "#7a5010" : accent }}>
+                              <span style={{ ...S.instBadge, background: isDup ? "var(--dup-row)" : accent + "22", color: isDup ? "#92400e" : accent }}>
                                 {t.installment.current}/{t.installment.total}
-                                {!isDup && <span style={{ color: "#556", marginLeft: 3, fontSize: 9 }}>
+                                {!isDup && <span style={{ color: "var(--text3)", marginLeft: 3, fontSize: 9 }}>
                                   +{t.installment.total - t.installment.current} futuras
                                 </span>}
                               </span>
                             ) : (
-                              <span style={{ color: "#334", fontSize: 10 }}>à vista</span>
+                              <span style={{ color: "var(--text3)", fontSize: 10 }}>à vista</span>
                             )}
                           </td>
                           <td style={S.td}>
                             <span style={{
                               fontSize: 10, borderRadius: 3, padding: "1px 5px",
-                              background: t.isCredit ? "#1a3a1a" : "#2a1a1a",
-                              color: t.isCredit ? "#00cc66" : "#ff6b6b",
+                              background: t.isCredit ? "var(--credit-bg)" : "var(--debit-bg)",
+                              color: t.isCredit ? "var(--credit-text)" : "var(--debit-text)",
                             }}>
                               {t.isCredit ? "CRÉD" : "DÉB"}
                             </span>
                           </td>
-                          <td style={{ ...S.td, textAlign: "right", fontWeight: 600, color: isDup ? "#5a4a20" : t.isCredit ? "#00cc66" : "#ff6b6b" }}>
+                          <td style={{ ...S.td, textAlign: "right", fontWeight: 600, color: isDup ? "#92400e" : t.isCredit ? "var(--credit-text)" : "#ff6b6b" }}>
                             {fmt(t.amount)}
                           </td>
                         </tr>
@@ -703,12 +703,12 @@
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               {card.brand && <BrandLogo brand={card.brand} size={38} />}
               <div>
-                <div style={{ color: "#e8eaf0", fontWeight: 700, fontSize: 15 }}>{card.alias}</div>
-                <div style={{ color: "#445", fontSize: 11, marginTop: 2 }}>Vence {fmtDate(card.dueDate)}</div>
+                <div style={{ color: "var(--text)", fontWeight: 700, fontSize: 15 }}>{card.alias}</div>
+                <div style={{ color: "var(--text3)", fontSize: 11, marginTop: 2 }}>Vence {fmtDate(card.dueDate)}</div>
               </div>
             </div>
             <div style={{ textAlign: "right" }}>
-              <div style={{ color: "#445", fontSize: 10, textTransform: "uppercase", letterSpacing: 1 }}>Disponível</div>
+              <div style={{ color: "var(--text3)", fontSize: 10, textTransform: "uppercase", letterSpacing: 1 }}>Disponível</div>
               <div style={{ color: remaining < 0 ? "#ff4d4d" : accent, fontWeight: 700, fontSize: 20 }}>
                 {fmt(remaining)}
               </div>
@@ -845,7 +845,7 @@
                             <td style={S.td}>
                               {e.desc}
                               {e.ofxDate && (
-                                <span style={{ color: "#334", fontSize: 10, marginLeft: 6 }}>
+                                <span style={{ color: "var(--text3)", fontSize: 10, marginLeft: 6 }}>
                                   {fmtDateShort(e.ofxDate)}
                                 </span>
                               )}
@@ -853,7 +853,7 @@
                             <td style={S.td}>
                               {e.installment
                                 ? <span style={S.instBadge}>{e.installment}</span>
-                                : <span style={{ color: "#334" }}>à vista</span>}
+                                : <span style={{ color: "var(--text3)" }}>à vista</span>}
                             </td>
                             <td style={{ ...S.td, color: "#ff6b6b", fontWeight: 600 }}>{fmt(e.value)}</td>
                             <td style={S.td}>
@@ -873,14 +873,14 @@
 
               {futureByMonth.length > 0 && (
                 <div>
-                  <div style={{ ...S.subLabel, color: "#334", marginBottom: 6 }}>Parcelas Futuras</div>
+                  <div style={{ ...S.subLabel, color: "var(--text3)", marginBottom: 6 }}>Parcelas Futuras</div>
                   {futureByMonth.map(group => (
                     <div key={group.month} style={S.futureGroup}>
                       <div style={S.futureGroupHeader}>
                         <span style={{ color: accent, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>
                           {group.dueDate ? fmtDate(group.dueDate) : `+${group.month} mês`}
                         </span>
-                        <span style={{ color: "#e8eaf0", fontSize: 13, fontWeight: 700 }}>
+                        <span style={{ color: "var(--text)", fontSize: 13, fontWeight: 700 }}>
                           {fmt(group.items.reduce((s, e) => s + e.value, 0))}
                         </span>
                       </div>
@@ -889,7 +889,7 @@
                           {e.fromOFX && <span style={{ color: accent, fontSize: 9 }} title="Via OFX">⬆</span>}
                           <span>{e.desc}</span>
                           <span style={S.instBadge}>{e.installment}</span>
-                          <span style={{ marginLeft: "auto", color: "#667" }}>{fmt(e.value)}</span>
+                          <span style={{ marginLeft: "auto", color: "var(--text2)" }}>{fmt(e.value)}</span>
                         </div>
                       ))}
                     </div>
@@ -944,9 +944,9 @@
                 {cards.map(c => (
                   <div key={c.id} style={{ ...S.addedCardChip, borderColor: getAccent(c.brand) + "44" }}>
                     {c.brand && <BrandLogo brand={c.brand} size={30} />}
-                    <span style={{ color: "#e8eaf0", fontSize: 13, fontWeight: 600 }}>{c.alias}</span>
-                    <span style={{ color: "#7a8aaa", fontSize: 12 }}>{fmt(c.limit)}</span>
-                    <span style={{ color: "#334", fontSize: 11 }}>· vence {fmtDate(c.dueDate)}</span>
+                    <span style={{ color: "var(--text)", fontSize: 13, fontWeight: 600 }}>{c.alias}</span>
+                    <span style={{ color: "var(--text2)", fontSize: 12 }}>{fmt(c.limit)}</span>
+                    <span style={{ color: "var(--text3)", fontSize: 11 }}>· vence {fmtDate(c.dueDate)}</span>
                     <button style={{ ...S.btnRemove, marginLeft: "auto" }}
                       onClick={() => setCards(p => p.filter(x => x.id !== c.id))}>✕</button>
                   </div>
@@ -970,7 +970,7 @@
         <div style={S.root}>
           <div style={S.container}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 4 }}>
-              <h1 style={{ color: "#1e293b", fontSize: 20, fontWeight: 700, margin: 0, letterSpacing: 1 }}>
+              <h1 style={{ color: "var(--text)", fontSize: 20, fontWeight: 700, margin: 0, letterSpacing: 1 }}>
                 💳 Controle de Faturas
               </h1>
               <div style={{ display: "flex", gap: 8 }}>
@@ -1024,43 +1024,43 @@
     // STYLES
     // ════════════════════════════════════════════════════════════════
     const S = {
-      root: { minHeight: "100vh", background: "#f1f5f9", fontFamily: "'Poppins', sans-serif", fontSize: 15, display: "flex", justifyContent: "center", padding: "28px 16px" },
+      root: { minHeight: "100vh", background: "var(--bg)", fontFamily: "'Poppins', sans-serif", fontSize: 15, display: "flex", justifyContent: "center", padding: "28px 16px" },
       container: { width: "100%", maxWidth: 720, display: "flex", flexDirection: "column", gap: 14 },
       setupWrapper: { width: "100%", maxWidth: 520, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 },
-      setupTitle: { color: "#1e293b", fontSize: 26, fontWeight: 700, margin: "8px 0 0", letterSpacing: 1 },
-      setupSub: { color: "#64748b", fontSize: 15, margin: "6px 0 0" },
-      addedCardChip: { background: "#ffffff", border: "1px solid", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 },
-      addCardBox: { background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 12, padding: 20, display: "flex", flexDirection: "column", gap: 14 },
-      importerCard: { background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 14, padding: 20, display: "flex", flexDirection: "column", gap: 14 },
-      formCard: { background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 14, padding: 20, display: "flex", flexDirection: "column", gap: 14 },
-      cardSection: { background: "#f8fafc", border: "1px solid", borderRadius: 14, padding: 20, display: "flex", flexDirection: "column", gap: 12 },
-      strip: { background: "#ffffff", borderRadius: 10, padding: 16, display: "flex", flexDirection: "column", gap: 10, border: "1px solid" },
-      barBg: { background: "#e2e8f0", borderRadius: 99, height: 7, overflow: "hidden" },
+      setupTitle: { color: "var(--text)", fontSize: 26, fontWeight: 700, margin: "8px 0 0", letterSpacing: 1 },
+      setupSub: { color: "var(--text2)", fontSize: 15, margin: "6px 0 0" },
+      addedCardChip: { background: "var(--surface)", border: "1px solid", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 },
+      addCardBox: { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: 20, display: "flex", flexDirection: "column", gap: 14 },
+      importerCard: { background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 14, padding: 20, display: "flex", flexDirection: "column", gap: 14 },
+      formCard: { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: 20, display: "flex", flexDirection: "column", gap: 14 },
+      cardSection: { background: "var(--surface2)", border: "1px solid", borderRadius: 14, padding: 20, display: "flex", flexDirection: "column", gap: 12 },
+      strip: { background: "var(--surface)", borderRadius: 10, padding: 16, display: "flex", flexDirection: "column", gap: 10, border: "1px solid" },
+      barBg: { background: "var(--border)", borderRadius: 99, height: 7, overflow: "hidden" },
       barFill: { height: "100%", borderRadius: 99, transition: "width 0.4s ease" },
       dropZone: { border: "1.5px dashed", borderRadius: 10, padding: "32px 20px", textAlign: "center", cursor: "pointer", transition: "all 0.2s" },
       metaBox: { display: "flex", flexWrap: "wrap", gap: 6 },
-      metaChip: { background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: 99, padding: "4px 12px", fontSize: 13, color: "#64748b" },
+      metaChip: { background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 99, padding: "4px 12px", fontSize: 13, color: "var(--text2)" },
       errorBox: { background: "#fee2e2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", color: "#ef4444", fontSize: 14 },
       grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 },
       field: { display: "flex", flexDirection: "column", gap: 6 },
-      label: { color: "#475569", fontSize: 12, textTransform: "uppercase", letterSpacing: 1, fontWeight: 600 },
-      input: { background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "11px 14px", color: "#1e293b", fontSize: 15, fontFamily: "'Poppins', sans-serif", outline: "none", width: "100%", boxSizing: "border-box" },
-      hint: { fontSize: 13, color: "#94a3b8", marginTop: 2 },
+      label: { color: "var(--text2)", fontSize: 12, textTransform: "uppercase", letterSpacing: 1, fontWeight: 600 },
+      input: { background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 8, padding: "11px 14px", color: "var(--text)", fontSize: 15, fontFamily: "'Poppins', sans-serif", outline: "none", width: "100%", boxSizing: "border-box" },
+      hint: { fontSize: 13, color: "var(--text3)", marginTop: 2 },
       btnPrimary: { background: "linear-gradient(135deg,#22c55e,#16a34a)", color: "#fff", border: "none", borderRadius: 8, padding: "13px 24px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "'Poppins', sans-serif", letterSpacing: 0.5, width: "100%", transition: "opacity 0.2s" },
-      btnSecondary: { background: "#ffffff", color: "#64748b", border: "1px solid #e2e8f0", borderRadius: 8, padding: "9px 16px", fontSize: 13, cursor: "pointer", fontFamily: "'Poppins', sans-serif", letterSpacing: 0.5 },
-      btnRemove: { background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: 13, padding: 4 },
+      btnSecondary: { background: "var(--surface)", color: "var(--text2)", border: "1px solid var(--border)", borderRadius: 8, padding: "9px 16px", fontSize: 13, cursor: "pointer", fontFamily: "'Poppins', sans-serif", letterSpacing: 0.5 },
+      btnRemove: { background: "transparent", border: "none", color: "var(--text3)", cursor: "pointer", fontSize: 13, padding: 4 },
       collapseBtn: { background: "transparent", border: "none", fontSize: 13, cursor: "pointer", fontFamily: "'Poppins', sans-serif", letterSpacing: 0.5, padding: 0, textAlign: "left", display: "flex", alignItems: "center" },
-      sectionTitle: { color: "#94a3b8", fontSize: 13, textTransform: "uppercase", letterSpacing: 2, margin: 0, display: "flex", alignItems: "center", gap: 8 },
+      sectionTitle: { color: "var(--text3)", fontSize: 13, textTransform: "uppercase", letterSpacing: 2, margin: 0, display: "flex", alignItems: "center", gap: 8 },
       subLabel: { fontSize: 12, textTransform: "uppercase", letterSpacing: 1.5, fontWeight: 700 },
       table: { width: "100%", borderCollapse: "collapse", marginTop: 4 },
-      th: { color: "#94a3b8", fontSize: 12, textTransform: "uppercase", letterSpacing: 1, padding: "8px 10px", borderBottom: "1px solid #e2e8f0", textAlign: "left" },
-      tr: { borderBottom: "1px solid #f1f5f9" },
-      td: { color: "#475569", fontSize: 14, padding: "10px 10px" },
-      instBadge: { background: "#eff6ff", color: "#3b82f6", borderRadius: 4, padding: "3px 9px", fontSize: 12, fontWeight: 600 },
-      futureGroup: { background: "#f8fafc", borderRadius: 8, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 5, border: "1px solid #e2e8f0", marginBottom: 6 },
+      th: { color: "var(--text3)", fontSize: 12, textTransform: "uppercase", letterSpacing: 1, padding: "8px 10px", borderBottom: "1px solid var(--border)", textAlign: "left" },
+      tr: { borderBottom: "1px solid var(--bg)" },
+      td: { color: "var(--text2)", fontSize: 14, padding: "10px 10px" },
+      instBadge: { background: "var(--surface2)", color: "#3b82f6", borderRadius: 4, padding: "3px 9px", fontSize: 12, fontWeight: 600 },
+      futureGroup: { background: "var(--surface2)", borderRadius: 8, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 5, border: "1px solid var(--border)", marginBottom: 6 },
       futureGroupHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 },
-      futureItem: { display: "flex", gap: 8, alignItems: "center", fontSize: 14, color: "#64748b" },
-      emptySmall: { color: "#94a3b8", fontSize: 14, padding: "8px 0" },
+      futureItem: { display: "flex", gap: 8, alignItems: "center", fontSize: 14, color: "var(--text2)" },
+      emptySmall: { color: "var(--text3)", fontSize: 14, padding: "8px 0" },
     };
 
     // Montar o app no ponto de montagem
