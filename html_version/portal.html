@@ -491,7 +491,10 @@ async function loadAll() {
    KPIs
 ══════════════════════════════════════════════════════════════ */
 function renderKPIs(data) {
-  const despesas  = data.filter(l => l.tipo === 'DESPESA' || l.tipo === 'CARTAO');
+  const agora = new Date();
+  const mesAtual = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
+  // Despesas = DESPESA normal + CARTAO apenas do mês atual
+  const despesas  = data.filter(l => l.tipo === 'DESPESA' || (l.tipo === 'CARTAO' && (l.data || '').slice(0, 7) === mesAtual));
   const receitas  = data.filter(l => l.tipo === 'RECEITA');
   const totalD    = despesas.reduce((a,l) => a + +l.valor, 0);
   const totalR    = receitas.reduce((a,l) => a + +l.valor, 0);
@@ -603,7 +606,9 @@ function renderMensalChart(data) {
    TIPO CHART (DONUT)
 ══════════════════════════════════════════════════════════════ */
 function renderTipoChart(data) {
-  const totalD = data.filter(l=>l.tipo==='DESPESA'||l.tipo==='CARTAO').reduce((a,l)=>a+(+l.valor),0);
+  const agoraD = new Date();
+  const mesAtualD = `${agoraD.getFullYear()}-${String(agoraD.getMonth() + 1).padStart(2, '0')}`;
+  const totalD = data.filter(l=>l.tipo==='DESPESA'||(l.tipo==='CARTAO'&&(l.data||'').slice(0,7)===mesAtualD)).reduce((a,l)=>a+(+l.valor),0);
   const totalR = data.filter(l=>l.tipo==='RECEITA').reduce((a,l)=>a+(+l.valor),0);
   if (chartTipo) chartTipo.destroy();
   chartTipo = new Chart(document.getElementById('cTipo').getContext('2d'), {
@@ -671,7 +676,9 @@ function renderRecentes(data) {
 ══════════════════════════════════════════════════════════════ */
 function renderTopSubgrupos(data) {
   function buildTop(tipo, elId, color) {
-    const filtered = tipo === 'DESPESA' ? data.filter(l => l.tipo === 'DESPESA' || l.tipo === 'CARTAO') : data.filter(l => l.tipo === tipo);
+    const agoraT = new Date();
+    const mesAtualT = `${agoraT.getFullYear()}-${String(agoraT.getMonth() + 1).padStart(2, '0')}`;
+    const filtered = tipo === 'DESPESA' ? data.filter(l => l.tipo === 'DESPESA' || (l.tipo === 'CARTAO' && (l.data || '').slice(0, 7) === mesAtualT)) : data.filter(l => l.tipo === tipo);
     const byS = {};
     filtered.forEach(l => {
       const name = l.classe?.subgrupo?.nome || (l.tipo === 'CARTAO' ? '💳 Cartão de Crédito' : 'Sem subgrupo');
