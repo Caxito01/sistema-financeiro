@@ -1211,7 +1211,7 @@ async function carregarDados() {
       quitado:       l.quitado                          || false,
     }));
 
-    // Lançamentos CARTAO do Supabase
+    // Lançamentos CARTAO do Supabase (do resultado geral)
     const supaCartao = (data || []).filter(l => {
       const raw = (l.tipo || '').toUpperCase();
       return raw === 'CARTAO';
@@ -1222,6 +1222,32 @@ async function carregarDados() {
       data:    l.data || '',
       fonte:   'supabase',
     }));
+
+    // Query separada: CARTAO do mês atual (a query principal pode não trazer por limite)
+    const agora = new Date();
+    const mesAtual = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
+    const primeiroDia = `${mesAtual}-01`;
+    const ultimoDia = `${mesAtual}-31`;
+
+    let supaCartaoMes = [];
+    try {
+      const { data: cartaoData, error: cartaoError } = await supabase
+        .from('lancamentos')
+        .select('*')
+        .eq('tipo', 'CARTAO')
+        .gte('data', primeiroDia)
+        .lte('data', ultimoDia)
+        .order('data', { ascending: true });
+      if (!cartaoError && cartaoData) {
+        supaCartaoMes = cartaoData.map(l => ({
+          id:      l.id,
+          descricao: l.descricao_complementar || l.descricao || '-',
+          valor:   parseFloat(l.valor || 0),
+          data:    l.data || '',
+          fonte:   'supabase',
+        }));
+      }
+    } catch(e) { console.warn('Erro ao buscar cartão do mês:', e); }
 
     // Lançamentos CARTAO do localStorage (módulo cartao-credito.html)
     let localCartao = [];
@@ -1244,10 +1270,12 @@ async function carregarDados() {
     CARTAO_LANCAMENTOS = [...supaCartao, ...localCartao]
       .sort((a, b) => b.data.localeCompare(a.data));
 
-    // Filtrar pelo mês atual
-    const agora = new Date();
-    const mesAtual = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
-    CARTAO_MES = CARTAO_LANCAMENTOS.filter(l => (l.data || '').slice(0, 7) === mesAtual);
+    // Filtrar pelo mês atual: combina query dedicada + localStorage do mês
+    const localCartaoMes = localCartao.filter(l => (l.data || '').slice(0, 7) === mesAtual);
+    // Deduplica entre supaCartaoMes e localCartaoMes
+    const idsVistos = new Set(supaCartaoMes.map(l => l.id));
+    const localNaodup = localCartaoMes.filter(l => !idsVistos.has(l.id));
+    CARTAO_MES = [...supaCartaoMes, ...localNaodup].sort((a, b) => a.data.localeCompare(b.data));
 
   } catch (err) {
     console.error('Erro ao carregar dados:', err);
