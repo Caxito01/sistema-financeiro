@@ -31,9 +31,48 @@
     .sf-nav a.active{background:#f0fdf4;color:#16a34a}
     [data-theme="dark"] .sf-nav a.active{background:rgba(34,197,94,.15);color:#4ade80}
     .sf-footer{text-align:center;padding:1.5rem;font-size:.72rem;color:var(--text3);border-top:1px solid var(--border);margin-top:1rem}
+
+    /* Sankey styles */
+    .sankey-section { margin-top: 2rem; }
+    .sankey-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1rem; }
+    .sankey-filters { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; }
+    .sankey-filters select {
+      background:var(--surface2); border:1px solid var(--border); border-radius:8px;
+      padding:.4rem .75rem; font-size:.82rem; font-weight:600; color:var(--text2);
+      cursor:pointer; font-family:inherit; transition:all var(--transition);
+    }
+    .sankey-filters select:focus { outline:none; border-color:#22c55e; }
+    .sankey-container { position:relative; width:100%; overflow-x: auto; }
+    .sankey-svg { width:100%; min-width: 700px; }
+    .sankey-tooltip {
+      position:fixed; background:var(--surface); border:1px solid var(--border);
+      border-radius:10px; padding:.65rem 1rem; font-size:.8rem; font-weight:600;
+      color:var(--text); box-shadow:0 8px 32px rgba(0,0,0,.18);
+      pointer-events:none; z-index:9999; opacity:0; transition:opacity .15s;
+      max-width:220px;
+    }
+    .sankey-tooltip .tt-val { font-size:1.05rem; font-weight:700; margin-top:.2rem; }
+    .sankey-tooltip .tt-pct { font-size:.75rem; color:var(--text2); }
+    .sankey-legend { display:flex; flex-wrap:wrap; gap:.5rem 1rem; margin-top:1rem; }
+    .sankey-legend-item { display:flex; align-items:center; gap:.4rem; font-size:.78rem; font-weight:600; color:var(--text2); }
+    .sankey-legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .sankey-empty {
+      text-align:center; padding:3rem 1rem; color:var(--text2);
+      display:flex; flex-direction:column; align-items:center; gap:.5rem;
+    }
+    .sankey-empty .icon { font-size:2.5rem; }
+    .sankey-empty .msg { font-size:.9rem; font-weight:600; }
+    .sankey-empty .sub { font-size:.78rem; color:var(--text3); }
+    .sankey-loading { text-align:center; padding:3rem; color:var(--text2); font-size:.9rem; }
+    .sankey-stats { display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1rem; }
+    .sankey-stat { background:var(--surface2); border-radius:10px; padding:.65rem 1rem; flex:1; min-width:120px; }
+    .sankey-stat-label { font-size:.72rem; color:var(--text2); font-weight:600; }
+    .sankey-stat-val { font-size:1.05rem; font-weight:700; color:var(--text); margin-top:.1rem; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
 </head>
 <body>
   <header class="sf-header">
@@ -85,27 +124,108 @@
         </div>
       </div>
     </div>
+
+    <!-- ═══════════════════════════════════════════
+         SEÇÃO SANKEY — CARTÃO DE CRÉDITO
+    ════════════════════════════════════════════ -->
+    <div class="card sankey-section">
+      <div class="sankey-header">
+        <div>
+          <h3 style="font-weight:700; font-size:1.05rem; margin:0 0 .2rem;">💳 Gastos do Cartão — Grupo › Subgrupo › Classe</h3>
+          <div style="font-size:.78rem; color:var(--text2);">Fluxo de despesas categorizadas no cartão de crédito</div>
+        </div>
+        <div class="sankey-filters">
+          <select id="sankeyMes" onchange="renderizarSankey()">
+            <option value="0">Todos os meses</option>
+            <option value="1">Janeiro</option>
+            <option value="2">Fevereiro</option>
+            <option value="3">Março</option>
+            <option value="4">Abril</option>
+            <option value="5">Maio</option>
+            <option value="6">Junho</option>
+            <option value="7">Julho</option>
+            <option value="8">Agosto</option>
+            <option value="9">Setembro</option>
+            <option value="10">Outubro</option>
+            <option value="11">Novembro</option>
+            <option value="12">Dezembro</option>
+          </select>
+          <select id="sankeyAno" onchange="renderizarSankey()">
+          </select>
+        </div>
+      </div>
+
+      <div id="sankeyStats" class="sankey-stats" style="display:none;"></div>
+      <div class="sankey-container">
+        <div id="sankeyLoading" class="sankey-loading">⏳ Carregando dados...</div>
+        <div id="sankeyEmpty" class="sankey-empty" style="display:none;">
+          <div class="icon">📭</div>
+          <div class="msg">Nenhum dado de cartão encontrado</div>
+          <div class="sub">Importe lançamentos do cartão e atribua categorias para visualizar o gráfico.</div>
+        </div>
+        <svg id="sankeySvg" class="sankey-svg" style="display:none;"></svg>
+      </div>
+      <div id="sankeyLegend" class="sankey-legend" style="margin-top:.75rem;"></div>
+    </div>
+
+    <!-- Tooltip global -->
+    <div class="sankey-tooltip" id="sankeyTooltip"></div>
   </div>
 
   <script src="config/supabase-config.js"></script>
   <script>
     let chartMensal = null;
     let chartCategorias = null;
+    let todosLancamentosCartao = [];
 
+    // ─── MESES / ANO ─────────────────────────────────────────
+    const MESES_NOME = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const ANO_ATUAL = new Date().getFullYear();
+    const MES_ATUAL = new Date().getMonth() + 1; // 1-12
+
+    // ─── PALETA DE CORES ─────────────────────────────────────
+    const PALETTE = [
+      '#6366f1','#f59e0b','#10b981','#ef4444','#3b82f6',
+      '#8b5cf6','#ec4899','#14b8a6','#f97316','#22c55e',
+      '#a855f7','#06b6d4','#e11d48','#84cc16','#0ea5e9'
+    ];
+
+    function fmt(v) {
+      return (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    // ─── INICIALIZAÇÃO ────────────────────────────────────────
     window.addEventListener('DOMContentLoaded', async () => {
       await protectPage();
+      popularAnos();
+      // Definir mês atual como padrão
+      document.getElementById('sankeyMes').value = MES_ATUAL;
+      document.getElementById('sankeyAno').value = ANO_ATUAL;
+
       await carregarRelatorios();
+      await carregarDadosSankey();
     });
+
+    function popularAnos() {
+      const sel = document.getElementById('sankeyAno');
+      for (let a = ANO_ATUAL; a >= ANO_ATUAL - 4; a--) {
+        const opt = document.createElement('option');
+        opt.value = a;
+        opt.textContent = a;
+        if (a === ANO_ATUAL) opt.selected = true;
+        sel.appendChild(opt);
+      }
+    }
 
     async function handleLogout() {
       await logout();
       window.location.href = 'login.html';
     }
 
+    // ─── RELATÓRIOS EXISTENTES ────────────────────────────────
     async function carregarRelatorios() {
       try {
         const supabase = createSupabaseClient();
-        
         const { data: lancamentos } = await supabase
           .from('lancamentos')
           .select(`
@@ -123,56 +243,43 @@
           return ano === anoAtual;
         });
 
-        // Totais anuais
         const totalDespesas = lancamentosAno.filter(l => l.tipo === 'DESPESA').reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
         const totalReceitas = lancamentosAno.filter(l => l.tipo === 'RECEITA').reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
         const saldo = totalReceitas - totalDespesas;
 
-        document.getElementById('totalDespesasAno').textContent = `R$ ${totalDespesas.toFixed(2)}`;
-        document.getElementById('totalReceitasAno').textContent = `R$ ${totalReceitas.toFixed(2)}`;
-        document.getElementById('saldoAno').textContent = `R$ ${saldo.toFixed(2)}`;
+        document.getElementById('totalDespesasAno').textContent = fmt(totalDespesas);
+        document.getElementById('totalReceitasAno').textContent = fmt(totalReceitas);
+        document.getElementById('saldoAno').textContent = fmt(saldo);
         document.getElementById('saldoAno').style.color = saldo >= 0 ? 'var(--success)' : 'var(--danger)';
 
-        // Gráfico mensal
         const dadosMensais = processarDadosMensais(lancamentosAno);
         criarGraficoMensal(dadosMensais);
 
-        // Gráfico por categoria
         const dadosCategorias = processarDadosCategorias(lancamentosAno);
         criarGraficoCategorias(dadosCategorias);
 
       } catch (error) {
         console.error('Erro ao carregar relatórios:', error);
-        alert('Erro ao carregar relatórios');
       }
     }
 
     function processarDadosMensais(lancamentos) {
-      const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+      const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
       const despesasPorMes = new Array(12).fill(0);
       const receitasPorMes = new Array(12).fill(0);
 
       lancamentos.forEach(lanc => {
         const mes = new Date(lanc.data).getMonth();
         const valor = parseFloat(lanc.valor || 0);
-        
-        if (lanc.tipo === 'DESPESA') {
-          despesasPorMes[mes] += valor;
-        } else if (lanc.tipo === 'RECEITA') {
-          receitasPorMes[mes] += valor;
-        }
+        if (lanc.tipo === 'DESPESA') despesasPorMes[mes] += valor;
+        else if (lanc.tipo === 'RECEITA') receitasPorMes[mes] += valor;
       });
 
-      return {
-        labels: meses,
-        despesas: despesasPorMes,
-        receitas: receitasPorMes
-      };
+      return { labels: meses, despesas: despesasPorMes, receitas: receitasPorMes };
     }
 
     function processarDadosCategorias(lancamentos) {
       const categoriasMap = new Map();
-      
       lancamentos.filter(l => l.tipo === 'DESPESA').forEach(lanc => {
         const categoria = lanc.classe?.subgrupo?.nome || 'Sem Categoria';
         const valor = parseFloat(lanc.valor || 0);
@@ -180,104 +287,53 @@
       });
 
       const categorias = Array.from(categoriasMap.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 10);
+        .sort((a, b) => b[1] - a[1]).slice(0, 10);
 
-      return {
-        labels: categorias.map(c => c[0]),
-        valores: categorias.map(c => c[1])
-      };
+      return { labels: categorias.map(c => c[0]), valores: categorias.map(c => c[1]) };
     }
 
     function criarGraficoMensal(dados) {
       const ctx = document.getElementById('chartMensal').getContext('2d');
-      
-      if (chartMensal) {
-        chartMensal.destroy();
-      }
-
+      if (chartMensal) chartMensal.destroy();
       chartMensal = new Chart(ctx, {
         type: 'line',
         data: {
           labels: dados.labels,
           datasets: [
-            {
-              label: 'Despesas',
-              data: dados.despesas,
-              borderColor: '#ef4444',
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              tension: 0.4
-            },
-            {
-              label: 'Receitas',
-              data: dados.receitas,
-              borderColor: '#22c55e',
-              backgroundColor: 'rgba(34, 197, 94, 0.1)',
-              tension: 0.4
-            }
+            { label: 'Despesas', data: dados.despesas, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,.1)', tension: 0.4 },
+            { label: 'Receitas', data: dados.receitas, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,.1)', tension: 0.4 }
           ]
         },
         options: {
           responsive: true,
           plugins: {
-            legend: {
-              position: 'bottom'
-            },
-            tooltip: {
-              callbacks: {
-                label: function(context) {
-                  return `${context.dataset.label}: R$ ${context.parsed.y.toFixed(2)}`;
-                }
-              }
-            }
+            legend: { position: 'bottom' },
+            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmt(ctx.parsed.y)}` } }
           },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                callback: function(value) {
-                  return 'R$ ' + value.toFixed(0);
-                }
-              }
-            }
-          }
+          scales: { y: { beginAtZero: true, ticks: { callback: v => 'R$ ' + v.toFixed(0) } } }
         }
       });
     }
 
     function criarGraficoCategorias(dados) {
       const ctx = document.getElementById('chartCategorias').getContext('2d');
-      
-      if (chartCategorias) {
-        chartCategorias.destroy();
-      }
-
-      const cores = [
-        '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
-        '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9'
-      ];
-
+      if (chartCategorias) chartCategorias.destroy();
       chartCategorias = new Chart(ctx, {
         type: 'doughnut',
         data: {
           labels: dados.labels,
-          datasets: [{
-            data: dados.valores,
-            backgroundColor: cores
-          }]
+          datasets: [{ data: dados.valores, backgroundColor: PALETTE }]
         },
         options: {
           responsive: true,
           plugins: {
-            legend: {
-              position: 'right'
-            },
+            legend: { position: 'right' },
             tooltip: {
               callbacks: {
-                label: function(context) {
-                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                  const percentage = ((context.parsed / total) * 100).toFixed(1);
-                  return `${context.label}: R$ ${context.parsed.toFixed(2)} (${percentage}%)`;
+                label: ctx => {
+                  const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                  const pct = ((ctx.parsed / total) * 100).toFixed(1);
+                  return `${ctx.label}: ${fmt(ctx.parsed)} (${pct}%)`;
                 }
               }
             }
@@ -285,8 +341,308 @@
         }
       });
     }
+
+    // ═══════════════════════════════════════════════════════════
+    // SANKEY — Cartão de Crédito
+    // ═══════════════════════════════════════════════════════════
+    async function carregarDadosSankey() {
+      try {
+        const supabase = createSupabaseClient();
+        const { data } = await supabase
+          .from('lancamentos')
+          .select(`
+            id, valor, data, tipo,
+            classe:classes(
+              id, codigo, descricao,
+              subgrupo:subgrupos(
+                id, codigo, nome,
+                grupo:grupos(id, codigo, nome, tipo)
+              )
+            )
+          `)
+          .or('tipo.eq.CARTAO,tipo.eq.DESPESA')
+          .not('classe_id', 'is', null);
+
+        todosLancamentosCartao = (data || []).filter(l => l.classe?.subgrupo?.grupo);
+        renderizarSankey();
+      } catch (err) {
+        console.error('Erro ao carregar sankey:', err);
+        document.getElementById('sankeyLoading').style.display = 'none';
+        document.getElementById('sankeyEmpty').style.display = 'flex';
+      }
+    }
+
+    function renderizarSankey() {
+      const mesSel = parseInt(document.getElementById('sankeyMes').value);
+      const anoSel = parseInt(document.getElementById('sankeyAno').value);
+
+      // Filtrar
+      let filtrados = todosLancamentosCartao.filter(l => {
+        const d = new Date(l.data);
+        const anoOk = d.getFullYear() === anoSel;
+        const mesOk = mesSel === 0 || (d.getMonth() + 1) === mesSel;
+        return anoOk && mesOk;
+      });
+
+      // Apenas CARTAO ou se não tiver CARTAO, todo tipo com classe
+      const cartao = filtrados.filter(l => l.tipo === 'CARTAO');
+      if (cartao.length > 0) filtrados = cartao;
+
+      document.getElementById('sankeyLoading').style.display = 'none';
+
+      if (filtrados.length === 0) {
+        document.getElementById('sankeySvg').style.display = 'none';
+        document.getElementById('sankeyEmpty').style.display = 'flex';
+        document.getElementById('sankeyStats').style.display = 'none';
+        document.getElementById('sankeyLegend').innerHTML = '';
+        return;
+      }
+
+      document.getElementById('sankeyEmpty').style.display = 'none';
+      document.getElementById('sankeySvg').style.display = 'block';
+
+      // ─── Construir nós e links ─────────────────────────────
+      const nodeMap = new Map();
+      const linkMap = new Map();
+      let totalGeral = 0;
+
+      function nodeKey(tipo, id, nome) { return `${tipo}:${id}:${nome}`; }
+      function getNode(tipo, id, nome) {
+        const k = nodeKey(tipo, id, nome);
+        if (!nodeMap.has(k)) nodeMap.set(k, { id: k, name: nome, tipo, valor: 0 });
+        return nodeMap.get(k);
+      }
+      function addLink(sourceKey, targetKey, val) {
+        const k = `${sourceKey}→${targetKey}`;
+        if (!linkMap.has(k)) linkMap.set(k, { source: sourceKey, target: targetKey, value: 0 });
+        linkMap.get(k).value += val;
+      }
+
+      // Nó raiz "Cartão"
+      const rootKey = nodeKey('root', 'root', '💳 Cartão');
+      getNode('root', 'root', '💳 Cartão');
+
+      filtrados.forEach(l => {
+        const val = parseFloat(l.valor || 0);
+        if (val <= 0) return;
+        totalGeral += val;
+
+        const g = l.classe.subgrupo.grupo;
+        const sg = l.classe.subgrupo;
+        const cl = l.classe;
+
+        const gKey  = nodeKey('grupo',    g.id,  g.nome);
+        const sgKey = nodeKey('subgrupo', sg.id, sg.nome);
+        const clKey = nodeKey('classe',   cl.id, cl.descricao || cl.codigo);
+
+        getNode('grupo',    g.id,  g.nome);
+        getNode('subgrupo', sg.id, sg.nome);
+        getNode('classe',   cl.id, cl.descricao || cl.codigo);
+
+        nodeMap.get(rootKey).valor += val;
+        nodeMap.get(gKey).valor   += val;
+        nodeMap.get(sgKey).valor  += val;
+        nodeMap.get(clKey).valor  += val;
+
+        addLink(rootKey, gKey,  val);
+        addLink(gKey,  sgKey,   val);
+        addLink(sgKey, clKey,   val);
+      });
+
+      if (nodeMap.size < 2) {
+        document.getElementById('sankeySvg').style.display = 'none';
+        document.getElementById('sankeyEmpty').style.display = 'flex';
+        return;
+      }
+
+      // ─── Stats ────────────────────────────────────────────
+      const grupos = [...nodeMap.values()].filter(n => n.tipo === 'grupo');
+      const statsEl = document.getElementById('sankeyStats');
+      statsEl.style.display = 'flex';
+      statsEl.innerHTML = `
+        <div class="sankey-stat">
+          <div class="sankey-stat-label">💰 Total Cartão</div>
+          <div class="sankey-stat-val" style="color:#ef4444;">${fmt(totalGeral)}</div>
+        </div>
+        <div class="sankey-stat">
+          <div class="sankey-stat-label">📂 Grupos</div>
+          <div class="sankey-stat-val">${grupos.length}</div>
+        </div>
+        <div class="sankey-stat">
+          <div class="sankey-stat-label">🏷️ Classes</div>
+          <div class="sankey-stat-val">${[...nodeMap.values()].filter(n => n.tipo === 'classe').length}</div>
+        </div>
+        <div class="sankey-stat">
+          <div class="sankey-stat-label">📋 Lançamentos</div>
+          <div class="sankey-stat-val">${filtrados.length}</div>
+        </div>
+      `;
+
+      // ─── Cores por grupo ──────────────────────────────────
+      const grupoColors = {};
+      grupos.forEach((g, i) => { grupoColors[g.id] = PALETTE[i % PALETTE.length]; });
+
+      function getColor(node) {
+        if (node.tipo === 'root') return '#64748b';
+        if (node.tipo === 'grupo') return grupoColors[node.id.split(':')[1]] || PALETTE[0];
+        // subgrupo ou classe: herdar do grupo pai via link
+        // procuramos o link que aponta para esse nó
+        const parentLink = [...linkMap.values()].find(lk => lk.target === node.id);
+        if (parentLink) return getColor(nodeMap.get(parentLink.source));
+        return '#94a3b8';
+      }
+
+      // ─── D3 Sankey ────────────────────────────────────────
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const svgEl = document.getElementById('sankeySvg');
+      svgEl.innerHTML = '';
+
+      const W = Math.max(svgEl.parentElement.clientWidth || 800, 700);
+      const H = Math.max(nodeMap.size * 28, 320);
+      svgEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
+      svgEl.setAttribute('height', H);
+
+      const nodesArr = [...nodeMap.values()];
+      const linksArr = [...linkMap.values()].map(lk => ({
+        source: nodesArr.findIndex(n => n.id === lk.source),
+        target: nodesArr.findIndex(n => n.id === lk.target),
+        value:  lk.value
+      }));
+
+      const sankeyGen = d3.sankey()
+        .nodeId(d => d.index)
+        .nodeWidth(22)
+        .nodePadding(14)
+        .extent([[24, 16], [W - 24, H - 16]]);
+
+      const { nodes, links } = sankeyGen({
+        nodes: nodesArr.map((n, i) => ({ ...n, index: i })),
+        links: linksArr
+      });
+
+      const svg = d3.select(svgEl);
+      const tooltip = document.getElementById('sankeyTooltip');
+
+      function showTip(e, html) {
+        tooltip.innerHTML = html;
+        tooltip.style.opacity = '1';
+        moveTip(e);
+      }
+      function moveTip(e) {
+        const px = e.clientX + 14;
+        const py = e.clientY - 10;
+        tooltip.style.left = Math.min(px, window.innerWidth - 240) + 'px';
+        tooltip.style.top = Math.min(py, window.innerHeight - 100) + 'px';
+      }
+      function hideTip() { tooltip.style.opacity = '0'; }
+
+      // Links
+      svg.append('g').selectAll('path')
+        .data(links)
+        .join('path')
+        .attr('d', d3.sankeyLinkHorizontal())
+        .attr('stroke', d => getColor(nodesArr[d.source.index]))
+        .attr('stroke-width', d => Math.max(1, d.width))
+        .attr('fill', 'none')
+        .attr('stroke-opacity', 0.38)
+        .style('cursor', 'default')
+        .on('mouseover', function(e, d) {
+          d3.select(this).attr('stroke-opacity', 0.65);
+          const srcName = nodesArr[d.source.index].name;
+          const tgtName = nodesArr[d.target.index].name;
+          const pct = totalGeral > 0 ? ((d.value / totalGeral) * 100).toFixed(1) : 0;
+          showTip(e, `
+            <div style="font-size:.72rem;color:var(--text2);">${srcName} → ${tgtName}</div>
+            <div class="tt-val">${fmt(d.value)}</div>
+            <div class="tt-pct">${pct}% do total</div>
+          `);
+        })
+        .on('mousemove', moveTip)
+        .on('mouseout', function() { d3.select(this).attr('stroke-opacity', 0.38); hideTip(); });
+
+      // Nós
+      const node = svg.append('g').selectAll('g')
+        .data(nodes)
+        .join('g')
+        .style('cursor', 'default');
+
+      node.append('rect')
+        .attr('x', d => d.x0)
+        .attr('y', d => d.y0)
+        .attr('height', d => Math.max(d.y1 - d.y0, 2))
+        .attr('width', d => d.x1 - d.x0)
+        .attr('fill', d => getColor(d))
+        .attr('rx', 4)
+        .attr('opacity', 0.92)
+        .on('mouseover', function(e, d) {
+          d3.select(this).attr('opacity', 1);
+          const pct = totalGeral > 0 ? ((d.valor / totalGeral) * 100).toFixed(1) : 0;
+          const tipo = d.tipo === 'root' ? 'Total' : d.tipo.charAt(0).toUpperCase() + d.tipo.slice(1);
+          showTip(e, `
+            <div style="font-size:.72rem;color:var(--text2);">${tipo}</div>
+            <div style="font-weight:700;font-size:.88rem;margin:.1rem 0;">${d.name}</div>
+            <div class="tt-val">${fmt(d.valor)}</div>
+            <div class="tt-pct">${pct}% do total</div>
+          `);
+        })
+        .on('mousemove', moveTip)
+        .on('mouseout', function() { d3.select(this).attr('opacity', 0.92); hideTip(); });
+
+      // Labels
+      node.append('text')
+        .attr('x', d => d.x0 < W / 2 ? d.x1 + 6 : d.x0 - 6)
+        .attr('y', d => (d.y0 + d.y1) / 2)
+        .attr('dy', '0.35em')
+        .attr('text-anchor', d => d.x0 < W / 2 ? 'start' : 'end')
+        .style('font-family', "'Poppins', sans-serif")
+        .style('font-size', '11px')
+        .style('font-weight', '600')
+        .style('fill', isDark ? '#cbd5e1' : '#1e293b')
+        .style('pointer-events', 'none')
+        .each(function(d) {
+          const nameLen = d.name.length;
+          const boxW = W / 5;
+          let label = d.name;
+          if (nameLen > 18) label = d.name.substring(0, 17) + '…';
+          d3.select(this).append('tspan').text(label);
+          // Valor em segunda linha apenas se o nó for grande
+          if (d.y1 - d.y0 > 20) {
+            d3.select(this).append('tspan')
+              .attr('x', d.x0 < W / 2 ? d.x1 + 6 : d.x0 - 6)
+              .attr('dy', '1.15em')
+              .style('font-size', '9.5px')
+              .style('font-weight', '400')
+              .style('fill', isDark ? '#94a3b8' : '#64748b')
+              .text(fmt(d.valor));
+          }
+        });
+
+      // ─── Legenda dos grupos ────────────────────────────────
+      const legendEl = document.getElementById('sankeyLegend');
+      legendEl.innerHTML = '';
+      grupos.forEach(g => {
+        const color = getColor(g);
+        legendEl.innerHTML += `
+          <div class="sankey-legend-item">
+            <div class="sankey-legend-dot" style="background:${color};"></div>
+            <span>${g.name}</span>
+            <span style="color:var(--text3);font-size:.72rem;">${fmt(g.valor)}</span>
+          </div>`;
+      });
+    }
+
+    // listener para redimensionar
+    window.addEventListener('resize', () => {
+      if (document.getElementById('sankeySvg').style.display !== 'none') renderizarSankey();
+    });
+
+    // theme observer para re-renderizar em modo escuro
+    new MutationObserver(() => {
+      if (document.getElementById('sankeySvg').style.display !== 'none') renderizarSankey();
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
   </script>
-  <footer class="sf-footer">Sistema Financeiro © 2026 — Carlos Caxito &nbsp;|  Dados demonstrativos</footer>
+  <footer class="sf-footer">Sistema Financeiro © 2026 — Carlos Caxito &nbsp;|  Dados demonstrativos</footer>
   <script>function sfToggleTheme(){const h=document.documentElement,d=h.getAttribute('data-theme')==='dark';h.setAttribute('data-theme',d?'light':'dark');document.getElementById('sfThemeBtn').textContent=d?'🌙 Escuro':'☀️ Claro'}</script>
 </body>
 </html>
