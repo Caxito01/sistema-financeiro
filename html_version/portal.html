@@ -491,7 +491,7 @@ async function loadAll() {
    KPIs
 ══════════════════════════════════════════════════════════════ */
 function renderKPIs(data) {
-  const despesas  = data.filter(l => l.tipo === 'DESPESA');
+  const despesas  = data.filter(l => l.tipo === 'DESPESA' || l.tipo === 'CARTAO');
   const receitas  = data.filter(l => l.tipo === 'RECEITA');
   const totalD    = despesas.reduce((a,l) => a + +l.valor, 0);
   const totalR    = receitas.reduce((a,l) => a + +l.valor, 0);
@@ -568,8 +568,8 @@ function renderMensalChart(data) {
     const m = (l.data || '').slice(0, 7);
     if (!m) return;
     if (!months[m]) months[m] = { d: 0, r: 0 };
-    if (l.tipo === 'DESPESA') months[m].d += +l.valor;
-    else months[m].r += +l.valor;
+    if (l.tipo === 'DESPESA' || l.tipo === 'CARTAO') months[m].d += +l.valor;
+    else if (l.tipo === 'RECEITA') months[m].r += +l.valor;
   });
   const labels = Object.keys(months).sort().slice(-8);
   const desp   = labels.map(m => months[m].d);
@@ -603,7 +603,7 @@ function renderMensalChart(data) {
    TIPO CHART (DONUT)
 ══════════════════════════════════════════════════════════════ */
 function renderTipoChart(data) {
-  const totalD = data.filter(l=>l.tipo==='DESPESA').reduce((a,l)=>a+(+l.valor),0);
+  const totalD = data.filter(l=>l.tipo==='DESPESA'||l.tipo==='CARTAO').reduce((a,l)=>a+(+l.valor),0);
   const totalR = data.filter(l=>l.tipo==='RECEITA').reduce((a,l)=>a+(+l.valor),0);
   if (chartTipo) chartTipo.destroy();
   chartTipo = new Chart(document.getElementById('cTipo').getContext('2d'), {
@@ -652,7 +652,7 @@ function renderRecentes(data) {
   tbody.innerHTML = data.map(l => {
     const desc = l.descricao_complementar || l.classe?.descricao || '–';
     const sub  = l.classe?.subgrupo?.nome || '';
-    const isD  = l.tipo === 'DESPESA';
+    const isD  = l.tipo === 'DESPESA' || l.tipo === 'CARTAO';
     return `<tr>
       <td>
         <div style="font-weight:600;font-size:.78rem;">${desc}</div>
@@ -671,10 +671,10 @@ function renderRecentes(data) {
 ══════════════════════════════════════════════════════════════ */
 function renderTopSubgrupos(data) {
   function buildTop(tipo, elId, color) {
-    const filtered = data.filter(l => l.tipo === tipo);
+    const filtered = tipo === 'DESPESA' ? data.filter(l => l.tipo === 'DESPESA' || l.tipo === 'CARTAO') : data.filter(l => l.tipo === tipo);
     const byS = {};
     filtered.forEach(l => {
-      const name = l.classe?.subgrupo?.nome || 'Sem subgrupo';
+      const name = l.classe?.subgrupo?.nome || (l.tipo === 'CARTAO' ? '💳 Cartão de Crédito' : 'Sem subgrupo');
       byS[name] = (byS[name] || 0) + +l.valor;
     });
     const sorted = Object.entries(byS).sort((a,b)=>b[1]-a[1]).slice(0, 5);

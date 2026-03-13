@@ -181,7 +181,7 @@
         const gruposMap = new Map();
         (grupos || []).forEach(g => gruposMap.set(g.id, g));
 
-        const despesas = (lancamentos || []).filter(l => l.tipo === 'DESPESA');
+        const despesas = (lancamentos || []).filter(l => l.tipo === 'DESPESA' || l.tipo === 'CARTAO');
         const receitas = (lancamentos || []).filter(l => l.tipo === 'RECEITA');
         const cartoes  = (lancamentos || []).filter(l => l.tipo === 'CARTAO');
 
@@ -194,10 +194,13 @@
         const subgruposSoma = new Map();
         despesas.forEach(item => {
           const classe = classesMap.get(item.classe_id);
-          if (!classe) return;
-
-          const subgrupo = subgruposMap.get(classe.subgrupo_id);
-          const subgrupoNome = subgrupo ? subgrupo.nome : 'Sem Subgrupo';
+          let subgrupoNome;
+          if (classe) {
+            const subgrupo = subgruposMap.get(classe.subgrupo_id);
+            subgrupoNome = subgrupo ? subgrupo.nome : 'Sem Subgrupo';
+          } else {
+            subgrupoNome = item.tipo === 'CARTAO' ? '💳 Cartão de Crédito' : 'Sem Subgrupo';
+          }
           const valor = parseFloat(item.valor || 0);
 
           subgruposSoma.set(subgrupoNome, (subgruposSoma.get(subgrupoNome) || 0) + valor);
@@ -207,9 +210,12 @@
         const classesSoma = new Map();
         despesas.forEach(item => {
           const classe = classesMap.get(item.classe_id);
-          if (!classe) return;
-
-          const nomeClasse = classe.descricao || classe.codigo || 'Sem Classe';
+          let nomeClasse;
+          if (classe) {
+            nomeClasse = classe.descricao || classe.codigo || 'Sem Classe';
+          } else {
+            nomeClasse = item.tipo === 'CARTAO' ? '💳 Cartão de Crédito' : 'Sem Classe';
+          }
           const valor = parseFloat(item.valor || 0);
 
           classesSoma.set(nomeClasse, (classesSoma.get(nomeClasse) || 0) + valor);
