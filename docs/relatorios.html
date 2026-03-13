@@ -152,6 +152,7 @@
           </select>
           <select id="sankeyAno" onchange="renderizarSankey()">
           </select>
+          <button onclick="recarregarSankey()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.4rem .75rem;font-size:.82rem;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit;transition:all var(--transition);" title="Recarregar dados do banco">🔄 Atualizar</button>
         </div>
       </div>
 
@@ -326,9 +327,13 @@
     // SANKEY
     // ═══════════════════════════════════════════════════════════
     async function carregarDadosSankey() {
+      document.getElementById('sankeyLoading').style.display = 'block';
+      document.getElementById('sankeySvg').style.display    = 'none';
+      document.getElementById('sankeyEmpty').style.display  = 'none';
       try {
         const supabase = createSupabaseClient();
-        const { data } = await supabase
+        // Busca TODOS os lançamentos com categoria (qualquer tipo)
+        const { data, error } = await supabase
           .from('lancamentos')
           .select(`
             id, valor, data, tipo,
@@ -340,10 +345,15 @@
               )
             )
           `)
-          .or('tipo.eq.CARTAO,tipo.eq.DESPESA')
           .not('classe_id', 'is', null);
 
-        todosLancamentosCartao = (data || []).filter(l => l.classe?.subgrupo?.grupo);
+        if (error) throw error;
+
+        // Filtra apenas os que têm hierarquia completa: classe → subgrupo → grupo
+        todosLancamentosCartao = (data || []).filter(l =>
+          l.classe?.subgrupo?.grupo && parseFloat(l.valor || 0) > 0
+        );
+        console.log('[Sankey] Total lançamentos com categoria completa:', todosLancamentosCartao.length);
         renderizarSankey();
       } catch (err) {
         console.error('Erro ao carregar sankey:', err);
@@ -352,17 +362,20 @@
       }
     }
 
+    async function recarregarSankey() {
+      todosLancamentosCartao = [];
+      await carregarDadosSankey();
+    }
+
     function renderizarSankey() {
       const mesSel = parseInt(document.getElementById('sankeyMes').value);
       const anoSel = parseInt(document.getElementById('sankeyAno').value);
 
-      let filtrados = todosLancamentosCartao.filter(l => {
+      // Filtra por período — inclui TODOS os tipos com categoria (CARTAO, DESPESA, etc.)
+      const filtrados = todosLancamentosCartao.filter(l => {
         const d = new Date(l.data);
         return d.getFullYear() === anoSel && (mesSel === 0 || (d.getMonth() + 1) === mesSel);
       });
-
-      const cartao = filtrados.filter(l => l.tipo === 'CARTAO');
-      if (cartao.length > 0) filtrados = cartao;
 
       document.getElementById('sankeyLoading').style.display = 'none';
 
