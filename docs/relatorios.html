@@ -82,7 +82,7 @@
     </div>
   </header>
   <nav class="sf-nav">
-    <a href="index.html">🏠 Portal</a>
+    <a href="portal.html">🏠 Portal</a>
     <a href="dashboard.html">📊 Dashboard</a>
     <a href="lancamentos.html">➕ Novo Lançamento</a>
     <a href="lista-lancamentos.html">📋 Lista</a>
@@ -152,7 +152,6 @@
           </select>
           <select id="sankeyAno" onchange="renderizarSankey()">
           </select>
-          <button onclick="recarregarSankey()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.4rem .75rem;font-size:.82rem;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit;transition:all var(--transition);" title="Recarregar dados do banco">🔄 Atualizar</button>
         </div>
       </div>
 
@@ -179,10 +178,12 @@
     let chartCategorias = null;
     let todosLancamentosCartao = [];
 
+    // ─── MESES / ANO ─────────────────────────────────────────
     const MESES_NOME = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
     const ANO_ATUAL = new Date().getFullYear();
-    const MES_ATUAL = new Date().getMonth() + 1;
+    const MES_ATUAL = new Date().getMonth() + 1; // 1-12
 
+    // ─── PALETA DE CORES ─────────────────────────────────────
     const PALETTE = [
       '#6366f1','#f59e0b','#10b981','#ef4444','#3b82f6',
       '#8b5cf6','#ec4899','#14b8a6','#f97316','#22c55e',
@@ -193,11 +194,14 @@
       return (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     }
 
+    // ─── INICIALIZAÇÃO ────────────────────────────────────────
     window.addEventListener('DOMContentLoaded', async () => {
       await protectPage();
       popularAnos();
+      // Definir mês atual como padrão
       document.getElementById('sankeyMes').value = MES_ATUAL;
       document.getElementById('sankeyAno').value = ANO_ATUAL;
+
       await carregarRelatorios();
       await carregarDadosSankey();
     });
@@ -218,6 +222,7 @@
       window.location.href = 'login.html';
     }
 
+    // ─── RELATÓRIOS EXISTENTES ────────────────────────────────
     async function carregarRelatorios() {
       try {
         const supabase = createSupabaseClient();
@@ -234,7 +239,8 @@
 
         const anoAtual = new Date().getFullYear();
         const lancamentosAno = (lancamentos || []).filter(l => {
-          return new Date(l.data).getFullYear() === anoAtual;
+          const ano = new Date(l.data).getFullYear();
+          return ano === anoAtual;
         });
 
         const totalDespesas = lancamentosAno.filter(l => l.tipo === 'DESPESA').reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
@@ -246,8 +252,11 @@
         document.getElementById('saldoAno').textContent = fmt(saldo);
         document.getElementById('saldoAno').style.color = saldo >= 0 ? 'var(--success)' : 'var(--danger)';
 
-        criarGraficoMensal(processarDadosMensais(lancamentosAno));
-        criarGraficoCategorias(processarDadosCategorias(lancamentosAno));
+        const dadosMensais = processarDadosMensais(lancamentosAno);
+        criarGraficoMensal(dadosMensais);
+
+        const dadosCategorias = processarDadosCategorias(lancamentosAno);
+        criarGraficoCategorias(dadosCategorias);
 
       } catch (error) {
         console.error('Erro ao carregar relatórios:', error);
@@ -258,23 +267,29 @@
       const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
       const despesasPorMes = new Array(12).fill(0);
       const receitasPorMes = new Array(12).fill(0);
+
       lancamentos.forEach(lanc => {
         const mes = new Date(lanc.data).getMonth();
         const valor = parseFloat(lanc.valor || 0);
         if (lanc.tipo === 'DESPESA') despesasPorMes[mes] += valor;
         else if (lanc.tipo === 'RECEITA') receitasPorMes[mes] += valor;
       });
+
       return { labels: meses, despesas: despesasPorMes, receitas: receitasPorMes };
     }
 
     function processarDadosCategorias(lancamentos) {
-      const map = new Map();
+      const categoriasMap = new Map();
       lancamentos.filter(l => l.tipo === 'DESPESA').forEach(lanc => {
-        const cat = lanc.classe?.subgrupo?.nome || 'Sem Categoria';
-        map.set(cat, (map.get(cat) || 0) + parseFloat(lanc.valor || 0));
+        const categoria = lanc.classe?.subgrupo?.nome || 'Sem Categoria';
+        const valor = parseFloat(lanc.valor || 0);
+        categoriasMap.set(categoria, (categoriasMap.get(categoria) || 0) + valor);
       });
-      const cats = Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, 10);
-      return { labels: cats.map(c => c[0]), valores: cats.map(c => c[1]) };
+
+      const categorias = Array.from(categoriasMap.entries())
+        .sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+      return { labels: categorias.map(c => c[0]), valores: categorias.map(c => c[1]) };
     }
 
     function criarGraficoMensal(dados) {
@@ -305,7 +320,10 @@
       if (chartCategorias) chartCategorias.destroy();
       chartCategorias = new Chart(ctx, {
         type: 'doughnut',
-        data: { labels: dados.labels, datasets: [{ data: dados.valores, backgroundColor: PALETTE }] },
+        data: {
+          labels: dados.labels,
+          datasets: [{ data: dados.valores, backgroundColor: PALETTE }]
+        },
         options: {
           responsive: true,
           plugins: {
@@ -314,7 +332,8 @@
               callbacks: {
                 label: ctx => {
                   const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-                  return `${ctx.label}: ${fmt(ctx.parsed)} (${((ctx.parsed / total) * 100).toFixed(1)}%)`;
+                  const pct = ((ctx.parsed / total) * 100).toFixed(1);
+                  return `${ctx.label}: ${fmt(ctx.parsed)} (${pct}%)`;
                 }
               }
             }
@@ -324,16 +343,12 @@
     }
 
     // ═══════════════════════════════════════════════════════════
-    // SANKEY
+    // SANKEY — Cartão de Crédito
     // ═══════════════════════════════════════════════════════════
     async function carregarDadosSankey() {
-      document.getElementById('sankeyLoading').style.display = 'block';
-      document.getElementById('sankeySvg').style.display    = 'none';
-      document.getElementById('sankeyEmpty').style.display  = 'none';
       try {
         const supabase = createSupabaseClient();
-        // Busca APENAS lançamentos de CARTAO ou DESPESA com categoria (NUNCA RECEITA)
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('lancamentos')
           .select(`
             id, valor, data, tipo,
@@ -345,20 +360,10 @@
               )
             )
           `)
-          .in('tipo', ['CARTAO', 'DESPESA'])
+          .or('tipo.eq.CARTAO,tipo.eq.DESPESA')
           .not('classe_id', 'is', null);
 
-        if (error) throw error;
-
-        // Filtra hierarquia completa e exclui qualquer item de grupo de RECEITA
-        todosLancamentosCartao = (data || []).filter(l => {
-          if (!l.classe?.subgrupo?.grupo) return false;
-          if (parseFloat(l.valor || 0) <= 0) return false;
-          // Exclui explicitamente grupos de tipo RECEITA
-          if (l.classe.subgrupo.grupo.tipo === 'RECEITA') return false;
-          return true;
-        });
-        console.log('[Sankey] Total lançamentos com categoria completa:', todosLancamentosCartao.length);
+        todosLancamentosCartao = (data || []).filter(l => l.classe?.subgrupo?.grupo);
         renderizarSankey();
       } catch (err) {
         console.error('Erro ao carregar sankey:', err);
@@ -367,20 +372,21 @@
       }
     }
 
-    async function recarregarSankey() {
-      todosLancamentosCartao = [];
-      await carregarDadosSankey();
-    }
-
     function renderizarSankey() {
       const mesSel = parseInt(document.getElementById('sankeyMes').value);
       const anoSel = parseInt(document.getElementById('sankeyAno').value);
 
-      // Filtra por período — inclui TODOS os tipos com categoria (CARTAO, DESPESA, etc.)
-      const filtrados = todosLancamentosCartao.filter(l => {
+      // Filtrar
+      let filtrados = todosLancamentosCartao.filter(l => {
         const d = new Date(l.data);
-        return d.getFullYear() === anoSel && (mesSel === 0 || (d.getMonth() + 1) === mesSel);
+        const anoOk = d.getFullYear() === anoSel;
+        const mesOk = mesSel === 0 || (d.getMonth() + 1) === mesSel;
+        return anoOk && mesOk;
       });
+
+      // Apenas CARTAO ou se não tiver CARTAO, todo tipo com classe
+      const cartao = filtrados.filter(l => l.tipo === 'CARTAO');
+      if (cartao.length > 0) filtrados = cartao;
 
       document.getElementById('sankeyLoading').style.display = 'none';
 
@@ -395,6 +401,7 @@
       document.getElementById('sankeyEmpty').style.display = 'none';
       document.getElementById('sankeySvg').style.display = 'block';
 
+      // ─── Construir nós e links ─────────────────────────────
       const nodeMap = new Map();
       const linkMap = new Map();
       let totalGeral = 0;
@@ -405,12 +412,13 @@
         if (!nodeMap.has(k)) nodeMap.set(k, { id: k, name: nome, tipo, valor: 0 });
         return nodeMap.get(k);
       }
-      function addLink(sk, tk, val) {
-        const k = `${sk}→${tk}`;
-        if (!linkMap.has(k)) linkMap.set(k, { source: sk, target: tk, value: 0 });
+      function addLink(sourceKey, targetKey, val) {
+        const k = `${sourceKey}→${targetKey}`;
+        if (!linkMap.has(k)) linkMap.set(k, { source: sourceKey, target: targetKey, value: 0 });
         linkMap.get(k).value += val;
       }
 
+      // Nó raiz "Cartão"
       const rootKey = nodeKey('root', 'root', '💳 Cartão');
       getNode('root', 'root', '💳 Cartão');
 
@@ -418,19 +426,24 @@
         const val = parseFloat(l.valor || 0);
         if (val <= 0) return;
         totalGeral += val;
+
         const g = l.classe.subgrupo.grupo;
         const sg = l.classe.subgrupo;
         const cl = l.classe;
+
         const gKey  = nodeKey('grupo',    g.id,  g.nome);
         const sgKey = nodeKey('subgrupo', sg.id, sg.nome);
         const clKey = nodeKey('classe',   cl.id, cl.descricao || cl.codigo);
+
         getNode('grupo',    g.id,  g.nome);
         getNode('subgrupo', sg.id, sg.nome);
         getNode('classe',   cl.id, cl.descricao || cl.codigo);
+
         nodeMap.get(rootKey).valor += val;
         nodeMap.get(gKey).valor   += val;
         nodeMap.get(sgKey).valor  += val;
         nodeMap.get(clKey).valor  += val;
+
         addLink(rootKey, gKey,  val);
         addLink(gKey,  sgKey,   val);
         addLink(sgKey, clKey,   val);
@@ -442,30 +455,44 @@
         return;
       }
 
-      // Stats
+      // ─── Stats ────────────────────────────────────────────
       const grupos = [...nodeMap.values()].filter(n => n.tipo === 'grupo');
       const statsEl = document.getElementById('sankeyStats');
       statsEl.style.display = 'flex';
       statsEl.innerHTML = `
-        <div class="sankey-stat"><div class="sankey-stat-label">💰 Total Cartão</div><div class="sankey-stat-val" style="color:#ef4444;">${fmt(totalGeral)}</div></div>
-        <div class="sankey-stat"><div class="sankey-stat-label">📂 Grupos</div><div class="sankey-stat-val">${grupos.length}</div></div>
-        <div class="sankey-stat"><div class="sankey-stat-label">🏷️ Classes</div><div class="sankey-stat-val">${[...nodeMap.values()].filter(n => n.tipo === 'classe').length}</div></div>
-        <div class="sankey-stat"><div class="sankey-stat-label">📋 Lançamentos</div><div class="sankey-stat-val">${filtrados.length}</div></div>
+        <div class="sankey-stat">
+          <div class="sankey-stat-label">💰 Total Cartão</div>
+          <div class="sankey-stat-val" style="color:#ef4444;">${fmt(totalGeral)}</div>
+        </div>
+        <div class="sankey-stat">
+          <div class="sankey-stat-label">📂 Grupos</div>
+          <div class="sankey-stat-val">${grupos.length}</div>
+        </div>
+        <div class="sankey-stat">
+          <div class="sankey-stat-label">🏷️ Classes</div>
+          <div class="sankey-stat-val">${[...nodeMap.values()].filter(n => n.tipo === 'classe').length}</div>
+        </div>
+        <div class="sankey-stat">
+          <div class="sankey-stat-label">📋 Lançamentos</div>
+          <div class="sankey-stat-val">${filtrados.length}</div>
+        </div>
       `;
 
-      // Cores
+      // ─── Cores por grupo ──────────────────────────────────
       const grupoColors = {};
       grupos.forEach((g, i) => { grupoColors[g.id] = PALETTE[i % PALETTE.length]; });
 
       function getColor(node) {
         if (node.tipo === 'root') return '#64748b';
         if (node.tipo === 'grupo') return grupoColors[node.id.split(':')[1]] || PALETTE[0];
+        // subgrupo ou classe: herdar do grupo pai via link
+        // procuramos o link que aponta para esse nó
         const parentLink = [...linkMap.values()].find(lk => lk.target === node.id);
         if (parentLink) return getColor(nodeMap.get(parentLink.source));
         return '#94a3b8';
       }
 
-      // D3 Sankey
+      // ─── D3 Sankey ────────────────────────────────────────
       const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
       const svgEl = document.getElementById('sankeySvg');
       svgEl.innerHTML = '';
@@ -496,10 +523,16 @@
       const svg = d3.select(svgEl);
       const tooltip = document.getElementById('sankeyTooltip');
 
-      function showTip(e, html) { tooltip.innerHTML = html; tooltip.style.opacity = '1'; moveTip(e); }
+      function showTip(e, html) {
+        tooltip.innerHTML = html;
+        tooltip.style.opacity = '1';
+        moveTip(e);
+      }
       function moveTip(e) {
-        tooltip.style.left = Math.min(e.clientX + 14, window.innerWidth - 240) + 'px';
-        tooltip.style.top  = Math.min(e.clientY - 10, window.innerHeight - 100) + 'px';
+        const px = e.clientX + 14;
+        const py = e.clientY - 10;
+        tooltip.style.left = Math.min(px, window.innerWidth - 240) + 'px';
+        tooltip.style.top = Math.min(py, window.innerHeight - 100) + 'px';
       }
       function hideTip() { tooltip.style.opacity = '0'; }
 
@@ -512,11 +545,14 @@
         .attr('stroke-width', d => Math.max(1, d.width))
         .attr('fill', 'none')
         .attr('stroke-opacity', 0.38)
+        .style('cursor', 'default')
         .on('mouseover', function(e, d) {
           d3.select(this).attr('stroke-opacity', 0.65);
+          const srcName = nodesArr[d.source.index].name;
+          const tgtName = nodesArr[d.target.index].name;
           const pct = totalGeral > 0 ? ((d.value / totalGeral) * 100).toFixed(1) : 0;
           showTip(e, `
-            <div style="font-size:.72rem;color:var(--text2);">${nodesArr[d.source.index].name} → ${nodesArr[d.target.index].name}</div>
+            <div style="font-size:.72rem;color:var(--text2);">${srcName} → ${tgtName}</div>
             <div class="tt-val">${fmt(d.value)}</div>
             <div class="tt-pct">${pct}% do total</div>
           `);
@@ -525,7 +561,10 @@
         .on('mouseout', function() { d3.select(this).attr('stroke-opacity', 0.38); hideTip(); });
 
       // Nós
-      const node = svg.append('g').selectAll('g').data(nodes).join('g');
+      const node = svg.append('g').selectAll('g')
+        .data(nodes)
+        .join('g')
+        .style('cursor', 'default');
 
       node.append('rect')
         .attr('x', d => d.x0)
@@ -539,7 +578,12 @@
           d3.select(this).attr('opacity', 1);
           const pct = totalGeral > 0 ? ((d.valor / totalGeral) * 100).toFixed(1) : 0;
           const tipo = d.tipo === 'root' ? 'Total' : d.tipo.charAt(0).toUpperCase() + d.tipo.slice(1);
-          showTip(e, `<div style="font-size:.72rem;color:var(--text2);">${tipo}</div><div style="font-weight:700;font-size:.88rem;margin:.1rem 0;">${d.name}</div><div class="tt-val">${fmt(d.valor)}</div><div class="tt-pct">${pct}% do total</div>`);
+          showTip(e, `
+            <div style="font-size:.72rem;color:var(--text2);">${tipo}</div>
+            <div style="font-weight:700;font-size:.88rem;margin:.1rem 0;">${d.name}</div>
+            <div class="tt-val">${fmt(d.valor)}</div>
+            <div class="tt-pct">${pct}% do total</div>
+          `);
         })
         .on('mousemove', moveTip)
         .on('mouseout', function() { d3.select(this).attr('opacity', 0.92); hideTip(); });
@@ -556,33 +600,43 @@
         .style('fill', isDark ? '#cbd5e1' : '#1e293b')
         .style('pointer-events', 'none')
         .each(function(d) {
-          const label = d.name.length > 18 ? d.name.substring(0, 17) + '…' : d.name;
-          const xRef = d.x0 < W / 2 ? d.x1 + 6 : d.x0 - 6;
+          const nameLen = d.name.length;
+          const boxW = W / 5;
+          let label = d.name;
+          if (nameLen > 18) label = d.name.substring(0, 17) + '…';
           d3.select(this).append('tspan').text(label);
+          // Valor em segunda linha apenas se o nó for grande
           if (d.y1 - d.y0 > 20) {
             d3.select(this).append('tspan')
-              .attr('x', xRef).attr('dy', '1.15em')
-              .style('font-size', '9.5px').style('font-weight', '400')
+              .attr('x', d.x0 < W / 2 ? d.x1 + 6 : d.x0 - 6)
+              .attr('dy', '1.15em')
+              .style('font-size', '9.5px')
+              .style('font-weight', '400')
               .style('fill', isDark ? '#94a3b8' : '#64748b')
               .text(fmt(d.valor));
           }
         });
 
-      // Legenda
+      // ─── Legenda dos grupos ────────────────────────────────
       const legendEl = document.getElementById('sankeyLegend');
-      legendEl.innerHTML = grupos.map(g =>
-        `<div class="sankey-legend-item">
-          <div class="sankey-legend-dot" style="background:${getColor(g)};"></div>
-          <span>${g.name}</span>
-          <span style="color:var(--text3);font-size:.72rem;">${fmt(g.valor)}</span>
-        </div>`
-      ).join('');
+      legendEl.innerHTML = '';
+      grupos.forEach(g => {
+        const color = getColor(g);
+        legendEl.innerHTML += `
+          <div class="sankey-legend-item">
+            <div class="sankey-legend-dot" style="background:${color};"></div>
+            <span>${g.name}</span>
+            <span style="color:var(--text3);font-size:.72rem;">${fmt(g.valor)}</span>
+          </div>`;
+      });
     }
 
+    // listener para redimensionar
     window.addEventListener('resize', () => {
       if (document.getElementById('sankeySvg').style.display !== 'none') renderizarSankey();
     });
 
+    // theme observer para re-renderizar em modo escuro
     new MutationObserver(() => {
       if (document.getElementById('sankeySvg').style.display !== 'none') renderizarSankey();
     }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });

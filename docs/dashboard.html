@@ -1,1301 +1,429 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-theme="light">
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard Financeiro</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Sistema Financeiro</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config/supabase-config.js"></script>
-  <style>
-    /* ─── RESET & VARS ───────────────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --despesa:    #ef4444;
-      --despesa-bg: #fef2f2;
-      --receita:    #22c55e;
-      --receita-bg: #f0fdf4;
-      --quitado:    #8b5cf6;
-      --saldo-pos:  #3b82f6;
-      --saldo-neg:  #f97316;
-      --bg:         #f1f5f9;
-      --surface:    #ffffff;
-      --surface2:   #f8fafc;
-      --border:     #e2e8f0;
-      --text:       #1e293b;
-      --text2:      #64748b;
-      --text3:      #94a3b8;
-      --shadow:     0 1px 3px rgba(0,0,0,.07), 0 4px 16px rgba(0,0,0,.06);
-      --shadow-lg:  0 8px 32px rgba(0,0,0,.12);
-      --radius:     16px;
-      --radius-sm:  10px;
-      --transition: .22s cubic-bezier(.4,0,.2,1);
-    }
-    [data-theme="dark"] {
-      --bg:       #0f172a;
-      --surface:  #1e293b;
-      --surface2: #273549;
-      --border:   #334155;
-      --text:     #f1f5f9;
-      --text2:    #94a3b8;
-      --text3:    #64748b;
-      --shadow:   0 1px 3px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.3);
-      --shadow-lg:0 8px 32px rgba(0,0,0,.5);
-    }
-
-    body {
-      font-family: 'Poppins', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      transition: background var(--transition), color var(--transition);
-    }
-
-    /* ─── SCROLLBAR ──────────────────────────────────────────────── */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
-
-    /* ─── HEADER ─────────────────────────────────────────────────── */
-    .header {
-      position: sticky; top: 0; z-index: 100;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      box-shadow: var(--shadow);
-      padding: 0 1.5rem;
-      height: 60px;
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .header-brand {
-      font-weight: 700; font-size: 1.15rem;
-      color: var(--text);
-      display: flex; align-items: center; gap: .5rem;
-      text-decoration: none;
-    }
-    .header-brand span { color: #22c55e; }
-    .header-right { display: flex; align-items: center; gap: .75rem; }
-    .theme-btn {
-      background: var(--surface2); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); padding: .35rem .75rem;
-      font-size: .8rem; font-weight: 600; cursor: pointer;
-      color: var(--text2); transition: all var(--transition);
-      display: flex; align-items: center; gap: .35rem;
-    }
-    .theme-btn:hover { background: var(--border); }
-
-    /* ─── MAIN NAV ───────────────────────────────────────────────── */
-    .main-nav {
-      position: sticky; top: 60px; z-index: 99;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 0 1.5rem;
-      display: flex; align-items: center; gap: .1rem;
-      height: 42px;
-      overflow-x: auto;
-    }
-    .main-nav::-webkit-scrollbar { height: 0; }
-    .mnav-link {
-      display: inline-flex; align-items: center; gap: .3rem;
-      padding: .28rem .65rem; border-radius: var(--radius-sm);
-      font-size: .78rem; font-weight: 600; color: var(--text2);
-      text-decoration: none; white-space: nowrap;
-      transition: all var(--transition); flex-shrink: 0;
-    }
-    .mnav-link:hover { background: var(--surface2); color: var(--text); }
-    .mnav-link.active { background: #f0fdf4; color: #16a34a; }
-    [data-theme="dark"] .mnav-link.active { background: rgba(34,197,94,.15); color: #4ade80; }
-
-    /* ─── LAYOUT ─────────────────────────────────────────────────── */
-    .page { max-width: 1400px; margin: 0 auto; padding: 1.5rem; }
-
-    /* ─── FILTERS ────────────────────────────────────────────────── */
-    .filter-bar {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1rem 1.25rem;
-      margin-bottom: 1.5rem;
-      box-shadow: var(--shadow);
-    }
-    .filter-bar h3 {
-      font-size: .75rem; text-transform: uppercase; letter-spacing: .08em;
-      color: var(--text3); margin-bottom: .75rem; font-weight: 600;
-    }
-    .filter-grid {
-      display: flex; flex-wrap: wrap; gap: .6rem; align-items: flex-end;
-    }
-    .filter-item { display: flex; flex-direction: column; gap: .25rem; }
-    .filter-item label { font-size: .7rem; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; }
-    .filter-item input,
-    .filter-item select {
-      background: var(--surface2); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); padding: .45rem .75rem;
-      font-size: .82rem; color: var(--text); font-family: inherit;
-      outline: none; transition: border var(--transition);
-      min-width: 130px;
-    }
-    .filter-item input:focus,
-    .filter-item select:focus { border-color: #3b82f6; }
-
-    .tipo-pills { display: flex; gap: .4rem; align-items: center; }
-    .pill {
-      padding: .4rem .9rem; border-radius: 99px; font-size: .78rem;
-      font-weight: 600; cursor: pointer; border: 2px solid transparent;
-      transition: all var(--transition);
-    }
-    .pill-all   { background: var(--surface2); border-color: var(--border); color: var(--text2); }
-    .pill-all.active { background: #1e293b; border-color: #1e293b; color: #fff; }
-    .pill-desp  { background: var(--despesa-bg); border-color: #fecaca; color: var(--despesa); }
-    .pill-desp.active { background: var(--despesa); border-color: var(--despesa); color: #fff; }
-    .pill-rec   { background: var(--receita-bg); border-color: #bbf7d0; color: var(--receita); }
-    .pill-rec.active { background: var(--receita); border-color: var(--receita); color: #fff; }
-    .btn-clear {
-      background: var(--surface2); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); padding: .45rem 1rem;
-      font-size: .8rem; font-weight: 600; cursor: pointer;
-      color: var(--text2); transition: all var(--transition);
-      margin-top: auto;
-    }
-    .btn-clear:hover { background: #fee2e2; color: #ef4444; border-color: #fecaca; }
-
-    /* ─── KPI CARDS ──────────────────────────────────────────────── */
-    .kpi-grid { display: grid; grid-template-columns: repeat(6,1fr); gap: 1rem; margin-bottom: 1.5rem; }
-    @media(max-width:1100px){ .kpi-grid { grid-template-columns: repeat(3,1fr); } }
-    @media(max-width:650px) { .kpi-grid { grid-template-columns: repeat(2,1fr); } }
-
-    .kpi-card {
-      border-radius: var(--radius); padding: 1.1rem 1.2rem;
-      box-shadow: var(--shadow); border: 1px solid transparent;
-      animation: fadeUp .45s ease both;
-      position: relative; overflow: hidden;
-    }
-    .kpi-card::before {
-      content: ''; position: absolute; right: -16px; top: -16px;
-      width: 72px; height: 72px; border-radius: 50%;
-      background: rgba(255,255,255,.15);
-    }
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(18px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .kpi-label { font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; opacity: .85; margin-bottom: .35rem; }
-    .kpi-value { font-size: 1.45rem; font-weight: 800; line-height: 1; }
-    .kpi-icon  { font-size: 1.5rem; margin-bottom: .35rem; }
-    .kpi-sub   { font-size: .7rem; margin-top: .4rem; opacity: .8; }
-    .kpi-prog-wrap { background: rgba(255,255,255,.25); border-radius: 99px; height: 6px; margin-top: .5rem; overflow: hidden; }
-    .kpi-prog-bar  { height: 100%; border-radius: 99px; background: rgba(255,255,255,.8); transition: width .6s ease; }
-
-    .kpi-desp  { background: linear-gradient(135deg,#ef4444,#dc2626); color: #fff; }
-    .kpi-rec   { background: linear-gradient(135deg,#22c55e,#16a34a); color: #fff; }
-    .kpi-quit  { background: linear-gradient(135deg,#8b5cf6,#7c3aed); color: #fff; }
-    .kpi-pend  { background: linear-gradient(135deg,#f59e0b,#d97706); color: #fff; }
-    .kpi-saldo-pos { background: linear-gradient(135deg,#3b82f6,#2563eb); color: #fff; }
-    .kpi-saldo-neg { background: linear-gradient(135deg,#f97316,#ea580c); color: #fff; }
-    .kpi-gauge { background: linear-gradient(135deg,#06b6d4,#0891b2) ; color: #fff; }
-
-    /* ─── CHARTS ─────────────────────────────────────────────────── */
-    .charts-grid {
-      display: grid;
-      grid-template-columns: repeat(3,1fr);
-      gap: 1rem; margin-bottom: 1.5rem;
-    }
-    @media(max-width:1000px){ .charts-grid { grid-template-columns: repeat(2,1fr); } }
-    @media(max-width:640px) { .charts-grid { grid-template-columns: 1fr; } }
-
-    .chart-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 1.2rem;
-      box-shadow: var(--shadow);
-      animation: fadeUp .5s ease both;
-    }
-    .chart-card.wide { grid-column: span 2; }
-    .chart-card.full { grid-column: 1 / -1; }
-    .chart-title {
-      font-size: .82rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .06em; color: var(--text2); margin-bottom: 1rem;
-      display: flex; align-items: center; gap: .4rem;
-    }
-    .chart-wrap { position: relative; height: 220px; }
-    .chart-wrap.tall { height: 280px; }
-
-    /* ─── TREEMAP ────────────────────────────────────────────────── */
-    .treemap-container {
-      display: flex; flex-wrap: wrap; gap: 3px;
-      width: 100%; min-height: 200px; align-content: flex-start;
-    }
-    .treemap-block {
-      border-radius: 8px; display: flex; flex-direction: column;
-      justify-content: center; align-items: center; text-align: center;
-      padding: 4px; cursor: pointer; transition: filter var(--transition);
-      overflow: hidden; position: relative;
-    }
-    .treemap-block:hover { filter: brightness(1.1); }
-    .treemap-label { font-size: .65rem; font-weight: 700; color: #fff; line-height: 1.2; }
-    .treemap-val   { font-size: .6rem; color: rgba(255,255,255,.85); }
-
-    /* ─── TABLE ──────────────────────────────────────────────────── */
-    .table-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 1.2rem;
-      box-shadow: var(--shadow); margin-bottom: 1.5rem;
-    }
-    .table-header-row {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 1rem;
-    }
-    .table-title { font-size: 1rem; font-weight: 700; color: var(--text); }
-    .table-count { font-size: .75rem; color: var(--text3); font-weight: 500; }
-
-    table { width: 100%; border-collapse: collapse; font-size: .82rem; }
-    th {
-      background: var(--surface2); padding: .65rem .75rem; text-align: left;
-      font-weight: 700; font-size: .7rem; text-transform: uppercase;
-      letter-spacing: .06em; color: var(--text2); border-bottom: 2px solid var(--border);
-      position: sticky; top: 0;
-    }
-    th:last-child, td:last-child { text-align: right; }
-
-    .tr-grupo td {
-      padding: .7rem .75rem; font-weight: 700; font-size: .82rem;
-      text-transform: uppercase; letter-spacing: .04em; color: #fff;
-      cursor: pointer; user-select: none;
-    }
-    .tr-grupo:hover td { filter: brightness(1.07); }
-    .tr-grupo.desp td { background: #ef4444; }
-    .tr-grupo.rec  td { background: #22c55e; }
-
-    .tr-sub td {
-      padding: .6rem .75rem .6rem 2rem;
-      background: var(--surface2);
-      border-bottom: 1px solid var(--border);
-      font-weight: 700; color: #3b82f6; cursor: pointer; user-select: none;
-      text-transform: uppercase; font-size: .78rem;
-    }
-    .tr-sub:hover td { background: #eff6ff; }
-    [data-theme="dark"] .tr-sub:hover td { background: #1e3a5f; }
-    .tr-sub .td-valor { color: #3b82f6; font-weight: 800; }
-
-    .tr-item td {
-      padding: .55rem .75rem .55rem 3rem;
-      border-bottom: 1px solid var(--border);
-      color: var(--text); cursor: pointer;
-    }
-    .tr-item:nth-child(even) td { background: var(--surface2); }
-    .tr-item:hover td { background: #f0f9ff; }
-    [data-theme="dark"] .tr-item:hover td { background: #1e3a5f33; }
-    .tr-item.quitado td { background: #f0fdf4 !important; color: #15803d; }
-    [data-theme="dark"] .tr-item.quitado td { background: #14401e33 !important; color: #4ade80; }
-
-    .badge-quit {
-      display: inline-block; background: #dcfce7; color: #16a34a;
-      font-size: .65rem; font-weight: 700; padding: .15rem .5rem;
-      border-radius: 99px; margin-left: .4rem;
-    }
-    [data-theme="dark"] .badge-quit { background: #14532d; color: #4ade80; }
-    .badge-pend {
-      display: inline-block; background: #fee2e2; color: #dc2626;
-      font-size: .65rem; font-weight: 700; padding: .15rem .5rem;
-      border-radius: 99px; margin-left: .4rem;
-    }
-    .toggle-icon { margin-right: .35rem; transition: transform var(--transition); }
-    .collapsed .toggle-icon { transform: rotate(-90deg); }
-    .td-valor { font-weight: 700; }
-    .td-valor.desp { color: var(--despesa); }
-    .td-valor.rec  { color: var(--receita); }
-
-    /* ─── SIDE PANEL ─────────────────────────────────────────────── */
-    .overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,.35);
-      z-index: 200; opacity: 0; pointer-events: none;
-      transition: opacity var(--transition);
-    }
-    .overlay.open { opacity: 1; pointer-events: all; }
-
-    .side-panel {
-      position: fixed; top: 0; right: -440px; width: 420px; max-width: 100vw;
-      height: 100vh; background: var(--surface); box-shadow: var(--shadow-lg);
-      z-index: 201; padding: 1.5rem; overflow-y: auto;
-      transition: right .3s cubic-bezier(.4,0,.2,1);
-      display: flex; flex-direction: column; gap: 1rem;
-    }
-    .side-panel.open { right: 0; }
-
-    .panel-close {
-      position: absolute; top: 1rem; right: 1rem;
-      background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 50%; width: 32px; height: 32px; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1rem; color: var(--text2); transition: all var(--transition);
-    }
-    .panel-close:hover { background: #fee2e2; color: #ef4444; }
-
-    .panel-title { font-size: 1rem; font-weight: 700; color: var(--text); padding-right: 2.5rem; }
-    .panel-breadcrumb { font-size: .72rem; color: var(--text3); }
-    .panel-breadcrumb span { color: var(--text2); font-weight: 600; }
-
-    .panel-row { display: flex; justify-content: space-between; align-items: center; }
-    .panel-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; color: var(--text3); }
-    .panel-value { font-size: .9rem; font-weight: 700; color: var(--text); }
-
-    .status-badge {
-      padding: .35rem .9rem; border-radius: 99px;
-      font-size: .78rem; font-weight: 700;
-    }
-    .status-badge.q { background: #dcfce7; color: #16a34a; }
-    .status-badge.p { background: #fee2e2; color: #dc2626; }
-
-    .btn-quit {
-      width: 100%; padding: .75rem; border-radius: var(--radius-sm);
-      background: linear-gradient(135deg,#22c55e,#16a34a); color: #fff;
-      border: none; font-size: .88rem; font-weight: 700; cursor: pointer;
-      font-family: inherit; transition: filter var(--transition);
-    }
-    .btn-quit:hover { filter: brightness(1.08); }
-    .btn-quit.already { background: var(--surface2); color: var(--text3); cursor: default; filter: none; }
-
-    .panel-chart-wrap { height: 160px; position: relative; }
-
-    hr.panel-divider { border: none; border-top: 1px solid var(--border); }
-
-    /* ─── FOOTER ─────────────────────────────────────────────────── */
-    .footer {
-      text-align: center; padding: 1.5rem; font-size: .72rem;
-      color: var(--text3); border-top: 1px solid var(--border);
-    }
-
-    /* ─── EMPTY STATE ────────────────────────────────────────────── */
-    .empty-row td { text-align: center; padding: 2rem; color: var(--text3); font-size: .88rem; }
-  </style>
+  <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-
-  <!-- HEADER -->
-  <header class="header">
-    <a href="index.html" class="header-brand">💰 <span>Sistema</span> Financeiro</a>
-    <div class="header-right">
-      <span id="filterCount" style="font-size:.75rem;color:var(--text3);font-weight:500;"></span>
-      <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">🌙 Escuro</button>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="navbar-content">
+      <a href="dashboard.html" class="navbar-brand">💰 Sistema Financeiro</a>
+      <div class="navbar-menu">
+        <a href="portal.html" class="navbar-link">🏠 Portal</a>
+        <a href="dashboard.html" class="navbar-link">Dashboard</a>
+        <a href="lancamentos.html" class="navbar-link">Novo Lançamento</a>
+        <a href="lista-lancamentos.html" class="navbar-link">Lançamentos</a>
+        <a href="relatorios.html" class="navbar-link">Relatórios</a>
+        <a href="cartao-credito.html" class="navbar-link">💳 Cartões</a>
+        <button onclick="handleLogout()" class="btn btn-secondary">Sair</button>
+      </div>
     </div>
-  </header>
-
-  <nav class="main-nav">
-    <a href="index.html" class="mnav-link">🏠 Portal</a>
-    <a href="#" class="mnav-link active">📊 Dashboard</a>
-    <a href="lancamentos.html" class="mnav-link">➕ Novo Lançamento</a>
-    <a href="lista-lancamentos.html" class="mnav-link">📋 Lista</a>
-    <a href="relatorios.html" class="mnav-link">📈 Relatórios</a>
-    <a href="cartao-credito.html" class="mnav-link">💳 Cartões</a>
-    <a href="configuracoes.html" class="mnav-link">⚙️ Configurações</a>
-    <a href="login.html" class="mnav-link">🔐 Login</a>
   </nav>
 
-  <!-- PAGE -->
-  <main class="page">
+  <!-- Container Principal -->
+  <div class="container">
+    <div class="flex-between mb-4">
+      <h1 style="font-size: 2rem; font-weight: 700; color: var(--gray-800);">📊 Dashboard</h1>
+      <button onclick="toggleValores()" class="btn btn-secondary" id="toggleBtn">
+        👁️ Ocultar Valores
+      </button>
+    </div>
 
-    <!-- FILTROS -->
-    <div class="filter-bar">
-      <h3>🔍 Filtros — resultados em tempo real</h3>
-      <div class="filter-grid">
+    <!-- Cards de Resumo -->
+    <div class="grid grid-cols-4 mb-4">
+      <div class="stat-card" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white;">
+        <div class="stat-title" style="color: rgba(255,255,255,0.9);">💸 Total Despesas</div>
+        <div class="stat-value" style="color: white;" id="totalDespesas">R$ 0,00</div>
+      </div>
 
-        <div class="filter-item">
-          <label>Tipo</label>
-          <div class="tipo-pills">
-            <button class="pill pill-all active" data-tipo="" onclick="setTipo(this,'')">Todos</button>
-            <button class="pill pill-desp" data-tipo="despesa" onclick="setTipo(this,'despesa')">📉 Despesa</button>
-            <button class="pill pill-rec"  data-tipo="receita" onclick="setTipo(this,'receita')">📈 Receita</button>
-          </div>
-        </div>
+      <div class="stat-card" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white;">
+        <div class="stat-title" style="color: rgba(255,255,255,0.9);">💰 Total Receitas</div>
+        <div class="stat-value" style="color: white;" id="totalReceitas">R$ 0,00</div>
+      </div>
 
-        <div class="filter-item">
-          <label>Data Início</label>
-          <input type="date" id="fDataIni" oninput="applyFilters()" />
-        </div>
-        <div class="filter-item">
-          <label>Data Fim</label>
-          <input type="date" id="fDataFim" oninput="applyFilters()" />
-        </div>
+      <div class="stat-card" id="saldoCard">
+        <div class="stat-title">📈 Saldo</div>
+        <div class="stat-value" id="saldo">R$ 0,00</div>
+      </div>
 
-        <div class="filter-item">
-          <label>Grupo</label>
-          <select id="fGrupo" onchange="updateSubgrupoOptions(); applyFilters();">
-            <option value="">Todos</option>
-          </select>
-        </div>
-
-        <div class="filter-item">
-          <label>Subgrupo</label>
-          <select id="fSubgrupo" onchange="updateClasseOptions(); applyFilters();">
-            <option value="">Todos</option>
-          </select>
-        </div>
-
-        <div class="filter-item">
-          <label>Classe</label>
-          <select id="fClasse" onchange="applyFilters()">
-            <option value="">Todas</option>
-          </select>
-        </div>
-
-        <div class="filter-item" style="flex:1;min-width:180px;">
-          <label>Palavra-chave</label>
-          <input type="text" id="fKeyword" placeholder="buscar descrição / classe…" oninput="applyFilters()" />
-        </div>
-
-        <div class="filter-item">
-          <label>&nbsp;</label>
-          <button class="btn-clear" onclick="clearFilters()">✕ Limpar</button>
-        </div>
-
+      <div class="stat-card" style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); color: white;">
+        <div class="stat-title" style="color: rgba(255,255,255,0.9);">💳 Faturas de Cartão</div>
+        <div class="stat-value" style="color: white;" id="totalCartao">R$ 0,00</div>
       </div>
     </div>
 
-    <!-- KPI CARDS -->
-    <div class="kpi-grid" id="kpiGrid"></div>
-
-    <!-- FATURAS DE CARTÃO -->
-    <div id="cardFaturasCartao" style="display:none;background:var(--surface);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem;box-shadow:var(--shadow);border:1px solid var(--border);">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-        <span style="font-size:1rem;font-weight:700;color:var(--text);">&#x1F4B3; Últimos Lançamentos de Cartão</span>
-        <a href="cartao-credito.html" style="font-size:0.78rem;color:#7c3aed;text-decoration:none;font-weight:600;">Acessar módulo &rarr;</a>
-      </div>
-      <div style="overflow-x:auto;" id="tabelaCartaoDocs"></div>
+    <!-- Botões de Ação -->
+    <div class="grid grid-cols-4 mb-4">
+      <button onclick="window.location.href='lancamentos.html'" class="btn btn-primary" style="padding: 1rem;">
+        ➕ Novo Lançamento
+      </button>
+      <button onclick="window.location.href='lista-lancamentos.html'" class="btn" style="background: #8b5cf6; color: white; padding: 1rem;">
+        📋 Ver Lançamentos
+      </button>
+      <button onclick="window.location.href='relatorios.html'" class="btn" style="background: #06b6d4; color: white; padding: 1rem;">
+        📊 Relatórios
+      </button>
+      <button onclick="window.location.href='configuracoes.html'" class="btn btn-secondary" style="padding: 1rem;">
+        ⚙️ Configurações
+      </button>
     </div>
 
-    <!-- CHARTS GRID -->
-    <div class="charts-grid">
-
-      <div class="chart-card">
-        <div class="chart-title">🍩 Despesas por Subgrupo</div>
-        <div class="chart-wrap"><canvas id="cDespSub"></canvas></div>
+    <!-- Card Faturas de Cartão -->
+    <div id="cardFaturasDetalhe" style="display:none; background:white; border-radius:12px; padding:1.5rem; margin-bottom:1.5rem; box-shadow:0 1px 3px rgba(0,0,0,.07);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <h3 style="font-size:1.125rem; font-weight:600; margin:0;">💳 Últimos Lançamentos de Cartão</h3>
+        <a href="cartao-credito.html" style="font-size:0.8rem; color:#7c3aed; text-decoration:none; font-weight:600;">Acessar módulo →</a>
       </div>
-
-      <div class="chart-card">
-        <div class="chart-title">🍩 Receitas por Subgrupo</div>
-        <div class="chart-wrap"><canvas id="cRecSub"></canvas></div>
-      </div>
-
-      <div class="chart-card">
-        <div class="chart-title">🎯 Comprometimento da Renda</div>
-        <div class="chart-wrap"><canvas id="cGauge"></canvas></div>
-      </div>
-
-      <div class="chart-card wide">
-        <div class="chart-title">📊 Receita vs Despesa por Mês</div>
-        <div class="chart-wrap tall"><canvas id="cMensal"></canvas></div>
-      </div>
-
-      <div class="chart-card">
-        <div class="chart-title">✅ Quitado vs Pendente</div>
-        <div class="chart-wrap"><canvas id="cQuit"></canvas></div>
-      </div>
-
-      <div class="chart-card wide">
-        <div class="chart-title">🏆 Top Classes por Valor</div>
-        <div class="chart-wrap tall"><canvas id="cTopClasses"></canvas></div>
-      </div>
-
-      <div class="chart-card full">
-        <div class="chart-title">🗂️ Mapa de Gastos — Hierarquia (Grupo → Subgrupo → Classe)</div>
-        <div id="treemap" class="treemap-container"></div>
-      </div>
-
+      <div id="tabelaCartoes"></div>
     </div>
 
-    <!-- TABELA HIERÁRQUICA -->
-    <div class="table-card">
-      <div class="table-header-row">
-        <span class="table-title">📋 Lançamentos Detalhados</span>
-        <span class="table-count" id="tableCount"></span>
+    <!-- Gráficos -->
+    <div class="grid grid-cols-2">
+      <!-- Gráfico de Pizza - Despesas por Subgrupo -->
+      <div class="card">
+        <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem;">Despesas por Subgrupo</h3>
+        <canvas id="chartSubgrupos" width="400" height="400"></canvas>
       </div>
-      <div style="overflow-x:auto;">
-        <table>
-          <thead>
-            <tr>
-              <th style="width:40%;">Descrição / Classificação</th>
-              <th>Vencimento</th>
-              <th>Status</th>
-              <th>Valor</th>
-            </tr>
-          </thead>
-          <tbody id="tableBody"></tbody>
-        </table>
+
+      <!-- Gráfico de Barras - Top Classes -->
+      <div class="card">
+        <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem;">Top 10 Classes com Maiores Despesas</h3>
+        <canvas id="chartClasses" width="400" height="400"></canvas>
       </div>
     </div>
+  </div>
 
-  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="config/supabase-config.js"></script>
+  <script>
+    let valoresVisiveis = true;
+    let dashboardData = null;
+    let chartSubgrupos = null;
+    let chartClasses = null;
 
-  <footer class="footer">Sistema Financeiro © 2026 — Carlos Caxito &nbsp;|&nbsp; Dados demonstrativos</footer>
-
-  <!-- OVERLAY -->
-  <div class="overlay" id="overlay" onclick="closeSidePanel()"></div>
-
-  <!-- SIDE PANEL -->
-  <aside class="side-panel" id="sidePanel">
-    <button class="panel-close" onclick="closeSidePanel()">✕</button>
-    <div class="panel-title" id="pTitle">–</div>
-    <div class="panel-breadcrumb" id="pBreadcrumb">–</div>
-    <hr class="panel-divider" />
-    <div style="display:flex;flex-direction:column;gap:.6rem;">
-      <div class="panel-row">
-        <span class="panel-label">Código</span>
-        <span class="panel-value" id="pId">–</span>
-      </div>
-      <div class="panel-row">
-        <span class="panel-label">Vencimento</span>
-        <span class="panel-value" id="pVenc">–</span>
-      </div>
-      <div class="panel-row">
-        <span class="panel-label">Valor</span>
-        <span class="panel-value" id="pValor" style="font-size:1.2rem;">–</span>
-      </div>
-      <div class="panel-row">
-        <span class="panel-label">Status</span>
-        <span id="pStatus">–</span>
-      </div>
-    </div>
-    <hr class="panel-divider" />
-    <div>
-      <div class="panel-label" style="margin-bottom:.6rem;">% no Subgrupo</div>
-      <div class="panel-chart-wrap"><canvas id="cPanel"></canvas></div>
-    </div>
-  </aside>
-
-<script>
-/* ═══════════════════════════════════════════════════════════════
-   DATA  (carregado do Supabase em carregarDados())
-═══════════════════════════════════════════════════════════════ */
-const GRUPOS = {
-  1: { nome: "DESPESAS", tipo: "despesa" },
-  2: { nome: "RECEITAS", tipo: "receita" }
-};
-
-let LANCAMENTOS = []; // preenchido dinamicamente
-let CARTAO_LANCAMENTOS = []; // lançamentos tipo CARTAO
-let CARTAO_MES = []; // lançamentos tipo CARTAO filtrados pelo mês atual
-
-/* ═══════════════════════════════════════════════════════════════
-   STATE
-═══════════════════════════════════════════════════════════════ */
-let filteredData   = [...LANCAMENTOS];
-let activeTipo     = '';
-let openGrupos     = {};
-let openSubgrupos  = {};
-let selectedId     = null;
-let panelChart     = null;
-
-// grupos/subgrupos abertos são inicializados em carregarDados()
-
-/* ═══════════════════════════════════════════════════════════════
-   CHART INSTANCES
-═══════════════════════════════════════════════════════════════ */
-const CHART_COLORS = ['#ef4444','#f97316','#f59e0b','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#10b981','#a855f7'];
-let charts = {};
-
-function getCtx(id) { return document.getElementById(id).getContext('2d'); }
-
-function destroyChart(key) {
-  if (charts[key]) { charts[key].destroy(); charts[key] = null; }
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   HELPERS
-═══════════════════════════════════════════════════════════════ */
-const fmt = v => 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
-const fmtDate = s => s ? s.split('-').reverse().join('/') : '–';
-
-function groupBy(arr, key) {
-  return arr.reduce((acc, item) => {
-    const k = item[key];
-    if (!acc[k]) acc[k] = [];
-    acc[k].push(item);
-    return acc;
-  }, {});
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   FILTERS — POPULATE DROPDOWNS
-═══════════════════════════════════════════════════════════════ */
-function populateGrupoDropdown() {
-  const sel = document.getElementById('fGrupo');
-  sel.innerHTML = '<option value="">Todos</option>';
-  const grupos = [...new Set(LANCAMENTOS.map(l => l.grupo_nome))];
-  grupos.forEach(g => {
-    const o = document.createElement('option'); o.value = g; o.textContent = g;
-    sel.appendChild(o);
-  });
-}
-
-function updateSubgrupoOptions() {
-  const grupoFiltro = document.getElementById('fGrupo').value;
-  const data = grupoFiltro ? LANCAMENTOS.filter(l => l.grupo_nome === grupoFiltro) : LANCAMENTOS;
-  const subs = [...new Set(data.map(l => l.subgrupo_nome))].sort();
-  const sel = document.getElementById('fSubgrupo');
-  sel.innerHTML = '<option value="">Todos</option>';
-  subs.forEach(s => {
-    const o = document.createElement('option'); o.value = s; o.textContent = s;
-    sel.appendChild(o);
-  });
-  document.getElementById('fClasse').innerHTML = '<option value="">Todas</option>';
-}
-
-function updateClasseOptions() {
-  const grupoFiltro   = document.getElementById('fGrupo').value;
-  const subFiltro     = document.getElementById('fSubgrupo').value;
-  let data = LANCAMENTOS;
-  if (grupoFiltro) data = data.filter(l => l.grupo_nome === grupoFiltro);
-  if (subFiltro)   data = data.filter(l => l.subgrupo_nome === subFiltro);
-  const classes = [...new Set(data.map(l => l.classe_nome))].sort();
-  const sel = document.getElementById('fClasse');
-  sel.innerHTML = '<option value="">Todas</option>';
-  classes.forEach(c => {
-    const o = document.createElement('option'); o.value = c; o.textContent = c;
-    sel.appendChild(o);
-  });
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   FILTERS — APPLY
-═══════════════════════════════════════════════════════════════ */
-function setTipo(btn, tipo) {
-  activeTipo = tipo;
-  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
-  btn.classList.add('active');
-  applyFilters();
-}
-
-function applyFilters() {
-  const dataIni = document.getElementById('fDataIni').value;
-  const dataFim = document.getElementById('fDataFim').value;
-  const grupo   = document.getElementById('fGrupo').value;
-  const subg    = document.getElementById('fSubgrupo').value;
-  const classe  = document.getElementById('fClasse').value;
-  const kw      = document.getElementById('fKeyword').value.toLowerCase().trim();
-
-  filteredData = LANCAMENTOS.filter(l => {
-    if (activeTipo && l.tipo !== activeTipo) return false;
-    if (dataIni && l.vencimento < dataIni) return false;
-    if (dataFim && l.vencimento > dataFim) return false;
-    if (grupo  && l.grupo_nome !== grupo) return false;
-    if (subg   && l.subgrupo_nome !== subg) return false;
-    if (classe && l.classe_nome !== classe) return false;
-    if (kw && !l.descricao.toLowerCase().includes(kw) && !l.classe_nome.toLowerCase().includes(kw)) return false;
-    return true;
-  });
-
-  const active = [activeTipo, dataIni, dataFim, grupo, subg, classe, kw].filter(Boolean).length;
-  document.getElementById('filterCount').textContent = active ? `${active} filtro(s) ativo(s)` : '';
-
-  renderAll();
-}
-
-function clearFilters() {
-  activeTipo = '';
-  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
-  document.querySelector('.pill-all').classList.add('active');
-  document.getElementById('fDataIni').value = '';
-  document.getElementById('fDataFim').value = '';
-  document.getElementById('fGrupo').value   = '';
-  document.getElementById('fKeyword').value = '';
-  updateSubgrupoOptions();
-  applyFilters();
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   KPI CARDS
-═══════════════════════════════════════════════════════════════ */
-function renderKPIs() {
-  const despesas  = filteredData.filter(l => l.tipo === 'despesa');
-  const receitas  = filteredData.filter(l => l.tipo === 'receita');
-  const totalDesp = despesas.reduce((a,l) => a + l.valor, 0);
-  const totalRec  = receitas.reduce((a,l) => a + l.valor, 0);
-  const saldo     = totalRec - totalDesp;
-  const totalQuit = filteredData.filter(l => l.quitado).reduce((a,l) => a + l.valor, 0);
-  const totalPend = filteredData.filter(l => !l.quitado).reduce((a,l) => a + l.valor, 0);
-  const comprPct  = totalRec > 0 ? Math.round((totalDesp / totalRec) * 100) : 0;
-
-  const saldoCls = saldo >= 0 ? 'kpi-saldo-pos' : 'kpi-saldo-neg';
-  const gaugeCls = comprPct < 60 ? '#22c55e' : comprPct < 90 ? '#f59e0b' : '#ef4444';
-
-  document.getElementById('kpiGrid').innerHTML = `
-    <div class="kpi-card kpi-desp" style="animation-delay:.0s">
-      <div class="kpi-icon">📉</div>
-      <div class="kpi-label">Total Despesas</div>
-      <div class="kpi-value">${fmt(totalDesp)}</div>
-      <div class="kpi-sub">${despesas.length} lançamento(s)</div>
-    </div>
-    <div class="kpi-card kpi-rec" style="animation-delay:.07s">
-      <div class="kpi-icon">📈</div>
-      <div class="kpi-label">Total Receitas</div>
-      <div class="kpi-value">${fmt(totalRec)}</div>
-      <div class="kpi-sub">${receitas.length} lançamento(s)</div>
-    </div>
-    <div class="kpi-card ${saldoCls}" style="animation-delay:.14s">
-      <div class="kpi-icon">${saldo >= 0 ? '💰' : '⚠️'}</div>
-      <div class="kpi-label">Saldo</div>
-      <div class="kpi-value">${fmt(saldo)}</div>
-      <div class="kpi-sub">Receitas − Despesas</div>
-    </div>
-    <div class="kpi-card kpi-quit" style="animation-delay:.21s">
-      <div class="kpi-icon">✅</div>
-      <div class="kpi-label">Total Quitado</div>
-      <div class="kpi-value">${fmt(totalQuit)}</div>
-      <div class="kpi-sub">${filteredData.filter(l=>l.quitado).length} item(s)</div>
-    </div>
-    <div class="kpi-card" style="animation-delay:.28s; background: linear-gradient(135deg,#7c3aed22,#6d28d911); border-color:#7c3aed44;">
-      <div class="kpi-icon">💳</div>
-      <div class="kpi-label">Faturas de Cartão</div>
-      <div class="kpi-value" style="color:#7c3aed">${fmt(CARTAO_MES.reduce((a,l)=>a+l.valor,0))}</div>
-      <div class="kpi-sub">${CARTAO_MES.length} lançamento(s) · <a href="cartao-credito.html" style="color:#7c3aed;font-size:11px;">ver módulo →</a></div>
-    </div>
-    <div class="kpi-card kpi-gauge" style="animation-delay:.35s">
-      <div class="kpi-icon">📊</div>
-      <div class="kpi-label">% Comprometida</div>
-      <div class="kpi-value" style="color:${gaugeCls}">${comprPct}%</div>
-      <div class="kpi-prog-wrap"><div class="kpi-prog-bar" style="width:${Math.min(comprPct,100)}%;background:${gaugeCls}"></div></div>
-      <div class="kpi-sub">Despesas / Receitas</div>
-    </div>
-  `;
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   CHARTS
-═══════════════════════════════════════════════════════════════ */
-function isDark() { return document.documentElement.getAttribute('data-theme') === 'dark'; }
-function gridColor() { return isDark() ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.07)'; }
-function tickColor() { return isDark() ? '#94a3b8' : '#64748b'; }
-
-const donutOpts = (cutout='68%') => ({
-  type: 'doughnut',
-  options: {
-    cutout,
-    plugins: { legend: { position: 'bottom', labels: { font:{size:11,family:'Poppins'}, color: tickColor(), boxWidth:12, padding:8 } } },
-    animation: { animateRotate: true, duration: 600 }
-  }
-});
-
-function buildDonut(id, labels, data, colors, title) {
-  destroyChart(id);
-  charts[id] = new Chart(getCtx(id), {
-    ...donutOpts(),
-    data: {
-      labels,
-      datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: isDark() ? '#1e293b' : '#fff', hoverOffset: 8 }]
-    },
-    options: { ...donutOpts().options, plugins: { ...donutOpts().options.plugins, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.raw)}` } } } }
-  });
-}
-
-function renderDespSubChart() {
-  const desp = filteredData.filter(l => l.tipo === 'despesa');
-  const byS  = groupBy(desp, 'subgrupo_nome');
-  const labels= Object.keys(byS);
-  const data  = labels.map(s => byS[s].reduce((a,l) => a+l.valor, 0));
-  const colors= CHART_COLORS.slice(0, labels.length);
-  buildDonut('cDespSub', labels, data, colors);
-}
-
-function renderRecSubChart() {
-  const rec  = filteredData.filter(l => l.tipo === 'receita');
-  const byS  = groupBy(rec, 'subgrupo_nome');
-  const labels= Object.keys(byS);
-  const data  = labels.map(s => byS[s].reduce((a,l) => a+l.valor, 0));
-  const colors= ['#22c55e','#10b981','#06b6d4','#3b82f6','#a855f7'];
-  buildDonut('cRecSub', labels, data, colors);
-}
-
-function renderGaugeChart() {
-  const totalDesp = filteredData.filter(l=>l.tipo==='despesa').reduce((a,l)=>a+l.valor,0);
-  const totalRec  = filteredData.filter(l=>l.tipo==='receita').reduce((a,l)=>a+l.valor,0);
-  const pct       = totalRec > 0 ? Math.min((totalDesp/totalRec)*100, 100) : 0;
-  const rest      = 100 - pct;
-  const color     = pct < 60 ? '#22c55e' : pct < 90 ? '#f59e0b' : '#ef4444';
-  destroyChart('cGauge');
-  charts['cGauge'] = new Chart(getCtx('cGauge'), {
-    type: 'doughnut',
-    data: {
-      datasets: [{
-        data: [pct, rest],
-        backgroundColor: [color, isDark() ? '#334155' : '#e2e8f0'],
-        borderWidth: 0
-      }]
-    },
-    options: {
-      cutout: '78%', rotation: -90, circumference: 180,
-      plugins: {
-        legend: { display: false },
-        tooltip: { enabled: false },
-      },
-      animation: { duration: 600 }
-    },
-    plugins: [{
-      id: 'gaugeLabel',
-      afterDraw(chart) {
-        const { ctx, chartArea: { left, right, top, bottom } } = chart;
-        const cx = (left+right)/2, cy = bottom - 10;
-        ctx.save();
-        ctx.textAlign = 'center';
-        ctx.font = `800 1.6rem Poppins, sans-serif`;
-        ctx.fillStyle = color;
-        ctx.fillText(Math.round(pct)+'%', cx, cy-6);
-        ctx.font = `500 .7rem Poppins, sans-serif`;
-        ctx.fillStyle = tickColor();
-        ctx.fillText('comprometida', cx, cy+16);
-        ctx.restore();
+    // Verificar autenticação
+    window.addEventListener('DOMContentLoaded', async () => {
+      // Aguardar um pouco para garantir que as bibliotecas foram carregadas
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      try {
+        await protectPage();
+        await carregarDados();
+      } catch (error) {
+        console.error('Erro na inicialização:', error);
+        alert('Erro ao carregar dashboard: ' + error.message);
       }
-    }]
-  });
-}
-
-function renderMensalChart() {
-  const months = {};
-  filteredData.forEach(l => {
-    const m = l.vencimento.slice(0,7);
-    if (!months[m]) months[m] = { desp:0, rec:0 };
-    if (l.tipo === 'despesa') months[m].desp += l.valor;
-    else                      months[m].rec  += l.valor;
-  });
-  const labels = Object.keys(months).sort();
-  const desp   = labels.map(m => months[m].desp);
-  const rec    = labels.map(m => months[m].rec);
-  const saldo  = labels.map((m,i) => rec[i] - desp[i]);
-  const fmtM   = m => { const [y,mo]=m.split('-'); const names=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']; return names[+mo-1]+'/'+y.slice(2); };
-  destroyChart('cMensal');
-  charts['cMensal'] = new Chart(getCtx('cMensal'), {
-    data: {
-      labels: labels.map(fmtM),
-      datasets: [
-        { type:'bar',  label:'Receitas', data:rec,   backgroundColor:'rgba(34,197,94,.75)',  borderRadius:6, order:2 },
-        { type:'bar',  label:'Despesas', data:desp,  backgroundColor:'rgba(239,68,68,.75)',  borderRadius:6, order:2 },
-        { type:'line', label:'Saldo',    data:saldo, borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,.1)', borderWidth:2.5, pointRadius:5, tension:.35, fill:true, order:1 }
-      ]
-    },
-    options: {
-      responsive:true, maintainAspectRatio:false,
-      plugins: { legend: { labels:{ font:{size:11,family:'Poppins'}, color:tickColor() } } },
-      scales: {
-        x: { grid:{ color:gridColor() }, ticks:{ color:tickColor(), font:{size:11,family:'Poppins'} } },
-        y: { grid:{ color:gridColor() }, ticks:{ color:tickColor(), font:{size:11,family:'Poppins'}, callback: v=>'R$'+v.toLocaleString('pt-BR') } }
-      },
-      animation: { duration:600 }
-    }
-  });
-}
-
-function renderQuitChart() {
-  const despQ = filteredData.filter(l=>l.tipo==='despesa'&&l.quitado).reduce((a,l)=>a+l.valor,0);
-  const despP = filteredData.filter(l=>l.tipo==='despesa'&&!l.quitado).reduce((a,l)=>a+l.valor,0);
-  const recQ  = filteredData.filter(l=>l.tipo==='receita'&&l.quitado).reduce((a,l)=>a+l.valor,0);
-  const recP  = filteredData.filter(l=>l.tipo==='receita'&&!l.quitado).reduce((a,l)=>a+l.valor,0);
-  destroyChart('cQuit');
-  charts['cQuit'] = new Chart(getCtx('cQuit'), {
-    type:'bar',
-    data: {
-      labels:['Despesas','Receitas'],
-      datasets:[
-        { label:'Quitado', data:[despQ,recQ], backgroundColor:['rgba(139,92,246,.8)','rgba(139,92,246,.6)'], borderRadius:6 },
-        { label:'Pendente',data:[despP,recP], backgroundColor:['rgba(239,68,68,.6)','rgba(245,158,11,.6)'],   borderRadius:6 }
-      ]
-    },
-    options: {
-      responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ labels:{ font:{size:11,family:'Poppins'}, color:tickColor() } } },
-      scales:{
-        x:{ stacked:false, grid:{ color:gridColor() }, ticks:{ color:tickColor() } },
-        y:{ grid:{ color:gridColor() }, ticks:{ color:tickColor(), callback:v=>'R$'+v.toLocaleString('pt-BR') } }
-      },
-      animation:{ duration:600 }
-    }
-  });
-}
-
-function renderTopClassesChart() {
-  const byClass = {};
-  filteredData.forEach(l => {
-    const k = l.classe_nome;
-    if (!byClass[k]) byClass[k] = { valor:0, tipo:l.tipo };
-    byClass[k].valor += l.valor;
-  });
-  const sorted = Object.entries(byClass).sort((a,b)=>b[1].valor-a[1].valor).slice(0,10);
-  const labels = sorted.map(([k])=>k);
-  const data   = sorted.map(([,v])=>v.valor);
-  const colors = sorted.map(([,v])=>v.tipo==='despesa'?'rgba(239,68,68,.8)':'rgba(34,197,94,.8)');
-  destroyChart('cTopClasses');
-  charts['cTopClasses'] = new Chart(getCtx('cTopClasses'), {
-    type:'bar',
-    data: { labels, datasets:[{ label:'Valor', data, backgroundColor:colors, borderRadius:6 }] },
-    options: {
-      indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label: ctx=>' '+fmt(ctx.raw) } } },
-      scales:{
-        x:{ grid:{ color:gridColor() }, ticks:{ color:tickColor(), callback:v=>'R$'+v.toLocaleString('pt-BR') } },
-        y:{ grid:{ color:gridColor() }, ticks:{ color:tickColor(), font:{size:11,family:'Poppins'} } }
-      },
-      animation:{ duration:600 }
-    }
-  });
-}
-
-/* ─── TREEMAP SIMULADO ───────────────────────────────────────── */
-function renderTreemap() {
-  const container = document.getElementById('treemap');
-  container.innerHTML = '';
-  const total = filteredData.reduce((a,l)=>a+l.valor,0);
-  if (total === 0) { container.innerHTML = '<div style="padding:1rem;color:var(--text3)">Sem dados</div>'; return; }
-
-  const byGrupo = groupBy(filteredData, 'grupo_nome');
-  Object.entries(byGrupo).forEach(([gNome, gItems]) => {
-    const gTotal = gItems.reduce((a,l)=>a+l.valor,0);
-    const gPct   = (gTotal / total) * 100;
-    const isMix  = gItems[0].tipo;
-    const baseColor = isMix === 'despesa' ? '#ef4444' : '#22c55e';
-
-    const gDiv = document.createElement('div');
-    gDiv.className = 'treemap-block';
-    gDiv.style.cssText = `width:calc(${gPct}% - 3px);min-width:80px;background:${baseColor};padding:6px 4px 4px;flex-direction:column;align-items:flex-start;`;
-    gDiv.innerHTML = `<div style="font-size:.65rem;font-weight:800;color:#fff;margin-bottom:4px;padding:0 2px">${gNome}</div>`;
-
-    const subContainer = document.createElement('div');
-    subContainer.style.cssText = 'display:flex;flex-wrap:wrap;gap:2px;width:100%;';
-
-    const bySub = groupBy(gItems, 'subgrupo_nome');
-    const subEntries = Object.entries(bySub).sort((a,b)=>b[1].reduce((x,l)=>x+l.valor,0)-a[1].reduce((x,l)=>x+l.valor,0));
-    subEntries.forEach(([sNome, sItems], si) => {
-      const sTotal = sItems.reduce((a,l)=>a+l.valor,0);
-      const sPct   = (sTotal / gTotal) * 100;
-      const shade  = isMix === 'despesa'
-        ? `hsl(${0 + si*15}, ${70-si*5}%, ${48+si*4}%)`
-        : `hsl(${142 + si*12}, ${65-si*5}%, ${42+si*4}%)`;
-
-      const sDiv = document.createElement('div');
-      sDiv.className = 'treemap-block';
-      sDiv.style.cssText = `width:calc(${sPct}% - 2px);min-width:50px;min-height:48px;background:${shade};`;
-      sDiv.innerHTML = `<div class="treemap-label">${sNome}</div><div class="treemap-val">${fmt(sTotal)}</div>`;
-      sDiv.title = `${sNome}: ${fmt(sTotal)}`;
-      subContainer.appendChild(sDiv);
     });
 
-    gDiv.appendChild(subContainer);
-    container.appendChild(gDiv);
-  });
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   HIERARCHICAL TABLE
-═══════════════════════════════════════════════════════════════ */
-function renderTable() {
-  const tbody = document.getElementById('tableBody');
-  tbody.innerHTML = '';
-  document.getElementById('tableCount').textContent = `${filteredData.length} registro(s)`;
-
-  if (filteredData.length === 0) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="4">Nenhum lançamento encontrado com os filtros aplicados.</td></tr>';
-    return;
-  }
-
-  const byGrupo = {};
-  Object.entries(GRUPOS).forEach(([gId, g]) => {
-    const items = filteredData.filter(l => l.grupo === +gId);
-    if (items.length > 0) byGrupo[gId] = { ...g, items };
-  });
-
-  Object.entries(byGrupo).forEach(([gId, grupo]) => {
-    const isOpen = openGrupos[gId] !== false;
-    const totalGrupo = grupo.items.reduce((a,l)=>a+l.valor,0);
-
-    // GRUPO ROW
-    const trG = document.createElement('tr');
-    trG.className = `tr-grupo ${grupo.tipo === 'despesa' ? 'desp' : 'rec'} ${isOpen ? '' : 'collapsed'}`;
-    trG.innerHTML = `
-      <td colspan="3"><span class="toggle-icon">${isOpen ? '▼' : '▶'}</span>${grupo.nome}</td>
-      <td>${fmt(totalGrupo)}</td>
-    `;
-    trG.onclick = () => { openGrupos[gId] = !openGrupos[gId]; renderTable(); };
-    tbody.appendChild(trG);
-
-    if (!isOpen) return;
-
-    const bySub = groupBy(grupo.items, 'subgrupo_nome');
-    Object.entries(bySub).forEach(([sNome, sItems]) => {
-      const subKey  = sItems[0].subgrupo + '_' + gId;
-      const subOpen = openSubgrupos[subKey] !== false;
-      const totalSub = sItems.reduce((a,l)=>a+l.valor,0);
-
-      // SUBGRUPO ROW
-      const trS = document.createElement('tr');
-      trS.className = `tr-sub ${subOpen ? '' : 'collapsed'}`;
-      trS.innerHTML = `
-        <td colspan="3"><span class="toggle-icon">${subOpen ? '▼' : '▶'}</span>${sNome}</td>
-        <td class="td-valor">${fmt(totalSub)}</td>
-      `;
-      trS.onclick = () => { openSubgrupos[subKey] = !openSubgrupos[subKey]; renderTable(); };
-      tbody.appendChild(trS);
-
-      if (!subOpen) return;
-
-      // CLASS / ITEM ROWS
-      sItems.forEach(l => {
-        const trI = document.createElement('tr');
-        trI.className = `tr-item ${l.quitado ? 'quitado' : ''}`;
-        trI.innerHTML = `
-          <td>
-            ${l.classe_nome}
-            <span style="font-size:.72rem;color:var(--text3);display:block">${l.descricao}</span>
-          </td>
-          <td>${fmtDate(l.vencimento)}</td>
-          <td>
-            ${l.quitado
-              ? '<span class="badge-quit">✓ quitado</span>'
-              : '<span class="badge-pend">⏳ pendente</span>'}
-          </td>
-          <td class="td-valor ${l.tipo === 'despesa' ? 'desp' : 'rec'}">${fmt(l.valor)}</td>
-        `;
-        trI.onclick = () => openSidePanel(l.id);
-        tbody.appendChild(trI);
-      });
-    });
-  });
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   SIDE PANEL
-═══════════════════════════════════════════════════════════════ */
-function openSidePanel(id) {
-  selectedId = id;
-  const l = LANCAMENTOS.find(x => x.id === id);
-  if (!l) return;
-
-  document.getElementById('pTitle').textContent = l.descricao;
-  document.getElementById('pBreadcrumb').innerHTML =
-    `<span>${l.grupo_nome}</span> › <span>${l.subgrupo_nome}</span> › <span>${l.classe_nome}</span>`;
-  document.getElementById('pId').textContent    = '#' + l.id;
-  document.getElementById('pVenc').textContent  = fmtDate(l.vencimento);
-  document.getElementById('pValor').textContent = fmt(l.valor);
-  document.getElementById('pValor').style.color = l.tipo === 'despesa' ? '#ef4444' : '#22c55e';
-
-  const statusEl = document.getElementById('pStatus');
-  statusEl.innerHTML = l.quitado
-    ? '<span class="status-badge q">✓ Quitado</span>'
-    : '<span class="status-badge p">⏳ Pendente</span>';
-
-  // Mini pizza: proporção no subgrupo
-  const subItems = LANCAMENTOS.filter(x => x.subgrupo === l.subgrupo && x.grupo === l.grupo);
-  const labels   = subItems.map(x => x.descricao.length > 18 ? x.descricao.slice(0,18)+'…' : x.descricao);
-  const data     = subItems.map(x => x.valor);
-  const colors   = subItems.map(x => x.id === l.id ? (l.tipo==='despesa'?'#ef4444':'#22c55e') : '#cbd5e1');
-
-  if (panelChart) { panelChart.destroy(); panelChart = null; }
-  panelChart = new Chart(document.getElementById('cPanel').getContext('2d'), {
-    type: 'doughnut',
-    data: { labels, datasets:[{ data, backgroundColor: colors, borderWidth:2, borderColor: isDark()?'#1e293b':'#fff' }] },
-    options: {
-      cutout:'60%', responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ position:'right', labels:{ font:{size:10,family:'Poppins'}, color:tickColor(), boxWidth:10, padding:6 } },
-                tooltip:{ callbacks:{ label: ctx => ` ${fmt(ctx.raw)}` } } },
-      animation:{ duration:400 }
-    }
-  });
-
-  document.getElementById('sidePanel').classList.add('open');
-  document.getElementById('overlay').classList.add('open');
-}
-
-function closeSidePanel() {
-  document.getElementById('sidePanel').classList.remove('open');
-  document.getElementById('overlay').classList.remove('open');
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   DARK MODE
-═══════════════════════════════════════════════════════════════ */
-function toggleTheme() {
-  const html = document.documentElement;
-  const isDk  = html.getAttribute('data-theme') === 'dark';
-  html.setAttribute('data-theme', isDk ? 'light' : 'dark');
-  document.getElementById('themeBtn').textContent = isDk ? '🌙 Escuro' : '☀️ Claro';
-  // Rebuild charts with updated colors
-  renderCharts();
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   RENDER ALL
-═══════════════════════════════════════════════════════════════ */
-function renderCharts() {
-  renderDespSubChart();
-  renderRecSubChart();
-  renderGaugeChart();
-  renderMensalChart();
-  renderQuitChart();
-  renderTopClassesChart();
-  renderTreemap();
-}
-
-function renderAll() {
-  renderKPIs();
-
-  // Faturas de cartão
-  const cardFaturas = document.getElementById('cardFaturasCartao');
-  const tabelaCartao = document.getElementById('tabelaCartaoDocs');
-  if (cardFaturas && tabelaCartao && CARTAO_MES.length > 0) {
-    cardFaturas.style.display = 'block';
-    tabelaCartao.innerHTML = `
-      <table style="width:100%;border-collapse:collapse;">
-        <thead>
-          <tr>
-            <th style="text-align:left;padding:8px 10px;font-size:.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);">Data</th>
-            <th style="text-align:left;padding:8px 10px;font-size:.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);">Descrição</th>
-            <th style="text-align:right;padding:8px 10px;font-size:.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);">Valor</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${CARTAO_MES.map(l => `
-            <tr style="border-bottom:1px solid var(--border);">
-              <td style="padding:9px 10px;font-size:.8rem;color:var(--text2);white-space:nowrap;">${l.data ? l.data.split('-').reverse().join('/') : '—'}</td>
-              <td style="padding:9px 10px;font-size:.85rem;color:var(--text);">${(l.descricao || '—').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td>
-              <td style="padding:9px 10px;font-size:.9rem;font-weight:700;color:#7c3aed;text-align:right;">${fmt(l.valor)}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    `;
-  }
-  renderCharts();
-  renderTable();
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   INIT
-═══════════════════════════════════════════════════════════════ */
-async function carregarDados() {
-  try {
-    await protectPage();
-
-    const supabase = createSupabaseClient();
-    const { data, error } = await supabase
-      .from('lancamentos')
-      .select(`
-        *,
-        classe:classes(id, codigo, descricao,
-          subgrupo:subgrupos(id, nome,
-            grupo:grupos(id, nome, tipo)
-          )
-        )
-      `)
-      .order('data', { ascending: false });
-
-    if (error) throw error;
-
-    // Mapear formato Supabase → formato do dashboard
-    LANCAMENTOS = (data || []).filter(l => {
-      const raw = (l.tipo || '').toUpperCase();
-      return raw !== 'CARTAO';
-    }).map(l => ({
-      id:            l.id,
-      tipo:          (() => {
-                       const raw = (l.tipo || l.classe?.subgrupo?.grupo?.tipo || 'despesa').toLowerCase();
-                       return raw.includes('rec') ? 'receita' : 'despesa';
-                     })(),
-      grupo:         l.classe?.subgrupo?.grupo?.id       || 0,
-      grupo_nome:    l.classe?.subgrupo?.grupo?.nome     || 'SEM GRUPO',
-      subgrupo:      l.classe?.subgrupo?.id              || 0,
-      subgrupo_nome: l.classe?.subgrupo?.nome            || 'SEM SUBGRUPO',
-      classe:        l.classe?.id                        || 0,
-      classe_nome:   l.classe?.descricao || l.classe?.codigo || 'SEM CLASSE',
-      descricao:     l.descricao_complementar            || '-',
-      valor:         parseFloat(l.valor || 0),
-      vencimento:    l.data                              || '',
-      quitado:       l.quitado                          || false,
-    }));
-
-    // Lançamentos CARTAO do Supabase (do resultado geral)
-    const supaCartao = (data || []).filter(l => {
-      const raw = (l.tipo || '').toUpperCase();
-      return raw === 'CARTAO';
-    }).map(l => ({
-      id:      l.id,
-      descricao: l.descricao_complementar || l.descricao || '-',
-      valor:   parseFloat(l.valor || 0),
-      data:    l.data || '',
-      fonte:   'supabase',
-    }));
-
-    // Query separada: CARTAO do mês atual (a query principal pode não trazer por limite)
-    const agora = new Date();
-    const mesAtual = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
-    const primeiroDia = `${mesAtual}-01`;
-    const ultimoDia = `${mesAtual}-31`;
-
-    let supaCartaoMes = [];
-    try {
-      const { data: cartaoData, error: cartaoError } = await supabase
-        .from('lancamentos')
-        .select('*')
-        .eq('tipo', 'CARTAO')
-        .gte('data', primeiroDia)
-        .lte('data', ultimoDia)
-        .order('data', { ascending: true });
-      if (!cartaoError && cartaoData) {
-        supaCartaoMes = cartaoData.map(l => ({
-          id:      l.id,
-          descricao: l.descricao_complementar || l.descricao || '-',
-          valor:   parseFloat(l.valor || 0),
-          data:    l.data || '',
-          fonte:   'supabase',
-        }));
+    async function handleLogout() {
+      try {
+        await logout();
+        window.location.href = 'login.html';
+      } catch (error) {
+        alert('Erro ao fazer logout: ' + error.message);
       }
-    } catch(e) { console.warn('Erro ao buscar cartão do mês:', e); }
+    }
 
-    // Lançamentos CARTAO do localStorage (módulo cartao-credito.html)
-    let localCartao = [];
-    try {
-      const entries = JSON.parse(localStorage.getItem('sf_entries') || '[]');
-      const fitidsVistas = new Set(supaCartao.map(l => l.id));
-      entries.forEach(e => {
-        if (!e.fromOFX || !fitidsVistas.has(e.id)) {
-          localCartao.push({
-            id:       e.id,
-            descricao: e.installment ? `${e.desc} [${e.cardAlias || 'Cartão'} ${e.installment}]` : `${e.desc} [${e.cardAlias || 'Cartão'}]`,
-            valor:    parseFloat(e.value || 0),
-            data:     e.dueDate ? new Date(e.dueDate).toISOString().split('T')[0] : '',
-            fonte:    'local',
-          });
+    function toggleValores() {
+      valoresVisiveis = !valoresVisiveis;
+      const toggleBtn = document.getElementById('toggleBtn');
+      toggleBtn.textContent = valoresVisiveis ? '👁️ Ocultar Valores' : '👁️ Mostrar Valores';
+      atualizarDisplay();
+    }
+
+    function formatarMoeda(valor) {
+      if (!valoresVisiveis) return '••••••';
+      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+    }
+
+    async function carregarDados() {
+      try {
+        const supabase = createSupabaseClient();
+
+        // Buscar lançamentos
+        const { data: lancamentos, error: errorLanc } = await supabase
+          .from('lancamentos')
+          .select('*');
+        
+        if (errorLanc) {
+          console.error('Erro ao buscar lançamentos:', errorLanc);
+          throw errorLanc;
+        }
+
+        // Buscar classes, subgrupos e grupos
+        const { data: classes, error: errorClasses } = await supabase.from('classes').select('*');
+        if (errorClasses) {
+          console.error('Erro ao buscar classes:', errorClasses);
+        }
+        
+        const { data: subgrupos, error: errorSubgrupos } = await supabase.from('subgrupos').select('*');
+        if (errorSubgrupos) {
+          console.error('Erro ao buscar subgrupos:', errorSubgrupos);
+        }
+        
+        const { data: grupos, error: errorGrupos } = await supabase.from('grupos').select('*');
+        if (errorGrupos) {
+          console.error('Erro ao buscar grupos:', errorGrupos);
+        }
+
+        // Processar dados
+        const classesMap = new Map();
+        (classes || []).forEach(c => classesMap.set(c.id, c));
+
+        const subgruposMap = new Map();
+        (subgrupos || []).forEach(s => subgruposMap.set(s.id, s));
+
+        const gruposMap = new Map();
+        (grupos || []).forEach(g => gruposMap.set(g.id, g));
+
+        // Mês atual para filtrar cartões
+        const agora = new Date();
+        const mesAtual = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
+
+        const receitas = (lancamentos || []).filter(l => l.tipo === 'RECEITA');
+        const cartoes  = (lancamentos || []).filter(l => l.tipo === 'CARTAO');
+        const cartoesMes = cartoes.filter(l => (l.data || '').slice(0, 7) === mesAtual);
+        // Despesas = DESPESA normal + CARTAO apenas do mês atual
+        const despesas = (lancamentos || []).filter(l => l.tipo === 'DESPESA' || (l.tipo === 'CARTAO' && (l.data || '').slice(0, 7) === mesAtual));
+
+        const totalDespesas = despesas.reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
+        const totalReceitas = receitas.reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
+        const totalCartao   = cartoesMes.reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
+        const saldo = totalReceitas - totalDespesas;
+
+        // Agregar por subgrupo
+        const subgruposSoma = new Map();
+        despesas.forEach(item => {
+          const classe = classesMap.get(item.classe_id);
+          let subgrupoNome;
+          if (classe) {
+            const subgrupo = subgruposMap.get(classe.subgrupo_id);
+            subgrupoNome = subgrupo ? subgrupo.nome : 'Sem Subgrupo';
+          } else {
+            subgrupoNome = item.tipo === 'CARTAO' ? '💳 Cartão de Crédito' : 'Sem Subgrupo';
+          }
+          const valor = parseFloat(item.valor || 0);
+
+          subgruposSoma.set(subgrupoNome, (subgruposSoma.get(subgrupoNome) || 0) + valor);
+        });
+
+        // Agregar por classe
+        const classesSoma = new Map();
+        despesas.forEach(item => {
+          const classe = classesMap.get(item.classe_id);
+          let nomeClasse;
+          if (classe) {
+            nomeClasse = classe.descricao || classe.codigo || 'Sem Classe';
+          } else {
+            nomeClasse = item.tipo === 'CARTAO' ? '💳 Cartão de Crédito' : 'Sem Classe';
+          }
+          const valor = parseFloat(item.valor || 0);
+
+          classesSoma.set(nomeClasse, (classesSoma.get(nomeClasse) || 0) + valor);
+        });
+
+        dashboardData = {
+          totalDespesas,
+          totalReceitas,
+          totalCartao,
+          saldo,
+          cartoesLista: cartoesMes.sort((a, b) => new Date(b.data) - new Date(a.data)),
+          despesasPorSubgrupo: Array.from(subgruposSoma.entries()).map(([subgrupo, valor]) => ({ subgrupo, valor })),
+          despesasPorClasse: Array.from(classesSoma.entries())
+            .map(([classe, valor]) => ({ classe, valor }))
+            .sort((a, b) => b.valor - a.valor)
+            .slice(0, 10)
+        };
+
+        atualizarDisplay();
+        criarGraficos();
+      } catch (error) {
+        console.error('Erro completo:', error);
+        const errorMsg = error.message || error.toString();
+        alert('Erro ao carregar dados do dashboard:\n\n' + errorMsg + '\n\nVerifique o console (F12) para mais detalhes.');
+      }
+    }
+
+    function atualizarDisplay() {
+      if (!dashboardData) return;
+
+      document.getElementById('totalDespesas').textContent = formatarMoeda(dashboardData.totalDespesas);
+      document.getElementById('totalReceitas').textContent = formatarMoeda(dashboardData.totalReceitas);
+      document.getElementById('saldo').textContent = formatarMoeda(dashboardData.saldo);
+      document.getElementById('totalCartao').textContent = formatarMoeda(dashboardData.totalCartao);
+
+      const saldoCard = document.getElementById('saldoCard');
+      const saldoElement = document.getElementById('saldo');
+      
+      if (dashboardData.saldo >= 0) {
+        saldoCard.style.background = 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)';
+        saldoCard.style.color = 'white';
+        saldoElement.style.color = 'white';
+      } else {
+        saldoCard.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+        saldoCard.style.color = 'white';
+        saldoElement.style.color = 'white';
+      }
+
+      // Atualizar card faturas de cartão
+      const cardFaturasDetalhe = document.getElementById('cardFaturasDetalhe');
+      const tabelaCartoes = document.getElementById('tabelaCartoes');
+      if (cardFaturasDetalhe && tabelaCartoes && dashboardData.cartoesLista && dashboardData.cartoesLista.length > 0) {
+        cardFaturasDetalhe.style.display = 'block';
+        if (valoresVisiveis) {
+          tabelaCartoes.innerHTML = `
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                  <tr>
+                    <th style="text-align:left; padding:8px 10px; font-size:0.72rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #e2e8f0;">Data</th>
+                    <th style="text-align:left; padding:8px 10px; font-size:0.72rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #e2e8f0;">Descrição</th>
+                    <th style="text-align:right; padding:8px 10px; font-size:0.72rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #e2e8f0;">Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${dashboardData.cartoesLista.map(l => `
+                    <tr style="border-bottom:1px solid #f1f5f9;">
+                      <td style="padding:9px 10px; font-size:0.82rem; color:#64748b; white-space:nowrap;">${new Date(l.data + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                      <td style="padding:9px 10px; font-size:0.85rem; color:#1e293b;">${(l.descricao_complementar || l.descricao || '—').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td>
+                      <td style="padding:9px 10px; font-size:0.9rem; font-weight:700; color:#7c3aed; text-align:right;">${new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(l.valor)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `;
+        } else {
+          tabelaCartoes.innerHTML = '<p style="color:#94a3b8; text-align:center; padding:16px; font-size:0.9rem;">•••••• (valores ocultos)</p>';
+        }
+      }
+
+      // Destruir gráficos antes de recriar
+      if (chartSubgrupos) {
+        chartSubgrupos.destroy();
+        chartSubgrupos = null;
+      }
+      if (chartClasses) {
+        chartClasses.destroy();
+        chartClasses = null;
+      }
+      
+      criarGraficos();
+    }
+
+    function criarGraficos() {
+      if (!dashboardData || !valoresVisiveis) {
+        if (chartSubgrupos) {
+          chartSubgrupos.destroy();
+          chartSubgrupos = null;
+        }
+        if (chartClasses) {
+          chartClasses.destroy();
+          chartClasses = null;
+        }
+        return;
+      }
+
+      const cores = [
+        '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
+        '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9',
+        '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef',
+        '#ec4899', '#f43f5e'
+      ];
+
+      // Destruir gráficos existentes antes de criar novos
+      if (chartSubgrupos) {
+        chartSubgrupos.destroy();
+        chartSubgrupos = null;
+      }
+      if (chartClasses) {
+        chartClasses.destroy();
+        chartClasses = null;
+      }
+
+      // Gráfico de Pizza - Subgrupos
+      const ctxSubgrupos = document.getElementById('chartSubgrupos').getContext('2d');
+      const topSubgrupos = dashboardData.despesasPorSubgrupo
+        .sort((a, b) => b.valor - a.valor)
+        .slice(0, 10);
+
+      chartSubgrupos = new Chart(ctxSubgrupos, {
+        type: 'pie',
+        data: {
+          labels: topSubgrupos.map(s => s.subgrupo),
+          datasets: [{
+            data: topSubgrupos.map(s => s.valor),
+            backgroundColor: cores,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: {
+              position: 'bottom',
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const label = context.label || '';
+                  const value = context.parsed || 0;
+                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                  const percentage = ((value / total) * 100).toFixed(1);
+                  return `${label}: R$ ${value.toFixed(2)} (${percentage}%)`;
+                }
+              }
+            }
+          }
         }
       });
-    } catch(e) { console.warn('localStorage cartão:', e); }
 
-    CARTAO_LANCAMENTOS = [...supaCartao, ...localCartao]
-      .sort((a, b) => b.data.localeCompare(a.data));
-
-    // Filtrar pelo mês atual: combina query dedicada + localStorage do mês
-    const localCartaoMes = localCartao.filter(l => (l.data || '').slice(0, 7) === mesAtual);
-    // Deduplica entre supaCartaoMes e localCartaoMes
-    const idsVistos = new Set(supaCartaoMes.map(l => l.id));
-    const localNaodup = localCartaoMes.filter(l => !idsVistos.has(l.id));
-    CARTAO_MES = [...supaCartaoMes, ...localNaodup].sort((a, b) => a.data.localeCompare(b.data));
-
-  } catch (err) {
-    console.error('Erro ao carregar dados:', err);
-    LANCAMENTOS = [];
-  }
-
-  // Inicializar estado e renderizar
-  filteredData = [...LANCAMENTOS];
-  LANCAMENTOS.forEach(l => {
-    openGrupos[l.grupo] = true;
-    openSubgrupos[l.subgrupo + '_' + l.grupo] = true;
-  });
-  populateGrupoDropdown();
-  updateSubgrupoOptions();
-  renderAll();
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  carregarDados();
-});
-</script>
+      // Gráfico de Barras - Classes
+      const ctxClasses = document.getElementById('chartClasses').getContext('2d');
+      
+      chartClasses = new Chart(ctxClasses, {
+        type: 'bar',
+        data: {
+          labels: dashboardData.despesasPorClasse.map(c => c.classe),
+          datasets: [{
+            label: 'Valor (R$)',
+            data: dashboardData.despesasPorClasse.map(c => c.valor),
+            backgroundColor: '#3b82f6',
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return `R$ ${context.parsed.y.toFixed(2)}`;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) {
+                  return 'R$ ' + value.toFixed(0);
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+  </script>
 </body>
 </html>
