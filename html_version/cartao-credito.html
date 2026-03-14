@@ -1185,6 +1185,7 @@
       });
       const [showAddCard, setShowAddCard] = useState(false);
       const [showOFX, setShowOFX] = useState(false);
+      const [syncing, setSyncing] = useState(false);
 
       // ── Persiste no localStorage ao alterar estado (cache offline)
       useEffect(() => {
@@ -1230,18 +1231,8 @@
               localStorage.setItem("sf_cards", JSON.stringify(mapped));
               setStep("main");
 
-              // Carrega fitids do Supabase para detecção de duplicatas
-              const cardIds = dbCards.map(c => c.id);
-              const { data: fitidRows } = await supa
-                .from("lancamentos")
-                .select("ofx_fitid")
-                .in("cartao_id", cardIds)
-                .not("ofx_fitid", "is", null);
-              if (fitidRows && fitidRows.length > 0 && !cancelled) {
-                const fitids = new Set(fitidRows.map(r => r.ofx_fitid));
-                setImportedFitids(fitids);
-                localStorage.setItem("sf_fitids", JSON.stringify([...fitids]));
-              }
+              // Carrega lançamentos e fitids do Supabase
+              if (!cancelled) await loadEntriesFromSupabase(mapped);
             } else {
               // Supabase vazio → migra automaticamente do localStorage
               const localCards = (() => {
@@ -1280,6 +1271,62 @@
         syncWithSupabase();
         return () => { cancelled = true; };
       }, []);
+
+      // ── Carrega lançamentos de cartão do Supabase
+      async function loadEntriesFromSupabase(cardsList) {
+        const theCards = cardsList || cards;
+        const cardIds = theCards.map(c => c.id).filter(Boolean);
+        if (cardIds.length === 0) return 0;
+        setSyncing(true);
+        try {
+          const supa = createSupabaseClient();
+          const { data: rows, error } = await supa
+            .from("lancamentos")
+            .select("id, descricao_complementar, valor, data, classe_id, cartao_id, ofx_fitid, group_id, parcela_numero, total_parcelas")
+            .in("cartao_id", cardIds)
+            .eq("tipo", "CARTAO")
+            .order("data", { ascending: true });
+          if (error) throw error;
+          if (!rows || rows.length === 0) { setSyncing(false); return 0; }
+          const cardMap = Object.fromEntries(theCards.map(c => [c.id, c]));
+          const loaded = rows.map(r => {
+            const card = cardMap[r.cartao_id];
+            const parcNum = r.parcela_numero || 1;
+            const parcTotal = r.total_parcelas || 1;
+            const rawDesc = r.descricao_complementar || "";
+            const desc = rawDesc.replace(/\s*\[.*?\]\s*$/, "") || rawDesc;
+            return {
+              id: r.id,
+              supabaseId: r.id,
+              groupId: r.group_id || r.id,
+              cardId: r.cartao_id,
+              cardAlias: card?.alias || "",
+              desc,
+              value: Number(r.valor),
+              total: Number(r.valor) * parcTotal,
+              installment: parcTotal > 1 ? `${parcNum}/${parcTotal}` : null,
+              month: parcNum - 1,
+              dueDate: r.data ? new Date(r.data) : null,
+              classeId: r.classe_id || null,
+              categoryLabel: null,
+              fromOFX: !!r.ofx_fitid,
+              ofxDate: null,
+              ofxFitid: r.ofx_fitid || null,
+            };
+          });
+          setEntries(loaded);
+          localStorage.setItem("sf_entries", JSON.stringify(loaded));
+          const fitids = new Set(loaded.filter(e => e.ofxFitid).map(e => e.ofxFitid));
+          setImportedFitids(fitids);
+          localStorage.setItem("sf_fitids", JSON.stringify([...fitids]));
+          return loaded.length;
+        } catch (err) {
+          console.error("Erro ao carregar lan\u00e7amentos:", err);
+          return null;
+        } finally {
+          setSyncing(false);
+        }
+      }
 
       // ── Adiciona cartão (salva no Supabase, usa UUID retornado)
       async function handleAddCard(card) {
@@ -1442,6 +1489,10 @@
                 </button>
                 <button style={S.btnSecondary} onClick={() => { setShowAddCard(p => !p); setShowOFX(false); }}>
                   {showAddCard ? "✕" : "+ Cartão"}
+                </button>
+                <button style={{ ...S.btnSecondary, opacity: syncing ? 0.6 : 1 }}
+                  onClick={() => loadEntriesFromSupabase()} disabled={syncing}>
+                  {syncing ? "⏳" : "🔄"} Sincronizar
                 </button>
                 <button style={S.btnSecondary} onClick={handleReiniciar}>
                   Reiniciar
