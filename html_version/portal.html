@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="config/supabase-config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -386,9 +387,10 @@ const LS_KEY = 'sf_supabase_key';
 let sb = null;   // supabase client
 
 function loadConfig() {
+  // Usa as credenciais fixas do supabase-config.js se disponíveis
   return {
-    url: localStorage.getItem(LS_URL) || '',
-    key: localStorage.getItem(LS_KEY) || ''
+    url: (typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : null) || localStorage.getItem(LS_URL) || '',
+    key: (typeof SUPABASE_ANON_KEY !== 'undefined' ? SUPABASE_ANON_KEY : null) || localStorage.getItem(LS_KEY) || ''
   };
 }
 
@@ -715,11 +717,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Supabase
   const cfg = loadConfig();
+  document.getElementById('setupOverlay').style.display = 'none';
   if (cfg.url && cfg.key) {
-    document.getElementById('setupOverlay').style.display = 'none';
     initSupabase(cfg.url, cfg.key);
   } else {
-    document.getElementById('setupOverlay').style.display = 'flex';
     setConnStatus('err', 'Não configurado');
   }
 });

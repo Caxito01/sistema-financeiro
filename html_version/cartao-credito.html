@@ -424,11 +424,19 @@
           tipo: "CARTAO",
           classe_id: e.classeId || null,
           user_id: userId,
+          cartao_id: e.cardId || null,
+          ofx_fitid: e.ofxFitid || null,
+          group_id: e.groupId != null ? String(e.groupId) : null,
+          parcela_numero: e.installment ? parseInt(e.installment.split("/")[0], 10) : 1,
+          total_parcelas: e.installment ? parseInt(e.installment.split("/")[1], 10) : 1,
         }));
-        const { error } = await supa.from("lancamentos").insert(records);
-        if (error) console.error("Erro Supabase cartão:", error.message);
+        const { data: inserted, error } = await supa.from("lancamentos").insert(records).select("id");
+        if (error) { console.error("Erro Supabase cartão:", error.message); return null; }
+        // retorna mapeamento localId → supabaseId (mesma ordem do insert)
+        return inserted ? inserted.map((row, i) => ({ localId: entries[i].id, supabaseId: row.id })) : null;
       } catch (err) {
         console.error("Erro ao salvar lançamentos do cartão:", err);
+        return null;
       }
     }
 
@@ -447,7 +455,14 @@
       const [catSaved, setCatSaved] = useState(false);
       const fileRef = useRef();
 
-      const targetCard = cards.find(c => c.id === parseInt(targetCardId) || c.id === targetCardId);
+      // Sincroniza targetCardId quando os cartões mudam
+      useEffect(() => {
+        if (cards.length > 0 && !cards.find(c => String(c.id) === String(targetCardId))) {
+          setTargetCardId(cards[0].id);
+        }
+      }, [cards]);
+
+      const targetCard = cards.find(c => String(c.id) === String(targetCardId));
       const accent = getAccent(targetCard?.brand);
 
       // Pré-preencher categorias do localStorage (memória por descrição)
@@ -946,7 +961,14 @@
       const isDark = useTheme();
       const S = getS(isDark);
       const [f, setF] = useState({ cardId: cards[0]?.id ?? "", desc: "", value: "", installments: "1", category: null });
-      const card = cards.find(c => c.id === f.cardId);
+      const card = cards.find(c => String(c.id) === String(f.cardId));
+
+      // Sincroniza cardId quando os cartões mudam (ex: chegam do Supabase após mount)
+      useEffect(() => {
+        if (cards.length > 0 && !cards.find(c => String(c.id) === String(f.cardId))) {
+          setF(p => ({ ...p, cardId: cards[0].id }));
+        }
+      }, [cards]);
       const accent = getAccent(card?.brand);
       const inst = parseInt(f.installments) || 1;
       const val = parseMoney(f.value);
@@ -958,7 +980,7 @@
           <div style={S.field}>
             <label style={S.label}>Cartão</label>
             <select style={S.input} value={f.cardId}
-              onChange={e => setF(p => ({ ...p, cardId: parseInt(e.target.value) }))}>
+              onChange={e => setF(p => ({ ...p, cardId: e.target.value }))}>
               {cards.map(c => <option key={c.id} value={c.id}>{c.alias}{c.brand ? ` · ${c.brand}` : ""}</option>)}
             </select>
           </div>
@@ -1016,19 +1038,22 @@
       const S = getS(isDark);
       const [collapsed, setCollapsed] = useState(false);
       const accent = getAccent(card.brand);
-      const current = entries.filter(e => e.cardId === card.id && e.month === 0);
-      const future = entries.filter(e => e.cardId === card.id && e.month > 0);
+
+      // Todas as entradas do cartão ordenadas por vencimento
+      const allEntries = useMemo(() =>
+        entries
+          .filter(e => String(e.cardId) === String(card.id))
+          .sort((a, b) => {
+            const da = a.dueDate || a.ofxDate, db = b.dueDate || b.ofxDate;
+            if (!da && !db) return 0; if (!da) return 1; if (!db) return -1;
+            return da - db;
+          }),
+        [entries, card.id]
+      );
+
+      const current = allEntries.filter(e => e.month === 0);
       const spent = current.reduce((s, e) => s + e.value, 0);
       const ofxCount = current.filter(e => e.fromOFX).length;
-
-      const futureByMonth = useMemo(() => {
-        const g = {};
-        future.forEach(e => {
-          if (!g[e.month]) g[e.month] = { month: e.month, dueDate: e.dueDate, items: [] };
-          g[e.month].items.push(e);
-        });
-        return Object.values(g).sort((a, b) => a.month - b.month);
-      }, [future]);
 
       return (
         <div style={{ ...S.cardSection, borderColor: accent + "33" }}>
@@ -1045,90 +1070,81 @@
           </button>
 
           {!collapsed && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div>
-                <div style={{ ...S.subLabel, color: accent, marginBottom: 6 }}>
-                  Fatura Atual · {current.length} item(s)
+            allEntries.length === 0 ? (
+              <div style={S.emptySmall}>Nenhum lançamento nesta fatura ainda.</div>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <span style={{ ...S.subLabel, color: accent }}>
+                    {allEntries.length} parcela(s) · <span style={{ color: isDark ? "#64748b" : "#94a3b8" }}>{current.length} na fatura atual</span>
+                  </span>
+                  {allEntries.length > current.length && (
+                    <span style={{ fontSize: 11, color: isDark ? "#64748b" : "#94a3b8" }}>
+                      Total futuro: {fmt(allEntries.filter(e => e.month > 0).reduce((s, e) => s + e.value, 0))}
+                    </span>
+                  )}
                 </div>
-                {current.length === 0 ? (
-                  <div style={S.emptySmall}>Nenhum lançamento nesta fatura ainda.</div>
-                ) : (
-                  <>
-                    <table style={S.table}>
-                      <thead>
-                        <tr>{["", "Descrição", "Parcela", "Categoria", "Valor", ""].map((h, i) =>
-                          <th key={i} style={S.th}>{h}</th>)}</tr>
-                      </thead>
-                      <tbody>
-                        {current.map(e => (
-                          <tr key={e.id} style={S.tr}>
-                            <td style={{ ...S.td, width: 20 }}>
-                              {e.fromOFX && (
-                                <span title="Importado via OFX" style={{ color: accent, fontSize: 10 }}>⬆</span>
-                              )}
-                            </td>
-                            <td style={S.td}>
-                              {e.desc}
-                              {e.ofxDate && (
-                                <span style={{ color: isDark ? "#64748b" : "#94a3b8", fontSize: 10, marginLeft: 6 }}>
-                                  {fmtDateShort(e.ofxDate)}
-                                </span>
-                              )}
-                            </td>
-                            <td style={S.td}>
-                              {e.installment
-                                ? <span style={S.instBadge}>{e.installment}</span>
-                                : <span style={{ color: isDark ? "#64748b" : "#94a3b8" }}>à vista</span>}
-                            </td>
-                            <td style={S.td}>
-                              {e.categoryLabel
-                                ? <span style={{ fontSize: 11, background: isDark ? "#1e3a5f" : "#dbeafe", color: "#3b82f6", borderRadius: 4, padding: "2px 7px", whiteSpace: "nowrap" }}>
-                                    {e.categoryLabel.split(" › ").pop()}
-                                  </span>
-                                : <span style={{ color: isDark ? "#475569" : "#cbd5e1", fontSize: 11 }}>—</span>}
-                            </td>
-                            <td style={{ ...S.td, color: "#ff6b6b", fontWeight: 600 }}>{fmt(e.value)}</td>
-                            <td style={S.td}>
-                              <button style={S.btnRemove} title="Remover todas as parcelas"
-                                onClick={() => onRemoveGroup(e.groupId)}>✕</button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    <div style={{ textAlign: "right", color: "#ff6b6b", fontWeight: 700, fontSize: 13, marginTop: 8 }}>
-                      Subtotal: {fmt(spent)}
-                    </div>
-                  </>
-                )}
+                <table style={S.table}>
+                  <thead>
+                    <tr>{["", "Descrição", "Parcela", "Vencimento", "Categoria", "Valor", ""].map((h, i) =>
+                      <th key={i} style={S.th}>{h}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allEntries.map(e => (
+                      <tr key={e.id} style={{
+                        ...S.tr,
+                        opacity: e.month > 0 ? 0.55 : 1,
+                        background: e.month > 0 ? (isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.015)") : "transparent",
+                      }}>
+                        <td style={{ ...S.td, width: 20 }}>
+                          {e.fromOFX && <span title="Importado via OFX" style={{ color: accent, fontSize: 10 }}>⬆</span>}
+                        </td>
+                        <td style={S.td}>
+                          <span style={{ color: e.month > 0 ? (isDark ? "#94a3b8" : "#64748b") : (isDark ? "#f1f5f9" : "#1e293b") }}>
+                            {e.desc}
+                          </span>
+                          {e.ofxDate && (
+                            <span style={{ color: isDark ? "#64748b" : "#94a3b8", fontSize: 10, marginLeft: 6 }}>
+                              {fmtDateShort(e.ofxDate)}
+                            </span>
+                          )}
+                        </td>
+                        <td style={S.td}>
+                          {e.installment
+                            ? <span style={{ ...S.instBadge, background: e.month > 0 ? (isDark ? "#1e293b" : "#f1f5f9") : accent + "22", color: e.month > 0 ? (isDark ? "#64748b" : "#94a3b8") : accent }}>{e.installment}</span>
+                            : <span style={{ color: isDark ? "#64748b" : "#94a3b8", fontSize: 12 }}>à vista</span>}
+                        </td>
+                        <td style={{ ...S.td, whiteSpace: "nowrap" }}>
+                          {e.month === 0
+                            ? <span style={{ color: accent, fontSize: 11, fontWeight: 700 }}>Atual</span>
+                            : <span style={{ color: isDark ? "#64748b" : "#94a3b8", fontSize: 11 }}>{fmtDateShort(e.dueDate)}</span>}
+                        </td>
+                        <td style={S.td}>
+                          {e.categoryLabel
+                            ? <span style={{ fontSize: 11, background: isDark ? "#1e3a5f" : "#dbeafe", color: "#3b82f6", borderRadius: 4, padding: "2px 7px", whiteSpace: "nowrap" }}>
+                                {e.categoryLabel.split(" › ").pop()}
+                              </span>
+                            : <span style={{ color: isDark ? "#475569" : "#cbd5e1", fontSize: 11 }}>—</span>}
+                        </td>
+                        <td style={{ ...S.td, color: e.month > 0 ? (isDark ? "#64748b" : "#94a3b8") : "#ff6b6b", fontWeight: 600 }}>
+                          {fmt(e.value)}
+                        </td>
+                        <td style={S.td}>
+                          {e.month === 0 && (
+                            <button style={S.btnRemove} title="Remover todas as parcelas"
+                              onClick={() => onRemoveGroup(e.groupId)}>✕</button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{ textAlign: "right", color: "#ff6b6b", fontWeight: 700, fontSize: 13, marginTop: 8 }}>
+                  Subtotal fatura atual: {fmt(spent)}
+                </div>
               </div>
-
-              {futureByMonth.length > 0 && (
-                <div>
-                  <div style={{ ...S.subLabel, color: isDark ? "#64748b" : "#94a3b8", marginBottom: 6 }}>Parcelas Futuras</div>
-                  {futureByMonth.map(group => (
-                    <div key={group.month} style={S.futureGroup}>
-                      <div style={S.futureGroupHeader}>
-                        <span style={{ color: accent, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>
-                          {group.dueDate ? fmtDate(group.dueDate) : `+${group.month} mês`}
-                        </span>
-                        <span style={{ color: isDark ? "#f1f5f9" : "#1e293b", fontSize: 13, fontWeight: 700 }}>
-                          {fmt(group.items.reduce((s, e) => s + e.value, 0))}
-                        </span>
-                      </div>
-                      {group.items.map(e => (
-                        <div key={e.id} style={S.futureItem}>
-                          {e.fromOFX && <span style={{ color: accent, fontSize: 9 }} title="Via OFX">⬆</span>}
-                          <span>{e.desc}</span>
-                          <span style={S.instBadge}>{e.installment}</span>
-                          <span style={{ marginLeft: "auto", color: isDark ? "#94a3b8" : "#64748b" }}>{fmt(e.value)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            )
           )}
         </div>
       );
@@ -1141,7 +1157,7 @@
       const isDark = useTheme();
       const S = getS(isDark);
 
-      // ── Carrega estado persistido do localStorage na inicializacao
+      // ── Inicializa do localStorage (resposta imediata / fallback offline)
       const [cards, setCards] = useState(() => {
         try {
           return JSON.parse(localStorage.getItem("sf_cards") || "[]").map(c => ({
@@ -1170,7 +1186,7 @@
       const [showAddCard, setShowAddCard] = useState(false);
       const [showOFX, setShowOFX] = useState(false);
 
-      // ── Persiste automaticamente no localStorage ao alterar estado
+      // ── Persiste no localStorage ao alterar estado (cache offline)
       useEffect(() => {
         try { localStorage.setItem("sf_cards", JSON.stringify(cards)); } catch {}
       }, [cards]);
@@ -1180,6 +1196,145 @@
       useEffect(() => {
         try { localStorage.setItem("sf_fitids", JSON.stringify([...importedFitids])); } catch {}
       }, [importedFitids]);
+
+      // ── Sincroniza com Supabase na montagem (fonte de verdade)
+      useEffect(() => {
+        let cancelled = false;
+        async function syncWithSupabase() {
+          try {
+            const supa = createSupabaseClient();
+            const { data: { session } } = await supa.auth.getSession();
+            if (!session || cancelled) return;
+            const userId = session.user.id;
+
+            const { data: dbCards, error: cardsErr } = await supa
+              .from("cartoes")
+              .select("*")
+              .eq("user_id", userId)
+              .eq("ativo", true)
+              .order("created_at", { ascending: true });
+            if (cardsErr) throw cardsErr;
+
+            if (dbCards && dbCards.length > 0) {
+              // Supabase tem cartões → usa como fonte de verdade
+              if (cancelled) return;
+              const mapped = dbCards.map(c => ({
+                id: c.id,
+                alias: c.alias,
+                brand: c.bandeira,
+                number: c.numero_masked || "",
+                limit: Number(c.limite),
+                dueDate: new Date(c.vencimento_ano, c.vencimento_mes - 1, c.vencimento_dia),
+              }));
+              setCards(mapped);
+              localStorage.setItem("sf_cards", JSON.stringify(mapped));
+              setStep("main");
+
+              // Carrega fitids do Supabase para detecção de duplicatas
+              const cardIds = dbCards.map(c => c.id);
+              const { data: fitidRows } = await supa
+                .from("lancamentos")
+                .select("ofx_fitid")
+                .in("cartao_id", cardIds)
+                .not("ofx_fitid", "is", null);
+              if (fitidRows && fitidRows.length > 0 && !cancelled) {
+                const fitids = new Set(fitidRows.map(r => r.ofx_fitid));
+                setImportedFitids(fitids);
+                localStorage.setItem("sf_fitids", JSON.stringify([...fitids]));
+              }
+            } else {
+              // Supabase vazio → migra automaticamente do localStorage
+              const localCards = (() => {
+                try { return JSON.parse(localStorage.getItem("sf_cards") || "[]"); } catch { return []; }
+              })();
+              if (localCards.length > 0) {
+                const toInsert = localCards.map(c => ({
+                  user_id: userId,
+                  alias: c.alias,
+                  bandeira: c.brand || null,
+                  numero_masked: c.number || null,
+                  limite: c.limit || 0,
+                  vencimento_dia: c.dueDate ? new Date(c.dueDate).getDate() : null,
+                  vencimento_mes: c.dueDate ? new Date(c.dueDate).getMonth() + 1 : null,
+                  vencimento_ano: c.dueDate ? new Date(c.dueDate).getFullYear() : null,
+                }));
+                const { data: inserted, error: insErr } = await supa
+                  .from("cartoes")
+                  .insert(toInsert)
+                  .select();
+                if (!insErr && inserted && !cancelled) {
+                  const mapped = inserted.map((c, i) => ({
+                    ...localCards[i],
+                    id: c.id,
+                    dueDate: localCards[i].dueDate ? new Date(localCards[i].dueDate) : null,
+                  }));
+                  setCards(mapped);
+                  localStorage.setItem("sf_cards", JSON.stringify(mapped));
+                }
+              }
+            }
+          } catch (err) {
+            console.warn("Supabase offline, usando localStorage como fallback:", err);
+          }
+        }
+        syncWithSupabase();
+        return () => { cancelled = true; };
+      }, []);
+
+      // ── Adiciona cartão (salva no Supabase, usa UUID retornado)
+      async function handleAddCard(card) {
+        let finalCard = card;
+        try {
+          const supa = createSupabaseClient();
+          const { data: { session } } = await supa.auth.getSession();
+          if (session) {
+            const { data: inserted, error } = await supa.from("cartoes").insert({
+              user_id: session.user.id,
+              alias: card.alias,
+              bandeira: card.brand || null,
+              numero_masked: card.number || null,
+              limite: card.limit || 0,
+              vencimento_dia: card.dueDate.getDate(),
+              vencimento_mes: card.dueDate.getMonth() + 1,
+              vencimento_ano: card.dueDate.getFullYear(),
+            }).select().single();
+            if (!error && inserted) {
+              finalCard = { ...card, id: inserted.id };
+            }
+          }
+        } catch (err) {
+          console.warn("Erro ao salvar cartão no Supabase:", err);
+        }
+        setCards(p => [...p, finalCard]);
+      }
+
+      // ── Remove cartão (soft delete no Supabase)
+      async function handleRemoveCard(cardId) {
+        try {
+          const supa = createSupabaseClient();
+          await supa.from("cartoes").update({ ativo: false }).eq("id", cardId);
+        } catch (err) {
+          console.warn("Erro ao remover cartão no Supabase:", err);
+        }
+        setCards(p => p.filter(x => x.id !== cardId));
+      }
+
+      // ── Reinicia tudo (soft delete no Supabase + limpa localStorage)
+      async function handleReiniciar() {
+        try {
+          const supa = createSupabaseClient();
+          const { data: { session } } = await supa.auth.getSession();
+          if (session) {
+            await supa.from("cartoes").update({ ativo: false }).eq("user_id", session.user.id);
+          }
+        } catch (err) {
+          console.warn("Erro ao reiniciar cartões no Supabase:", err);
+        }
+        localStorage.removeItem("sf_cards");
+        localStorage.removeItem("sf_entries");
+        localStorage.removeItem("sf_fitids");
+        setStep("setup"); setCards([]); setEntries([]); setImportedFitids(new Set());
+      }
 
       async function handleLaunch({ card, desc, value, installments, category }) {
         const groupId = Date.now();
@@ -1192,13 +1347,48 @@
           classeId: category?.classeId || null, categoryLabel: category?.label || null, cardAlias: card.alias,
         }));
         setEntries(prev => [...prev, ...newEntries]);
-        await saveCartaoEntriesToSupabase(newEntries);
+        const inserted = await saveCartaoEntriesToSupabase(newEntries);
+        if (inserted) {
+          const idMap = Object.fromEntries(inserted.map(r => [r.localId, r.supabaseId]));
+          setEntries(prev => prev.map(e => idMap[e.id] ? { ...e, supabaseId: idMap[e.id] } : e));
+        }
       }
 
       async function handleOFXImport(newEntries, fitids) {
         setEntries(prev => [...prev, ...newEntries]);
         setImportedFitids(prev => new Set([...prev, ...fitids]));
-        await saveCartaoEntriesToSupabase(newEntries);
+        const inserted = await saveCartaoEntriesToSupabase(newEntries);
+        if (inserted) {
+          const idMap = Object.fromEntries(inserted.map(r => [r.localId, r.supabaseId]));
+          setEntries(prev => prev.map(e => idMap[e.id] ? { ...e, supabaseId: idMap[e.id] } : e));
+        }
+      }
+
+      async function handleRemoveGroup(gid) {
+        // Remove fitids do Set se for entrada OFX
+        const removed = entries.filter(e => e.groupId === gid && e.fromOFX);
+        if (removed.length > 0) {
+          const removedFitids = new Set(removed.map(e => e.ofxFitid).filter(Boolean));
+          setImportedFitids(prev => {
+            const next = new Set(prev);
+            removedFitids.forEach(f => next.delete(f));
+            return next;
+          });
+        }
+        // Remove do Supabase: usa supabaseId (UUID real) quando disponível, fallback por group_id
+        try {
+          const supa = createSupabaseClient();
+          const toDelete = entries.filter(e => e.groupId === gid);
+          const supabaseIds = toDelete.map(e => e.supabaseId).filter(Boolean);
+          if (supabaseIds.length > 0) {
+            await supa.from("lancamentos").delete().in("id", supabaseIds);
+          } else {
+            await supa.from("lancamentos").delete().eq("group_id", String(gid));
+          }
+        } catch (err) {
+          console.warn("Erro ao remover lançamentos no Supabase:", err);
+        }
+        setEntries(p => p.filter(e => e.groupId !== gid));
       }
 
       // ── SETUP
@@ -1220,13 +1410,13 @@
                     <span style={{ color: isDark ? "#94a3b8" : "#64748b", fontSize: 12 }}>{fmt(c.limit)}</span>
                     <span style={{ color: isDark ? "#64748b" : "#94a3b8", fontSize: 11 }}>· vence {fmtDate(c.dueDate)}</span>
                     <button style={{ ...S.btnRemove, marginLeft: "auto" }}
-                      onClick={() => setCards(p => p.filter(x => x.id !== c.id))}>✕</button>
+                      onClick={() => handleRemoveCard(c.id)}>✕</button>
                   </div>
                 ))}
               </div>
             )}
 
-            <CardSetupForm onAdd={c => setCards(p => [...p, c])} />
+            <CardSetupForm onAdd={handleAddCard} />
 
             {cards.length > 0 && (
               <button style={S.btnPrimary} onClick={() => setStep("main")}>
@@ -1253,12 +1443,7 @@
                 <button style={S.btnSecondary} onClick={() => { setShowAddCard(p => !p); setShowOFX(false); }}>
                   {showAddCard ? "✕" : "+ Cartão"}
                 </button>
-                <button style={S.btnSecondary} onClick={() => {
-                  localStorage.removeItem("sf_cards");
-                  localStorage.removeItem("sf_entries");
-                  localStorage.removeItem("sf_fitids");
-                  setStep("setup"); setCards([]); setEntries([]); setImportedFitids(new Set());
-                }}>
+                <button style={S.btnSecondary} onClick={handleReiniciar}>
                   Reiniciar
                 </button>
               </div>
@@ -1271,7 +1456,7 @@
             {showAddCard && (
               <div style={S.formCard}>
                 <h2 style={S.sectionTitle}>Novo Cartão</h2>
-                <CardSetupForm onAdd={c => { setCards(p => [...p, c]); setShowAddCard(false); }} />
+                <CardSetupForm onAdd={async c => { await handleAddCard(c); setShowAddCard(false); }} />
               </div>
             )}
 
@@ -1279,18 +1464,7 @@
 
             {cards.map(card => (
               <CardSection key={card.id} card={card} entries={entries}
-              onRemoveGroup={gid => {
-                const removed = entries.filter(e => e.groupId === gid && e.fromOFX);
-                if (removed.length > 0) {
-                  const removedFitids = new Set(removed.map(e => e.ofxFitid).filter(Boolean));
-                  setImportedFitids(prev => {
-                    const next = new Set(prev);
-                    removedFitids.forEach(f => next.delete(f));
-                    return next;
-                  });
-                }
-                setEntries(p => p.filter(e => e.groupId !== gid));
-              }} />
+                onRemoveGroup={handleRemoveGroup} />
             ))}
           </div>
         </div>
