@@ -411,8 +411,8 @@
     async function saveCartaoEntriesToSupabase(entries) {
       try {
         const supa = createSupabaseClient();
-        const { data: sd } = await supa.auth.getSession();
-        const userId = sd?.session?.user?.id || null;
+        const { data: { user } } = await supa.auth.getUser();
+        const userId = user?.id || null;
         const records = entries.map(e => ({
           descricao_complementar: e.installment
             ? `${e.desc} [${e.cardAlias || "Cartão"} ${e.installment}]`
@@ -1204,9 +1204,9 @@
         async function syncWithSupabase() {
           try {
             const supa = createSupabaseClient();
-            const { data: { session } } = await supa.auth.getSession();
-            if (!session || cancelled) return;
-            const userId = session.user.id;
+            const { data: { user } } = await supa.auth.getUser();
+            if (!user || cancelled) return;
+            const userId = user.id;
 
             const { data: dbCards, error: cardsErr } = await supa
               .from("cartoes")
@@ -1455,29 +1455,34 @@
                 setSyncing(true);
                 try {
                   const supa = createSupabaseClient();
-                  const { data: { session } } = await supa.auth.getSession();
-                  if (!session) { alert("Faça login primeiro."); setSyncing(false); return; }
 
-                  let { data: dbCards } = await supa.from("cartoes").select("*")
-                    .eq("user_id", session.user.id).eq("ativo", true).order("created_at", { ascending: true });
+                  // getUser() valida o token no servidor (mais confiável que getSession)
+                  const { data: { user }, error: userErr } = await supa.auth.getUser();
+                  if (userErr || !user) { alert("Sessão expirada. Faça login novamente."); window.location.href = "login.html"; return; }
+
+                  const { data: dbCards, error: cardsErr } = await supa.from("cartoes").select("*")
+                    .eq("user_id", user.id).eq("ativo", true).order("created_at", { ascending: true });
+
+                  if (cardsErr) { alert("Erro ao buscar cartões: " + cardsErr.message); setSyncing(false); return; }
 
                   // Nenhum cartão no Supabase → tenta migrar do localStorage
-                  if (!dbCards || dbCards.length === 0) {
+                  let finalCards = dbCards;
+                  if (!finalCards || finalCards.length === 0) {
                     const localCards = (() => { try { return JSON.parse(localStorage.getItem("sf_cards") || "[]"); } catch { return []; } })();
                     if (localCards.length === 0) { alert("Nenhum cartão encontrado no servidor nem localmente.\nAdicione um cartão primeiro."); setSyncing(false); return; }
                     const toInsert = localCards.map(c => ({
-                      user_id: session.user.id, alias: c.alias, bandeira: c.brand || null,
+                      user_id: user.id, alias: c.alias, bandeira: c.brand || null,
                       numero_masked: c.number || null, limite: c.limit || 0,
                       vencimento_dia: c.dueDate ? new Date(c.dueDate).getDate() : null,
                       vencimento_mes: c.dueDate ? new Date(c.dueDate).getMonth() + 1 : null,
                       vencimento_ano: c.dueDate ? new Date(c.dueDate).getFullYear() : null,
                     }));
                     const { data: inserted, error: insErr } = await supa.from("cartoes").insert(toInsert).select();
-                    if (insErr || !inserted) { alert("Erro ao salvar cartões no servidor: " + (insErr?.message || "erro desconhecido")); setSyncing(false); return; }
-                    dbCards = inserted;
+                    if (insErr || !inserted) { alert("Erro ao salvar cartões: " + (insErr?.message || "erro desconhecido")); setSyncing(false); return; }
+                    finalCards = inserted;
                   }
 
-                  const mapped = dbCards.map(c => ({
+                  const mapped = finalCards.map(c => ({
                     id: c.id, alias: c.alias, brand: c.bandeira, number: c.numero_masked || "",
                     limit: Number(c.limite),
                     dueDate: new Date(c.vencimento_ano, c.vencimento_mes - 1, c.vencimento_dia),
