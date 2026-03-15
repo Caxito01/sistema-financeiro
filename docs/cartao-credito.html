@@ -1204,9 +1204,9 @@
         async function syncWithSupabase() {
           try {
             const supa = createSupabaseClient();
-            const { data: { user } } = await supa.auth.getUser();
-            if (!user || cancelled) return;
-            const userId = user.id;
+            const { data: { session: _sess } } = await supa.auth.getSession();
+            if (!_sess?.user || cancelled) return;
+            const userId = _sess.user.id;
 
             const { data: dbCards, error: cardsErr } = await supa
               .from("cartoes")
@@ -1261,6 +1261,7 @@
                   }));
                   setCards(mapped);
                   localStorage.setItem("sf_cards", JSON.stringify(mapped));
+                  if (!cancelled) { setStep("main"); await loadEntriesFromSupabase(mapped); }
                 }
               }
             }
@@ -1353,6 +1354,7 @@
           }
         } catch (err) {
           console.warn("Erro ao salvar cartão no Supabase:", err);
+          alert("Aviso: o cartão foi salvo apenas localmente. Falha ao sincronizar com o Supabase: " + (err.message || err));
         }
         setCards(p => [...p, finalCard]);
       }
@@ -1458,9 +1460,9 @@
                 try {
                   const supa = createSupabaseClient();
 
-                  // getUser() valida o token no servidor (mais confiável que getSession)
-                  const { data: { user }, error: userErr } = await supa.auth.getUser();
-                  if (userErr || !user) { alert("Sessão expirada. Faça login novamente."); window.location.href = "login.html"; return; }
+                  const { data: { session: _s }, error: sessionErr } = await supa.auth.getSession();
+                  if (sessionErr || !_s?.user) { alert("Sessão expirada. Faça login novamente."); window.location.href = "login.html"; return; }
+                  const user = _s.user;
 
                   const { data: dbCards, error: cardsErr } = await supa.from("cartoes").select("*")
                     .eq("user_id", user.id).eq("ativo", true).order("created_at", { ascending: true });
@@ -1472,12 +1474,8 @@
                   if (!finalCards || finalCards.length === 0) {
                     const localCards = (() => { try { return JSON.parse(localStorage.getItem("sf_cards") || "[]"); } catch { return []; } })();
                     if (localCards.length === 0) {
-                      // Sem cartões cadastrados — carrega lançamentos direto do Supabase via RLS
-                      setCards([]);
-                      localStorage.setItem("sf_cards", "[]");
-                      await loadEntriesFromSupabase([]);
-                      setStep("main");
                       setSyncing(false);
+                      alert("Nenhum cartão encontrado no Supabase. Se você tem cartões cadastrados, verifique se está logado com a conta correta. Caso contrário, adicione seus cartões com o botão '+ Adicionar Cartão'.");
                       return;
                     }
                     const toInsert = localCards.map(c => ({
