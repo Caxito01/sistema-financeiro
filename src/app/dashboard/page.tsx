@@ -20,19 +20,19 @@ import { Eye, EyeOff, Plus, List, BarChart3, Settings } from 'lucide-react';
 import { initMonitor, captureException } from '@/lib/monitor';
 
 const CORES_SUBGRUPOS = [
-  '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
-  '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9',
-  '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef',
-  '#ec4899', '#f43f5e',
+  '#5B8FF9','#5AD8A6','#F4664A','#FAAD14','#9661BC',
+  '#78D3F8','#F6BD16','#61DDAA','#F6903D','#008685',
+  '#E8684A','#6DC8EC','#9867BC','#F6C3B7','#AAD461',
+  '#BEDED1','#F1907B',
 ];
 
 const TOP_N_SUBGRUPOS = 10;
 
 const CORES_CLASSES = [
-  '#dc2626', '#ea580c', '#d97706', '#ca8a04', '#65a30d',
-  '#16a34a', '#059669', '#0d9488', '#0891b2', '#0284c7',
-  '#2563eb', '#4f46e5', '#7c3aed', '#9333ea', '#c026d3',
-  '#db2777', '#e11d48',
+  '#F4664A','#F6903D','#FAAD14','#F6BD16','#AAD461',
+  '#5AD8A6','#61DDAA','#008685','#78D3F8','#5B8FF9',
+  '#9661BC','#9867BC','#E8684A','#6DC8EC','#61DDAA',
+  '#F6C3B7','#BEDED1',
 ];
 
 interface Lancamento {
@@ -40,6 +40,8 @@ interface Lancamento {
   tipo: string;
   valor: number;
   classe_id?: number | null;
+  cartao_id?: string | null;
+  quitado?: boolean;
   [key: string]: unknown;
 }
 
@@ -47,6 +49,9 @@ interface DashboardData {
   totalDespesas: number;
   totalReceitas: number;
   saldo: number;
+  totalQuitado: number;
+  faturasCartao: number;
+  percentComprometido: number;
   despesasPorSubgrupo: Array<{ subgrupo: string; valor: number }>;
   despesasPorClasse: Array<{ classe: string; valor: number }>;
 }
@@ -73,6 +78,13 @@ export default function DashboardPage() {
     try {
       const supabase = createClient();
 
+      // Verificar autenticação
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/login');
+        return;
+      }
+
       // Buscar todos os lançamentos
       const { data: lancamentosAll, error: errorLanc } = await supabase.from('lancamentos').select('*');
       if (errorLanc) throw errorLanc;
@@ -83,7 +95,9 @@ export default function DashboardPage() {
         const valor = Number(raw['valor'] ?? 0) || 0;
         const rawClasseId = raw['classe_id'];
         const classe_id = rawClasseId === undefined || rawClasseId === null ? null : Number(rawClasseId as any) || null;
-        return ({ ...raw, tipo, valor, classe_id } as unknown) as Lancamento;
+        const cartao_id = raw['cartao_id'] as string | null ?? null;
+        const quitado = Boolean(raw['quitado']);
+        return ({ ...raw, tipo, valor, classe_id, cartao_id, quitado } as unknown) as Lancamento;
       });
 
       const despesas = lancamentos.filter(l => l.tipo === 'despesa');
@@ -130,7 +144,11 @@ export default function DashboardPage() {
       const despesasPorSubgrupo = Array.from(subgruposSoma.entries()).map(([subgrupo, valor]) => ({ subgrupo, valor }));
       const despesasPorClasse = Array.from(classesSoma.entries()).map(([classe, valor]) => ({ classe, valor })).sort((a, b) => b.valor - a.valor);
 
-      setData({ totalDespesas, totalReceitas, saldo: totalReceitas - totalDespesas, despesasPorSubgrupo, despesasPorClasse });
+      const totalQuitado = lancamentos.filter(l => l.quitado).reduce((sum, l) => sum + (l.valor || 0), 0);
+      const faturasCartao = despesas.filter(l => l.cartao_id).reduce((sum, l) => sum + (l.valor || 0), 0);
+      const percentComprometido = totalReceitas > 0 ? (totalDespesas / totalReceitas) * 100 : 0;
+
+      setData({ totalDespesas, totalReceitas, saldo: totalReceitas - totalDespesas, totalQuitado, faturasCartao, percentComprometido, despesasPorSubgrupo, despesasPorClasse });
     } catch (error) {
       captureException(error);
       // manter loading false e evitar crash
@@ -215,18 +233,33 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-red-500">
-            <h3 className="text-gray-600 text-sm font-medium mb-2">Total de Despesas</h3>
-            <p className="text-3xl font-bold text-red-600">{formatarMoeda(data?.totalDespesas || 0)}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <div className="p-6 rounded-xl shadow-md text-white" style={{ background: 'linear-gradient(135deg,#F4664A,#e05a40)' }}>
+            <h3 className="text-sm font-medium opacity-90 mb-2">💸 Total de Despesas</h3>
+            <p className="text-3xl font-bold">{formatarMoeda(data?.totalDespesas || 0)}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-green-500">
-            <h3 className="text-gray-600 text-sm font-medium mb-2">Total de Receitas</h3>
-            <p className="text-3xl font-bold text-green-600">{formatarMoeda(data?.totalReceitas || 0)}</p>
+          <div className="p-6 rounded-xl shadow-md text-white" style={{ background: 'linear-gradient(135deg,#5AD8A6,#3dc48e)' }}>
+            <h3 className="text-sm font-medium opacity-90 mb-2">💰 Total de Receitas</h3>
+            <p className="text-3xl font-bold">{formatarMoeda(data?.totalReceitas || 0)}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
-            <h3 className="text-gray-600 text-sm font-medium mb-2">Saldo</h3>
-            <p className={`text-3xl font-bold ${(data?.saldo || 0) >= 0 ? 'text-blue-600' : 'text-red-600'}`}>{formatarMoeda(data?.saldo || 0)}</p>
+          <div className="p-6 rounded-xl shadow-md text-white" style={{ background: (data?.saldo || 0) >= 0 ? 'linear-gradient(135deg,#5B8FF9,#3a72e8)' : 'linear-gradient(135deg,#F6903D,#e07a25)' }}>
+            <h3 className="text-sm font-medium opacity-90 mb-2">⚖️ Saldo</h3>
+            <p className="text-3xl font-bold">{formatarMoeda(data?.saldo || 0)}</p>
+          </div>
+          <div className="p-6 rounded-xl shadow-md text-white" style={{ background: 'linear-gradient(135deg,#9661BC,#7d4da8)' }}>
+            <h3 className="text-sm font-medium opacity-90 mb-2">✅ Total Quitado</h3>
+            <p className="text-3xl font-bold">{formatarMoeda(data?.totalQuitado || 0)}</p>
+          </div>
+          <div className="p-6 rounded-xl shadow-md text-white" style={{ background: 'linear-gradient(135deg,#5B8FF9,#3a72e8)' }}>
+            <h3 className="text-sm font-medium opacity-90 mb-2">💳 Faturas de Cartão</h3>
+            <p className="text-3xl font-bold">{formatarMoeda(data?.faturasCartao || 0)}</p>
+          </div>
+          <div className="p-6 rounded-xl shadow-md text-white" style={{ background: 'linear-gradient(135deg,#78D3F8,#4bbfe8)' }}>
+            <h3 className="text-sm font-medium opacity-90 mb-2">📊 % Comprometida</h3>
+            <p className="text-3xl font-bold">{valoresVisiveis ? `${(data?.percentComprometido || 0).toFixed(1)}%` : '••••'}</p>
+            <div className="mt-2 h-2 rounded-full bg-white bg-opacity-30">
+              <div className="h-2 rounded-full bg-white" style={{ width: `${Math.min(data?.percentComprometido || 0, 100)}%` }} />
+            </div>
           </div>
         </div>
 
