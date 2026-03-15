@@ -60,7 +60,7 @@
     </div>
 
     <!-- Cards de Resumo -->
-    <div class="grid grid-cols-4 mb-4">
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin-bottom:1rem;">
       <div class="stat-card" style="background: linear-gradient(135deg, #F4664A 0%, #e05a40 100%); color: white;">
         <div class="stat-title" style="color: rgba(255,255,255,0.9);">💸 Total Despesas</div>
         <div class="stat-value" style="color: white;" id="totalDespesas">R$ 0,00</div>
@@ -72,13 +72,26 @@
       </div>
 
       <div class="stat-card" id="saldoCard">
-        <div class="stat-title">📈 Saldo</div>
+        <div class="stat-title">⚖️ Saldo</div>
         <div class="stat-value" id="saldo">R$ 0,00</div>
       </div>
 
       <div class="stat-card" style="background: linear-gradient(135deg, #9661BC 0%, #7d4fa3 100%); color: white;">
+        <div class="stat-title" style="color: rgba(255,255,255,0.9);">✅ Total Quitado</div>
+        <div class="stat-value" style="color: white;" id="totalQuitado">R$ 0,00</div>
+      </div>
+
+      <div class="stat-card" style="background: linear-gradient(135deg, #5B8FF9 0%, #3a74e8 100%); color: white;">
         <div class="stat-title" style="color: rgba(255,255,255,0.9);">💳 Faturas de Cartão</div>
         <div class="stat-value" style="color: white;" id="totalCartao">R$ 0,00</div>
+      </div>
+
+      <div class="stat-card" style="background: linear-gradient(135deg, #78D3F8 0%, #4bbde8 100%); color: white;">
+        <div class="stat-title" style="color: rgba(255,255,255,0.9);">📊 % Comprometida</div>
+        <div class="stat-value" style="color: white;" id="percentComprometido">0%</div>
+        <div style="background:rgba(255,255,255,0.3);border-radius:99px;height:6px;margin-top:8px;overflow:hidden;">
+          <div id="barraComprometido" style="height:100%;border-radius:99px;background:rgba(255,255,255,0.9);width:0%;transition:width .6s ease;"></div>
+        </div>
       </div>
     </div>
 
@@ -241,10 +254,15 @@
           classesSoma.set(nomeClasse, (classesSoma.get(nomeClasse) || 0) + valor);
         });
 
+        const totalQuitado = (lancamentos || []).filter(l => l.quitado).reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
+        const comprPct = totalReceitas > 0 ? Math.round((totalDespesas / totalReceitas) * 100) : 0;
+
         dashboardData = {
           totalDespesas,
           totalReceitas,
           totalCartao,
+          totalQuitado,
+          comprPct,
           saldo,
           cartoesLista: cartoes.sort((a, b) => new Date(b.data) - new Date(a.data)).slice(0, 15),
           despesasPorSubgrupo: Array.from(subgruposSoma.entries()).map(([subgrupo, valor]) => ({ subgrupo, valor })),
@@ -270,6 +288,10 @@
       document.getElementById('totalReceitas').textContent = formatarMoeda(dashboardData.totalReceitas);
       document.getElementById('saldo').textContent = formatarMoeda(dashboardData.saldo);
       document.getElementById('totalCartao').textContent = formatarMoeda(dashboardData.totalCartao);
+      document.getElementById('totalQuitado').textContent = formatarMoeda(dashboardData.totalQuitado);
+      const pct = dashboardData.comprPct || 0;
+      document.getElementById('percentComprometido').textContent = valoresVisiveis ? pct + '%' : '••••';
+      document.getElementById('barraComprometido').style.width = Math.min(pct, 100) + '%';
 
       const saldoCard = document.getElementById('saldoCard');
       const saldoElement = document.getElementById('saldo');
@@ -347,7 +369,6 @@
         '#5B8FF9','#5AD8A6','#F4664A','#FAAD14','#9661BC',
         '#78D3F8','#F6BD16','#61DDAA','#F6903D','#008685',
         '#65789B','#E8684A','#6DC8EC','#9867BC','#FF9D4D'
-      ];
       ];
 
       // Destruir gráficos existentes antes de criar novos
