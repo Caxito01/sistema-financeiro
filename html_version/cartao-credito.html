@@ -1175,7 +1175,7 @@
             position:"relative",animation:"sfSlideUp .22s ease",
             textAlign:"center"
           }} onClick={e=>e.stopPropagation()}>
-            <div style={{fontSize:36,marginBottom:16}}>ℹ️</div>
+            <div style={{fontSize:36,marginBottom:16}}>⚠️</div>
             <p style={{
               color:text,fontSize:14,lineHeight:1.7,
               margin:"0 0 24px",whiteSpace:"pre-line"
@@ -1504,22 +1504,24 @@
                 try {
                   const supa = createSupabaseClient();
 
-                  const { data: { session: _s }, error: sessionErr } = await supa.auth.getSession();
-                  if (sessionErr || !_s?.user) { showMsg("Sessão expirada. Faça login novamente.", "login.html"); setSyncing(false); return; }
-                  const user = _s.user;
+                  const { data: { user }, error: userErr } = await supa.auth.getUser();
+                  if (userErr || !user) { showMsg("Sessão expirada. Faça login novamente.", "login.html"); setSyncing(false); return; }
 
                   const { data: dbCards, error: cardsErr } = await supa.from("cartoes").select("*")
                     .eq("user_id", user.id).order("created_at", { ascending: true });
 
+                  console.log("[Cartoes] userId:", user.id, "dbCards:", dbCards, "err:", cardsErr);
+
                   if (cardsErr) { showMsg("Erro ao buscar cartões: " + cardsErr.message); setSyncing(false); return; }
 
-                  // Nenhum cartão no Supabase → tenta migrar do localStorage
+                  // Filtragem client-side: inclui NULL e true, exclui somente false
                   let finalCards = (dbCards || []).filter(c => c.ativo !== false);
+                  console.log("[Cartoes] raw:", (dbCards||[]).length, "filtered:", finalCards.length);
                   if (finalCards.length === 0) {
                     const localCards = (() => { try { return JSON.parse(localStorage.getItem("sf_cards") || "[]"); } catch { return []; } })();
                     if (localCards.length === 0) {
                       setSyncing(false);
-                      showMsg("Nenhum cartão encontrado.\nVerifique se está logado com a conta correta ou adicione seus cartões com o botão '+ Adicionar Cartão'.");
+                      showMsg(`Nenhum cartão encontrado.\n\nID do usuário: ${user.id.substring(0,8)}...\nRegistros retornados: ${(dbCards||[]).length}\n\nVerifique no Supabase se o user_id dos cartões corresponde ao seu usuário.`);
                       return;
                     }
                     const toInsert = localCards.map(c => ({
