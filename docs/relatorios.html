@@ -361,7 +361,7 @@
               )
             )
           `)
-          .or('tipo.eq.CARTAO,tipo.eq.DESPESA')
+          .eq('tipo', 'CARTAO')
           .not('classe_id', 'is', null);
 
         todosLancamentosCartao = (data || []).filter(l => l.classe?.subgrupo?.grupo);
@@ -385,9 +385,8 @@
         return anoOk && mesOk;
       });
 
-      // Apenas CARTAO ou se não tiver CARTAO, todo tipo com classe
-      const cartao = filtrados.filter(l => l.tipo === 'CARTAO');
-      if (cartao.length > 0) filtrados = cartao;
+      // Apenas lançamentos de CARTAO
+      filtrados = filtrados.filter(l => l.tipo === 'CARTAO');
 
       document.getElementById('sankeyLoading').style.display = 'none';
 
