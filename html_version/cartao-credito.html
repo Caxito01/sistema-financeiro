@@ -1212,7 +1212,7 @@
               .from("cartoes")
               .select("*")
               .eq("user_id", userId)
-              .eq("ativo", true)
+              .or("ativo.is.null,ativo.eq.true")
               .order("created_at", { ascending: true });
             if (cardsErr) throw cardsErr;
 
@@ -1465,7 +1465,7 @@
                   const user = _s.user;
 
                   const { data: dbCards, error: cardsErr } = await supa.from("cartoes").select("*")
-                    .eq("user_id", user.id).eq("ativo", true).order("created_at", { ascending: true });
+                    .eq("user_id", user.id).or("ativo.is.null,ativo.eq.true").order("created_at", { ascending: true });
 
                   if (cardsErr) { alert("Erro ao buscar cartões: " + cardsErr.message); setSyncing(false); return; }
 
