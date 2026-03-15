@@ -61,12 +61,12 @@
 
     <!-- Cards de Resumo -->
     <div class="grid grid-cols-4 mb-4">
-      <div class="stat-card" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white;">
+      <div class="stat-card" style="background: linear-gradient(135deg, #F4664A 0%, #e05a40 100%); color: white;">
         <div class="stat-title" style="color: rgba(255,255,255,0.9);">💸 Total Despesas</div>
         <div class="stat-value" style="color: white;" id="totalDespesas">R$ 0,00</div>
       </div>
 
-      <div class="stat-card" style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white;">
+      <div class="stat-card" style="background: linear-gradient(135deg, #5AD8A6 0%, #3dc48e 100%); color: white;">
         <div class="stat-title" style="color: rgba(255,255,255,0.9);">💰 Total Receitas</div>
         <div class="stat-value" style="color: white;" id="totalReceitas">R$ 0,00</div>
       </div>
@@ -76,7 +76,7 @@
         <div class="stat-value" id="saldo">R$ 0,00</div>
       </div>
 
-      <div class="stat-card" style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); color: white;">
+      <div class="stat-card" style="background: linear-gradient(135deg, #9661BC 0%, #7d4fa3 100%); color: white;">
         <div class="stat-title" style="color: rgba(255,255,255,0.9);">💳 Faturas de Cartão</div>
         <div class="stat-value" style="color: white;" id="totalCartao">R$ 0,00</div>
       </div>
@@ -87,10 +87,10 @@
       <button onclick="window.location.href='lancamentos.html'" class="btn btn-primary" style="padding: 1rem;">
         ➕ Novo Lançamento
       </button>
-      <button onclick="window.location.href='lista-lancamentos.html'" class="btn" style="background: #8b5cf6; color: white; padding: 1rem;">
+      <button onclick="window.location.href='lista-lancamentos.html'" class="btn" style="background: #9661BC; color: white; padding: 1rem;">
         📋 Ver Lançamentos
       </button>
-      <button onclick="window.location.href='relatorios.html'" class="btn" style="background: #06b6d4; color: white; padding: 1rem;">
+      <button onclick="window.location.href='relatorios.html'" class="btn" style="background: #5B8FF9; color: white; padding: 1rem;">
         📊 Relatórios
       </button>
       <button onclick="window.location.href='configuracoes.html'" class="btn btn-secondary" style="padding: 1rem;">
@@ -275,11 +275,11 @@
       const saldoElement = document.getElementById('saldo');
       
       if (dashboardData.saldo >= 0) {
-        saldoCard.style.background = 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)';
+        saldoCard.style.background = 'linear-gradient(135deg, #5B8FF9 0%, #3a74e8 100%)';
         saldoCard.style.color = 'white';
         saldoElement.style.color = 'white';
       } else {
-        saldoCard.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+        saldoCard.style.background = 'linear-gradient(135deg, #F6903D 0%, #e07828 100%)';
         saldoCard.style.color = 'white';
         saldoElement.style.color = 'white';
       }
@@ -344,10 +344,10 @@
       }
 
       const cores = [
-        '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
-        '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9',
-        '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef',
-        '#ec4899', '#f43f5e'
+        '#5B8FF9','#5AD8A6','#F4664A','#FAAD14','#9661BC',
+        '#78D3F8','#F6BD16','#61DDAA','#F6903D','#008685',
+        '#65789B','#E8684A','#6DC8EC','#9867BC','#FF9D4D'
+      ];
       ];
 
       // Destruir gráficos existentes antes de criar novos
@@ -407,7 +407,7 @@
           datasets: [{
             label: 'Valor (R$)',
             data: dashboardData.despesasPorClasse.map(c => c.valor),
-            backgroundColor: '#3b82f6',
+            backgroundColor: '#5B8FF9',
           }]
         },
         options: {
