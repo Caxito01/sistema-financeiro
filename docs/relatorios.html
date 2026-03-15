@@ -549,9 +549,9 @@
           .attr('x1', d.source.x1).attr('y1', (d.source.y0 + d.source.y1) / 2)
           .attr('x2', d.target.x0).attr('y2', (d.target.y0 + d.target.y1) / 2);
         grad.append('stop').attr('offset', '0%')
-          .attr('stop-color', srcColor).attr('stop-opacity', 0.72);
+          .attr('stop-color', srcColor).attr('stop-opacity', 0.88);
         grad.append('stop').attr('offset', '100%')
-          .attr('stop-color', tgtColor).attr('stop-opacity', 0.72);
+          .attr('stop-color', tgtColor).attr('stop-opacity', 0.88);
       });
 
       // Links
