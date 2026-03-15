@@ -513,7 +513,7 @@
 
       const sankeyGen = d3.sankey()
         .nodeId(d => d.index)
-        .nodeWidth(22)
+        .nodeWidth(6)
         .nodePadding(14)
         .extent([[24, 16], [W - 24, H - 16]]);
 
@@ -549,9 +549,9 @@
           .attr('x1', d.source.x1).attr('y1', (d.source.y0 + d.source.y1) / 2)
           .attr('x2', d.target.x0).attr('y2', (d.target.y0 + d.target.y1) / 2);
         grad.append('stop').attr('offset', '0%')
-          .attr('stop-color', srcColor).attr('stop-opacity', 0.88);
+          .attr('stop-color', srcColor).attr('stop-opacity', 0.18);
         grad.append('stop').attr('offset', '100%')
-          .attr('stop-color', tgtColor).attr('stop-opacity', 0.88);
+          .attr('stop-color', tgtColor).attr('stop-opacity', 0.18);
       });
 
       // Links
@@ -564,7 +564,7 @@
         .attr('stroke', 'none')
         .style('cursor', 'default')
         .on('mouseover', function(e, d) {
-          d3.select(this).attr('fill-opacity', 0.6);
+          d3.select(this).attr('fill-opacity', 0.35);
           const srcName = nodesArr[d.source.index].name;
           const tgtName = nodesArr[d.target.index].name;
           const pct = totalGeral > 0 ? ((d.value / totalGeral) * 100).toFixed(1) : 0;
