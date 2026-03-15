@@ -561,16 +561,16 @@
       const anoAtual = new Date().getFullYear();
       function prioridade(l) {
         const ano = new Date(l.data).getFullYear();
-        if (l.quitado) return 2;          // quitados — ústimo
-        if (ano > anoAtual) return 1;     // futuros — meio
-        return 0;                         // ativos ano atual — primeiro
+        if (l.quitado)       return 3;  // quitados — ústimo
+        if (ano === anoAtual) return 0;  // ano atual — primeiro
+        if (ano > anoAtual)  return 1;  // futuros — segundo
+        return 2;                        // anos anteriores não quitados — terceiro
       }
       const pa = prioridade(a), pb = prioridade(b);
       if (pa !== pb) return pa - pb;
-      // Dentro do mesmo grupo, ordenar por data
       const da = new Date(a.data), db = new Date(b.data);
-      if (pa === 1) return da - db;       // futuros: crescente
-      return db - da;                     // ativos e quitados: decrescente
+      if (pa === 1) return da - db;  // futuros: crescente (mais próximo primeiro)
+      return db - da;                 // demais: decrescente (mais recente primeiro)
     }
 
     function renderizarTabela(lancamentos) {
