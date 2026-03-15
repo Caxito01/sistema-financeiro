@@ -185,9 +185,10 @@
 
     // ─── PALETA DE CORES ─────────────────────────────────────
     const PALETTE = [
-      '#6366f1','#f59e0b','#10b981','#ef4444','#3b82f6',
-      '#8b5cf6','#ec4899','#14b8a6','#f97316','#22c55e',
-      '#a855f7','#06b6d4','#e11d48','#84cc16','#0ea5e9'
+      '#5B8FF9','#FF7D00','#5AD8A6','#5D7092',
+      '#F4664A','#9661BC','#F6BD16','#78D3F8',
+      '#61DDAA','#65789B','#F6903D','#008685',
+      '#E8684A','#6DC8EC','#9867BC'
     ];
 
     function fmt(v) {
@@ -541,13 +542,12 @@
         .data(links)
         .join('path')
         .attr('d', d3.sankeyLinkHorizontal())
-        .attr('stroke', d => getColor(nodesArr[d.source.index]))
-        .attr('stroke-width', d => Math.max(1, d.width))
-        .attr('fill', 'none')
-        .attr('stroke-opacity', 0.38)
+        .attr('fill', d => getColor(nodesArr[d.source.index]))
+        .attr('fill-opacity', 0.28)
+        .attr('stroke', 'none')
         .style('cursor', 'default')
         .on('mouseover', function(e, d) {
-          d3.select(this).attr('stroke-opacity', 0.65);
+          d3.select(this).attr('fill-opacity', 0.55);
           const srcName = nodesArr[d.source.index].name;
           const tgtName = nodesArr[d.target.index].name;
           const pct = totalGeral > 0 ? ((d.value / totalGeral) * 100).toFixed(1) : 0;
@@ -558,7 +558,7 @@
           `);
         })
         .on('mousemove', moveTip)
-        .on('mouseout', function() { d3.select(this).attr('stroke-opacity', 0.38); hideTip(); });
+        .on('mouseout', function() { d3.select(this).attr('fill-opacity', 0.28); hideTip(); });
 
       // Nós
       const node = svg.append('g').selectAll('g')
