@@ -554,11 +554,27 @@
           .attr('stop-color', tgtColor).attr('stop-opacity', 0.45);
       });
 
+      // Ribbon path fechado: borda superior (Bezier) + direita + borda inferior (Bezier inv) + esquerda
+      function ribbonPath(d) {
+        const x0 = d.source.x1, x1 = d.target.x0;
+        const midX = (x0 + x1) / 2;
+        const w = d.width;
+        const yt0 = d.y0 - w / 2, yb0 = d.y0 + w / 2; // topo/base na origem
+        const yt1 = d.y1 - w / 2, yb1 = d.y1 + w / 2; // topo/base no destino
+        return [
+          `M${x0},${yt0}`,
+          `C${midX},${yt0} ${midX},${yt1} ${x1},${yt1}`,
+          `L${x1},${yb1}`,
+          `C${midX},${yb1} ${midX},${yb0} ${x0},${yb0}`,
+          `Z`
+        ].join(' ');
+      }
+
       // Links
       svg.append('g').selectAll('path')
         .data(links)
         .join('path')
-        .attr('d', d3.sankeyLinkHorizontal())
+        .attr('d', ribbonPath)
         .attr('fill', (d, i) => `url(#sg${i})`)
         .attr('fill-opacity', 1)
         .attr('stroke', 'none')
