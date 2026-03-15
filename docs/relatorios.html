@@ -185,10 +185,10 @@
 
     // ─── PALETA DE CORES ─────────────────────────────────────
     const PALETTE = [
-      '#5B8FF9','#FF7D00','#5AD8A6','#5D7092',
-      '#F4664A','#9661BC','#F6BD16','#78D3F8',
-      '#61DDAA','#65789B','#F6903D','#008685',
-      '#E8684A','#6DC8EC','#9867BC'
+      '#3b82f6','#f97316','#22c55e','#a855f7',
+      '#ec4899','#14b8a6','#eab308','#ef4444',
+      '#06b6d4','#8b5cf6','#84cc16','#f43f5e',
+      '#0ea5e9','#10b981','#fb923c'
     ];
 
     function fmt(v) {
@@ -478,17 +478,19 @@
         </div>
       `;
 
-      // ─── Cores por grupo ──────────────────────────────────
-      const grupoColors = {};
-      grupos.forEach((g, i) => { grupoColors[g.id] = PALETTE[i % PALETTE.length]; });
+      // ─── Cores independentes por nível ────────────────────
+      const grupoColors = {}, subgrupoColors = {}, classeColors = {};
+      const subgruposArr = [...nodeMap.values()].filter(n => n.tipo === 'subgrupo');
+      const classesArr   = [...nodeMap.values()].filter(n => n.tipo === 'classe');
+      grupos.forEach((g, i)      => { grupoColors[g.id]   = PALETTE[i % PALETTE.length]; });
+      subgruposArr.forEach((s, i) => { subgrupoColors[s.id] = PALETTE[(grupos.length + i) % PALETTE.length]; });
+      classesArr.forEach((c, i)   => { classeColors[c.id]   = PALETTE[(grupos.length + subgruposArr.length + i) % PALETTE.length]; });
 
       function getColor(node) {
-        if (node.tipo === 'root') return '#64748b';
-        if (node.tipo === 'grupo') return grupoColors[node.id.split(':')[1]] || PALETTE[0];
-        // subgrupo ou classe: herdar do grupo pai via link
-        // procuramos o link que aponta para esse nó
-        const parentLink = [...linkMap.values()].find(lk => lk.target === node.id);
-        if (parentLink) return getColor(nodeMap.get(parentLink.source));
+        if (node.tipo === 'root')     return '#64748b';
+        if (node.tipo === 'grupo')    return grupoColors[node.id]    || PALETTE[0];
+        if (node.tipo === 'subgrupo') return subgrupoColors[node.id] || PALETTE[1];
+        if (node.tipo === 'classe')   return classeColors[node.id]   || PALETTE[2];
         return '#94a3b8';
       }
 
@@ -536,17 +538,33 @@
       }
       function hideTip() { tooltip.style.opacity = '0'; }
 
+      // ─── Gradientes SVG por link ──────────────────────────
+      const defs = svg.append('defs');
+      links.forEach((d, i) => {
+        const srcColor = getColor(nodesArr[d.source.index]);
+        const tgtColor = getColor(nodesArr[d.target.index]);
+        const grad = defs.append('linearGradient')
+          .attr('id', `sg${i}`)
+          .attr('gradientUnits', 'userSpaceOnUse')
+          .attr('x1', d.source.x1).attr('y1', (d.source.y0 + d.source.y1) / 2)
+          .attr('x2', d.target.x0).attr('y2', (d.target.y0 + d.target.y1) / 2);
+        grad.append('stop').attr('offset', '0%')
+          .attr('stop-color', srcColor).attr('stop-opacity', 0.72);
+        grad.append('stop').attr('offset', '100%')
+          .attr('stop-color', tgtColor).attr('stop-opacity', 0.72);
+      });
+
       // Links
       svg.append('g').selectAll('path')
         .data(links)
         .join('path')
         .attr('d', d3.sankeyLinkHorizontal())
-        .attr('fill', d => getColor(nodesArr[d.source.index]))
-        .attr('fill-opacity', 0.28)
+        .attr('fill', (d, i) => `url(#sg${i})`)
+        .attr('fill-opacity', 1)
         .attr('stroke', 'none')
         .style('cursor', 'default')
         .on('mouseover', function(e, d) {
-          d3.select(this).attr('fill-opacity', 0.55);
+          d3.select(this).attr('fill-opacity', 0.6);
           const srcName = nodesArr[d.source.index].name;
           const tgtName = nodesArr[d.target.index].name;
           const pct = totalGeral > 0 ? ((d.value / totalGeral) * 100).toFixed(1) : 0;
@@ -557,7 +575,7 @@
           `);
         })
         .on('mousemove', moveTip)
-        .on('mouseout', function() { d3.select(this).attr('fill-opacity', 0.28); hideTip(); });
+        .on('mouseout', function() { d3.select(this).attr('fill-opacity', 1); hideTip(); });
 
       // Nós
       const node = svg.append('g').selectAll('g')
