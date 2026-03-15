@@ -366,12 +366,11 @@
               )
             )
           `)
-          .eq('tipo', 'CARTAO')
-          .not('classe_id', 'is', null);
+          .eq('tipo', 'CARTAO');
 
-        todosLancamentosCartao = (data || []).filter(l => l.classe?.subgrupo?.grupo);
+        todosLancamentosCartao = (data || []);
 
-        // Popular select de cartões
+        // Popular select de cartões (todos, mesmo sem categoria)
         const cartaoSel = document.getElementById('sankeyCartao');
         const seenIds = new Set();
         todosCartoes = [];
@@ -454,17 +453,25 @@
         if (val <= 0) return;
         totalGeral += val;
 
-        const g = l.classe.subgrupo.grupo;
-        const sg = l.classe.subgrupo;
+        // Grupo / Subgrupo / Classe — usa fallback para sem categoria
+        const g  = l.classe?.subgrupo?.grupo;
+        const sg = l.classe?.subgrupo;
         const cl = l.classe;
 
-        const gKey  = nodeKey('grupo',    g.id,  g.nome);
-        const sgKey = nodeKey('subgrupo', sg.id, sg.nome);
-        const clKey = nodeKey('classe',   cl.id, cl.descricao || cl.codigo);
+        const gNome  = g?.nome  || 'DESPESAS';
+        const sgNome = sg?.nome || '(Sem subgrupo)';
+        const clNome = cl?.descricao || cl?.codigo || '(Sem classe definida)';
+        const gId    = g?.id   || '__sem_grupo';
+        const sgId   = sg?.id  || '__sem_subgrupo';
+        const clId   = cl?.id  || '__sem_classe';
 
-        getNode('grupo',    g.id,  g.nome);
-        getNode('subgrupo', sg.id, sg.nome);
-        getNode('classe',   cl.id, cl.descricao || cl.codigo);
+        const gKey  = nodeKey('grupo',    gId,  gNome);
+        const sgKey = nodeKey('subgrupo', sgId, sgNome);
+        const clKey = nodeKey('classe',   clId, clNome);
+
+        getNode('grupo',    gId,  gNome);
+        getNode('subgrupo', sgId, sgNome);
+        getNode('classe',   clId, clNome);
 
         nodeMap.get(rootKey).valor += val;
         nodeMap.get(gKey).valor   += val;
