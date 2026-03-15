@@ -1509,17 +1509,17 @@
                   const user = _s.user;
 
                   const { data: dbCards, error: cardsErr } = await supa.from("cartoes").select("*")
-                    .eq("user_id", user.id).or("ativo.is.null,ativo.eq.true").order("created_at", { ascending: true });
+                    .eq("user_id", user.id).order("created_at", { ascending: true });
 
-                  if (cardsErr) { alert("Erro ao buscar cartões: " + cardsErr.message); setSyncing(false); return; }
+                  if (cardsErr) { showMsg("Erro ao buscar cartões: " + cardsErr.message); setSyncing(false); return; }
 
                   // Nenhum cartão no Supabase → tenta migrar do localStorage
-                  let finalCards = dbCards;
-                  if (!finalCards || finalCards.length === 0) {
+                  let finalCards = (dbCards || []).filter(c => c.ativo !== false);
+                  if (finalCards.length === 0) {
                     const localCards = (() => { try { return JSON.parse(localStorage.getItem("sf_cards") || "[]"); } catch { return []; } })();
                     if (localCards.length === 0) {
                       setSyncing(false);
-                      alert("Nenhum cartão encontrado no Supabase. Se você tem cartões cadastrados, verifique se está logado com a conta correta. Caso contrário, adicione seus cartões com o botão '+ Adicionar Cartão'.");
+                      showMsg("Nenhum cartão encontrado.\nVerifique se está logado com a conta correta ou adicione seus cartões com o botão '+ Adicionar Cartão'.");
                       return;
                     }
                     const toInsert = localCards.map(c => ({
@@ -1530,7 +1530,7 @@
                       vencimento_ano: c.dueDate ? new Date(c.dueDate).getFullYear() : null,
                     }));
                     const { data: inserted, error: insErr } = await supa.from("cartoes").insert(toInsert).select();
-                    if (insErr || !inserted) { alert("Erro ao salvar cartões: " + (insErr?.message || "erro desconhecido")); setSyncing(false); return; }
+                    if (insErr || !inserted) { showMsg("Erro ao salvar cartões: " + (insErr?.message || "erro desconhecido")); setSyncing(false); return; }
                     finalCards = inserted;
                   }
 
