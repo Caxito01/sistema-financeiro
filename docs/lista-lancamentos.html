@@ -572,6 +572,8 @@
       if (pa === 1) return da - db;       // futuros: crescente
       return db - da;                     // ativos e quitados: decrescente
     }
+
+    function renderizarTabela(lancamentos) {
       const tbody = document.getElementById('tbody');
       const tabela = document.getElementById('tabelaLancamentos');
       const loading = document.getElementById('loading');
