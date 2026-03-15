@@ -1276,16 +1276,18 @@
       async function loadEntriesFromSupabase(cardsList) {
         const theCards = cardsList || cards;
         const cardIds = theCards.map(c => c.id).filter(Boolean);
-        if (cardIds.length === 0) return 0;
         setSyncing(true);
         try {
           const supa = createSupabaseClient();
-          const { data: rows, error } = await supa
+          let q = supa
             .from("lancamentos")
             .select("id, descricao_complementar, valor, data, classe_id, cartao_id, ofx_fitid, group_id, parcela_numero, total_parcelas")
-            .in("cartao_id", cardIds)
             .eq("tipo", "CARTAO")
             .order("data", { ascending: true });
+          if (cardIds.length > 0) {
+            q = q.in("cartao_id", cardIds);
+          }
+          const { data: rows, error } = await q;
           if (error) throw error;
           if (!rows || rows.length === 0) { setSyncing(false); return 0; }
           const cardMap = Object.fromEntries(theCards.map(c => [c.id, c]));
@@ -1469,7 +1471,15 @@
                   let finalCards = dbCards;
                   if (!finalCards || finalCards.length === 0) {
                     const localCards = (() => { try { return JSON.parse(localStorage.getItem("sf_cards") || "[]"); } catch { return []; } })();
-                    if (localCards.length === 0) { alert("Nenhum cartão encontrado no servidor nem localmente.\nAdicione um cartão primeiro."); setSyncing(false); return; }
+                    if (localCards.length === 0) {
+                      // Sem cartões cadastrados — carrega lançamentos direto do Supabase via RLS
+                      setCards([]);
+                      localStorage.setItem("sf_cards", "[]");
+                      await loadEntriesFromSupabase([]);
+                      setStep("main");
+                      setSyncing(false);
+                      return;
+                    }
                     const toInsert = localCards.map(c => ({
                       user_id: user.id, alias: c.alias, bandeira: c.brand || null,
                       numero_masked: c.number || null, limite: c.limit || 0,
@@ -1492,10 +1502,10 @@
                   await loadEntriesFromSupabase(mapped);
                   setStep("main");
                 } catch (err) {
-                  console.error(err); alert("Erro ao carregar do servidor: " + err.message);
+                  console.error(err); alert("Erro ao carregar lançamentos: " + err.message);
                 } finally { setSyncing(false); }
               }}>
-              {syncing ? "⏳ Carregando..." : "☁️ Carregar do Servidor"}
+              {syncing ? "⏳ Carregando..." : "☁️ Carregar Lançamentos"}
             </button>
 
             {cards.length > 0 && (
