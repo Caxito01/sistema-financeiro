@@ -135,6 +135,9 @@
           <div style="font-size:.78rem; color:var(--text2);">Fluxo de despesas categorizadas no cartão de crédito</div>
         </div>
         <div class="sankey-filters">
+          <select id="sankeyCartao" onchange="renderizarSankey()">
+            <option value="">Todos os cartões</option>
+          </select>
           <select id="sankeyMes" onchange="renderizarSankey()">
             <option value="0">Todos os meses</option>
             <option value="1">Janeiro</option>
@@ -177,6 +180,7 @@
     let chartMensal = null;
     let chartCategorias = null;
     let todosLancamentosCartao = [];
+    let todosCartoes = [];
 
     // ─── MESES / ANO ─────────────────────────────────────────
     const MESES_NOME = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -352,7 +356,8 @@
         const { data } = await supabase
           .from('lancamentos')
           .select(`
-            id, valor, data, tipo,
+            id, valor, data, tipo, cartao_id,
+            cartao:cartoes(id, alias),
             classe:classes(
               id, codigo, descricao,
               subgrupo:subgrupos(
@@ -365,6 +370,26 @@
           .not('classe_id', 'is', null);
 
         todosLancamentosCartao = (data || []).filter(l => l.classe?.subgrupo?.grupo);
+
+        // Popular select de cartões
+        const cartaoSel = document.getElementById('sankeyCartao');
+        const seenIds = new Set();
+        todosCartoes = [];
+        todosLancamentosCartao.forEach(l => {
+          if (l.cartao_id && !seenIds.has(l.cartao_id)) {
+            seenIds.add(l.cartao_id);
+            todosCartoes.push({ id: l.cartao_id, alias: l.cartao?.alias || l.cartao_id });
+          }
+        });
+        // Limpar opções antigas (exceto a primeira)
+        while (cartaoSel.options.length > 1) cartaoSel.remove(1);
+        todosCartoes.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.alias;
+          cartaoSel.appendChild(opt);
+        });
+
         renderizarSankey();
       } catch (err) {
         console.error('Erro ao carregar sankey:', err);
@@ -376,13 +401,15 @@
     function renderizarSankey() {
       const mesSel = parseInt(document.getElementById('sankeyMes').value);
       const anoSel = parseInt(document.getElementById('sankeyAno').value);
+      const cartaoSel = document.getElementById('sankeyCartao').value;
 
       // Filtrar
       let filtrados = todosLancamentosCartao.filter(l => {
         const d = new Date(l.data);
         const anoOk = d.getFullYear() === anoSel;
         const mesOk = mesSel === 0 || (d.getMonth() + 1) === mesSel;
-        return anoOk && mesOk;
+        const cartaoOk = !cartaoSel || l.cartao_id === cartaoSel;
+        return anoOk && mesOk && cartaoOk;
       });
 
       // Apenas lançamentos de CARTAO
