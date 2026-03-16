@@ -1280,11 +1280,14 @@
               // Carrega lançamentos e fitids do Supabase
               if (!cancelled) await loadEntriesFromSupabase(mapped);
             } else {
-              // Supabase vazio → migra automaticamente do localStorage
+              // Supabase vazio → limpa cache local e vai para setup
+              // (evita recriar cartões que o usuário deletou intencionalmente)
               const localCards = (() => {
                 try { return JSON.parse(localStorage.getItem("sf_cards") || "[]"); } catch { return []; }
               })();
-              if (localCards.length > 0) {
+              // Só migra se os cartões locais nunca tiveram UUID do Supabase (primeira vez)
+              const isFirstSync = localCards.length > 0 && localCards.every(c => !c.id || c.id.length < 30);
+              if (isFirstSync) {
                 const toInsert = localCards.map(c => ({
                   user_id: userId,
                   alias: c.alias,
@@ -1309,6 +1312,12 @@
                   localStorage.setItem("sf_cards", JSON.stringify(mapped));
                   if (!cancelled) { setStep("main"); await loadEntriesFromSupabase(mapped); }
                 }
+              } else {
+                // Cartões locais já tinham UUID → foram deletados do banco intencionalmente
+                localStorage.removeItem("sf_cards");
+                localStorage.removeItem("sf_entries");
+                localStorage.removeItem("sf_fitids");
+                if (!cancelled) { setCards([]); setStep("setup"); }
               }
             }
           } catch (err) {
