@@ -558,19 +558,18 @@
     }
 
     function ordenacaoPersonalizada(a, b) {
-      const anoAtual = new Date().getFullYear();
+      const hoje = new Date();
+      hoje.setHours(23, 59, 59, 999);
       function prioridade(l) {
-        const ano = new Date(l.data).getFullYear();
-        if (l.quitado)       return 3;  // quitados — ústimo
-        if (ano === anoAtual) return 0;  // ano atual — primeiro
-        if (ano > anoAtual)  return 1;  // futuros — segundo
-        return 2;                        // anos anteriores não quitados — terceiro
+        if (l.quitado)             return 2;  // quitados — ústimo
+        if (new Date(l.data) <= hoje) return 0;  // hoje ou passado — primeiro
+        return 1;                               // qualquer data futura — segundo
       }
       const pa = prioridade(a), pb = prioridade(b);
       if (pa !== pb) return pa - pb;
       const da = new Date(a.data), db = new Date(b.data);
       if (pa === 1) return da - db;  // futuros: crescente (mais próximo primeiro)
-      return db - da;                 // demais: decrescente (mais recente primeiro)
+      return db - da;                 // passados/quitados: decrescente (mais recente primeiro)
     }
 
     function renderizarTabela(lancamentos) {
