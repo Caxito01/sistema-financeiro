@@ -2,9 +2,13 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
+import {
+  AreaChart, Area, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from 'recharts';
 
 export default function RelatoriosPage() {
   const router = useRouter();
@@ -278,6 +282,45 @@ export default function RelatoriosPage() {
     }, 0);
   }, 0);
 
+  // --- Chart data ---
+  const fluxoMensalChart = useMemo(() => {
+    const meses: Record<string, { mes: string; receitas: number; despesas: number }> = {};
+    relatorio.forEach((grupo: any) => {
+      Object.values(grupo.subgrupos).forEach((sub: any) => {
+        Object.values(sub.classes).forEach((cls: any) => {
+          cls.lancamentos.forEach((l: any) => {
+            if (!l.data) return;
+            const key = l.data.slice(0, 7);
+            if (!meses[key]) meses[key] = { mes: key, receitas: 0, despesas: 0 };
+            const v = parseFloat(l.valor);
+            if (l.tipo === 'RECEITA') meses[key].receitas += v;
+            else meses[key].despesas += v;
+          });
+        });
+      });
+    });
+    return Object.values(meses).sort((a, b) => a.mes.localeCompare(b.mes)).slice(-12);
+  }, [relatorio]);
+
+  const despesasPorSubgrupoChart = useMemo(() => {
+    const agg: Record<string, number> = {};
+    relatorio.forEach((grupo: any) => {
+      Object.values(grupo.subgrupos).forEach((sub: any) => {
+        const nome = (sub as any).nome;
+        const val = Object.values(sub.classes).reduce((s: number, cls: any) => {
+          return s + cls.lancamentos.filter((l: any) => l.tipo === 'DESPESA').reduce((a: number, l: any) => a + parseFloat(l.valor), 0);
+        }, 0);
+        if (val > 0) agg[nome] = (agg[nome] || 0) + val;
+      });
+    });
+    return Object.entries(agg)
+      .map(([subgrupo, valor]) => ({ subgrupo, valor }))
+      .sort((a, b) => b.valor - a.valor)
+      .slice(0, 10);
+  }, [relatorio]);
+
+  const CHART_COLORS = ['#ef4444','#f97316','#eab308','#84cc16','#22c55e','#14b8a6','#3b82f6','#8b5cf6','#ec4899','#6b7280'];
+
   return (
     <div className="min-h-screen bg-white p-8">
       <div className="max-w-7xl mx-auto">
@@ -466,6 +509,67 @@ export default function RelatoriosPage() {
             </div>
           </div>
         </div>
+
+        {/* Charts */}
+        {relatorio.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {/* Evolução Mensal */}
+            <div className="bg-white rounded-lg shadow-md p-5">
+              <h2 className="text-lg font-bold text-gray-800 mb-4">📈 Evolução Mensal</h2>
+              <div style={{ height: 260 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={fluxoMensalChart} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="gr" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="gd" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
+                    <YAxis tickFormatter={(v: number) => `R$${(v/1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
+                    <Tooltip formatter={(v: number) => `R$ ${v.toFixed(2)}`} />
+                    <Legend />
+                    <Area type="monotone" dataKey="receitas" name="Receitas" stroke="#22c55e" fill="url(#gr)" strokeWidth={2} />
+                    <Area type="monotone" dataKey="despesas" name="Despesas" stroke="#ef4444" fill="url(#gd)" strokeWidth={2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Despesas por Subgrupo (donut) */}
+            {despesasPorSubgrupoChart.length > 0 && (
+              <div className="bg-white rounded-lg shadow-md p-5">
+                <h2 className="text-lg font-bold text-gray-800 mb-4">🍩 Top 10 Despesas por Subgrupo</h2>
+                <div style={{ height: 260 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={despesasPorSubgrupoChart}
+                        cx="40%"
+                        cy="50%"
+                        outerRadius={100}
+                        innerRadius={45}
+                        dataKey="valor"
+                        nameKey="subgrupo"
+                      >
+                        {despesasPorSubgrupoChart.map((_: unknown, i: number) => (
+                          <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(v: number) => `R$ ${v.toFixed(2)}`} />
+                      <Legend layout="vertical" align="right" verticalAlign="middle" iconSize={10} wrapperStyle={{ fontSize: 11 }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Relatório Hierárquico */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">

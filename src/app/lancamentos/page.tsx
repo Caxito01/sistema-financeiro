@@ -28,6 +28,7 @@ export default function NovoLancamentoPage() {
   const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showModalAjuda, setShowModalAjuda] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
     async function loadGrupos() {
@@ -104,11 +105,11 @@ export default function NovoLancamentoPage() {
 
       if (error) throw error;
 
-      alert('Lançamento criado com sucesso!');
-      router.push('/lancamentos/lista');
+      setFeedback({ type: 'success', message: 'Lançamento criado com sucesso! Redirecionando...' });
+      setTimeout(() => router.push('/lancamentos/lista'), 1500);
     } catch (error) {
       console.error('Erro completo:', error);
-      alert('Erro ao criar lançamento: ' + (error as any).message);
+      setFeedback({ type: 'error', message: 'Erro ao criar lançamento: ' + (error as any).message });
     } finally {
       setLoading(false);
     }
@@ -127,6 +128,16 @@ export default function NovoLancamentoPage() {
             ❓ Ajuda
           </button>
         </div>
+        {feedback && (
+          <div className={`mb-4 px-4 py-3 rounded-lg text-sm font-medium ${
+            feedback.type === 'success'
+              ? 'bg-green-50 border border-green-300 text-green-800'
+              : 'bg-red-50 border border-red-300 text-red-800'
+          }`}>
+            {feedback.type === 'success' ? '✅ ' : '❌ '}{feedback.message}
+            <button onClick={() => setFeedback(null)} className="float-right font-bold ml-4 opacity-60 hover:opacity-100">✕</button>
+          </div>
+        )}
         <div className="bg-white rounded-lg shadow-md p-6">
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -156,6 +167,13 @@ export default function NovoLancamentoPage() {
                   }`}
                 >
                   📈 Receita
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push('/cartao-credito')}
+                  className="flex-1 py-3 px-4 rounded-lg font-medium bg-gray-100 text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition"
+                >
+                  💳 Cartão de Crédito
                 </button>
               </div>
             </div>

@@ -32,6 +32,18 @@ export default function ListaLancamentosPage() {
   
   const [editandoValor, setEditandoValor] = useState<any>(null);
   const [novoValor, setNovoValor] = useState('');
+
+  const [toasts, setToasts] = useState<{ id: number; type: 'success' | 'error' | 'info'; message: string }[]>([]);
+  const [confirmDialog, setConfirmDialog] = useState<{ show: boolean; message: string; onConfirm: () => void } | null>(null);
+  let _toastId = 0;
+  function addToast(type: 'success' | 'error' | 'info', message: string) {
+    const id = ++_toastId;
+    setToasts(prev => [...prev, { id, type, message }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500);
+  }
+  function askConfirm(message: string, onConfirm: () => void) {
+    setConfirmDialog({ show: true, message, onConfirm });
+  }
   
   const [showQuitadoModal, setShowQuitadoModal] = useState(false);
   const [lancamentoParaQuitar, setLancamentoParaQuitar] = useState<any>(null);
@@ -102,19 +114,16 @@ export default function ListaLancamentosPage() {
   }
 
   async function deletarLancamento(id: string | number) {
-    if (!confirm('Tem certeza que deseja deletar este lançamento?')) return;
-
-    const { error } = await supabase
-      .from('lancamentos')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      alert('Erro ao deletar: ' + error.message);
-    } else {
-      alert('Lançamento deletado com sucesso!');
-      loadLancamentos();
-    }
+    askConfirm('Tem certeza que deseja deletar este lançamento?', async () => {
+      setConfirmDialog(null);
+      const { error } = await supabase.from('lancamentos').delete().eq('id', id);
+      if (error) {
+        addToast('error', 'Erro ao deletar: ' + error.message);
+      } else {
+        addToast('success', 'Lançamento deletado com sucesso!');
+        loadLancamentos();
+      }
+    });
   }
 
   function abrirModalQuitacao(lancamento: any) {
@@ -133,7 +142,7 @@ export default function ListaLancamentosPage() {
 
   async function confirmarQuitacao() {
     if (!dadosQuitacao.forma_pagamento_id) {
-      alert('Por favor, selecione uma forma de pagamento');
+      addToast('error', 'Por favor, selecione uma forma de pagamento');
       return;
     }
 
@@ -147,31 +156,28 @@ export default function ListaLancamentosPage() {
       .eq('id', lancamentoParaQuitar.id);
 
     if (error) {
-      alert('Erro ao quitar lançamento: ' + error.message);
+      addToast('error', 'Erro ao quitar lançamento: ' + error.message);
     } else {
-      alert('Lançamento quitado com sucesso!');
+      addToast('success', 'Lançamento quitado com sucesso!');
       fecharModalQuitacao();
       loadLancamentos();
     }
   }
 
   async function reabrirLancamento(id: string | number) {
-    if (!confirm('Tem certeza que deseja reabrir este lançamento?')) return;
-
-    const { error } = await supabase
-      .from('lancamentos')
-      .update({ 
-        quitado: false,
-        data_quitacao: null,
-        forma_pagamento_id: null
-      })
-      .eq('id', id);
-
-    if (error) {
-      alert('Erro ao reabrir lançamento: ' + error.message);
-    } else {
-      loadLancamentos();
-    }
+    askConfirm('Tem certeza que deseja reabrir este lançamento?', async () => {
+      setConfirmDialog(null);
+      const { error } = await supabase
+        .from('lancamentos')
+        .update({ quitado: false, data_quitacao: null, forma_pagamento_id: null })
+        .eq('id', id);
+      if (error) {
+        addToast('error', 'Erro ao reabrir lançamento: ' + error.message);
+      } else {
+        addToast('info', 'Lançamento reaberto.');
+        loadLancamentos();
+      }
+    });
   }
 
   function iniciarEdicaoValor(lancamento: any) {
@@ -188,7 +194,7 @@ export default function ListaLancamentosPage() {
     const valorNumerico = parseFloat(novoValor);
     
     if (isNaN(valorNumerico) || valorNumerico <= 0) {
-      alert('Por favor, insira um valor válido maior que zero');
+      addToast('error', 'Por favor, insira um valor válido maior que zero');
       return;
     }
 
@@ -198,8 +204,9 @@ export default function ListaLancamentosPage() {
       .eq('id', id);
 
     if (error) {
-      alert('Erro ao atualizar valor: ' + error.message);
+      addToast('error', 'Erro ao atualizar valor: ' + error.message);
     } else {
+      addToast('success', 'Valor atualizado com sucesso!');
       setEditandoValor(null);
       setNovoValor('');
       loadLancamentos();
@@ -266,6 +273,42 @@ export default function ListaLancamentosPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
+      <style>{`
+        @media print {
+          body { background: white; }
+          .no-print { display: none !important; }
+          @page { size: A4 landscape; margin: 15mm; }
+          .print-header { display: block !important; }
+          table { font-size: 10px; }
+          th, td { padding: 4px 6px !important; }
+        }
+        .print-header { display: none; }
+      `}</style>
+
+      {/* Toast notifications */}
+      <div className="fixed bottom-4 right-4 z-50 space-y-2">
+        {toasts.map(t => (
+          <div key={t.id} className={`px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium flex items-center gap-2 animate-pulse ${
+            t.type === 'success' ? 'bg-green-600' : t.type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+          }`}>
+            {t.type === 'success' ? '✅' : t.type === 'error' ? '❌' : 'ℹ️'} {t.message}
+          </div>
+        ))}
+      </div>
+
+      {/* Confirm dialog */}
+      {confirmDialog?.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4">
+            <p className="text-gray-800 font-medium mb-5 text-center">{confirmDialog.message}</p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDialog(null)} className="flex-1 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium">Cancelar</button>
+              <button onClick={confirmDialog.onConfirm} className="flex-1 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 font-medium">Confirmar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto">
         {/* Cabeçalho */}
         <div className="flex justify-between items-center mb-6">

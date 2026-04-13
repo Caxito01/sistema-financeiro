@@ -164,6 +164,16 @@ export default function ConfiguracoesPage() {
     setExpandedGrupos(newSet);
   };
 
+  const toggleAtivo = async (table: string, id: number, ativo: boolean) => {
+    try {
+      const supabase = createClient();
+      await supabase.from(table).update({ ativo: !ativo }).eq('id', id);
+      await carregarDados();
+    } catch (error) {
+      captureException(error);
+    }
+  };
+
   const handleSave = async (data: any) => {
     try {
       const supabase = createClient();
@@ -493,9 +503,16 @@ export default function ConfiguracoesPage() {
                 <div key={grupo.id} className="mb-2">
                   <div className="flex items-center gap-2 p-2 bg-blue-50 rounded hover:bg-blue-100 cursor-pointer" onClick={() => toggleGrupoExpansion(grupo.id)}>
                     {expandedGrupos.has(grupo.id) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                    <span className={`font-medium ${!grupo.ativo ? 'text-red-600' : ''}`}>
+                    <span className={`font-medium flex-1 ${!grupo.ativo ? 'text-red-600' : ''}`}>
                       {grupo.codigo} - {grupo.nome}{!grupo.ativo ? ' (inativo)' : ''}
                     </span>
+                    <button
+                      onClick={e => { e.stopPropagation(); toggleAtivo('grupos', grupo.id, grupo.ativo); }}
+                      className={`text-xs px-2 py-0.5 rounded font-semibold ${grupo.ativo ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}
+                      title={grupo.ativo ? 'Inativar' : 'Ativar'}
+                    >
+                      {grupo.ativo ? '⏸ Inativar' : '▶ Ativar'}
+                    </button>
                   </div>
 
                   {expandedGrupos.has(grupo.id) && (
@@ -504,14 +521,28 @@ export default function ConfiguracoesPage() {
                         <div key={subgrupo.id} className="mb-1">
                           <div className="flex items-center gap-2 p-2 bg-green-50 rounded hover:bg-green-100">
                             <ChevronRight size={14} />
-                            <span className={`text-sm ${!subgrupo.ativo ? 'text-red-600' : ''}`}>
+                            <span className={`text-sm flex-1 ${!subgrupo.ativo ? 'text-red-600' : ''}`}>
                               {subgrupo.codigo} - {subgrupo.nome}{!subgrupo.ativo ? ' (inativo)' : ''}
                             </span>
+                            <button
+                              onClick={() => toggleAtivo('subgrupos', subgrupo.id, subgrupo.ativo)}
+                              className={`text-xs px-2 py-0.5 rounded font-semibold ${subgrupo.ativo ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}
+                              title={subgrupo.ativo ? 'Inativar' : 'Ativar'}
+                            >
+                              {subgrupo.ativo ? '⏸' : '▶'}
+                            </button>
                           </div>
                           <div className="ml-6 mt-1">
                             {getFilteredClassesBySubgrupo(subgrupo.id).map(classe => (
-                              <div key={classe.id} className={`p-1 text-sm hover:bg-gray-100 rounded ${!classe.ativo ? 'text-red-600' : 'text-gray-700'}`}>
-                                • {classe.codigo} - {classe.descricao}{!classe.ativo ? ' (inativo)' : ''}
+                              <div key={classe.id} className={`p-1 text-sm hover:bg-gray-100 rounded flex items-center gap-1 ${!classe.ativo ? 'text-red-600' : 'text-gray-700'}`}>
+                                <span className="flex-1">• {classe.codigo} - {classe.descricao}{!classe.ativo ? ' (inativo)' : ''}</span>
+                                <button
+                                  onClick={() => toggleAtivo('classes', classe.id, classe.ativo)}
+                                  className={`text-xs px-1.5 py-0.5 rounded font-semibold ${classe.ativo ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}
+                                  title={classe.ativo ? 'Inativar' : 'Ativar'}
+                                >
+                                  {classe.ativo ? '⏸' : '▶'}
+                                </button>
                               </div>
                             ))}
                           </div>
@@ -540,6 +571,13 @@ export default function ConfiguracoesPage() {
                     <div className={`flex-1 border border-gray-300 rounded px-3 py-2 ${!forma.ativo ? 'bg-red-50 text-red-600' : 'bg-white'}`}>
                       {forma.nome}{!forma.ativo ? ' (inativo)' : ''}
                     </div>
+                    <button
+                      onClick={() => toggleAtivo('formas_pagamento', forma.id, forma.ativo)}
+                      className={`p-2 rounded text-sm font-semibold ${forma.ativo ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}
+                      title={forma.ativo ? 'Inativar' : 'Ativar'}
+                    >
+                      {forma.ativo ? '⏸' : '▶'}
+                    </button>
                     <button 
                       onClick={() => openModal('edit', 'formaPagamento', forma)} 
                       className="bg-yellow-600 text-white p-2 rounded hover:bg-yellow-700"
