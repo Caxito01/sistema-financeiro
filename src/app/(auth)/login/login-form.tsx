@@ -19,7 +19,6 @@ export default function LoginForm() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [debugInfo, setDebugInfo] = useState('');
 
   useEffect(() => {
     const message = searchParams.get('message');
@@ -32,30 +31,20 @@ export default function LoginForm() {
     e.preventDefault();
     setLoading(true);
     setError('');
-    setDebugInfo('Iniciando login...');
 
     const supabase = createClient();
 
     try {
-      setDebugInfo('Chamando Supabase...');
-      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      setDebugInfo('Resposta recebida!');
+      if (error) throw error;
 
-      if (error) {
-        setDebugInfo('Erro: ' + error.message);
-        throw error;
-      }
-
-      setDebugInfo('Login bem-sucedido! Redirecionando...');
       router.push('/lancamentos');
     } catch (error) {
       setError((error as any).message || 'Credenciais inválidas');
-      setDebugInfo('Erro ao fazer login');
     } finally {
       setLoading(false);
     }
@@ -75,13 +64,6 @@ export default function LoginForm() {
 
         <form onSubmit={handleLogin}>
           <CardContent className="space-y-4">
-            {/* Debug Info */}
-            {debugInfo && (
-              <div className="bg-blue-50 text-blue-800 p-3 rounded-md text-sm">
-                🔍 {debugInfo}
-              </div>
-            )}
-
             {error && (
               <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
                 {error}
@@ -102,7 +84,15 @@ export default function LoginForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Senha</Label>
+                <Link
+                  href="/recuperar-senha"
+                  className="text-xs text-blue-600 hover:underline"
+                >
+                  Esqueceu sua senha?
+                </Link>
+              </div>
               <Input
                 id="password"
                 type="password"
