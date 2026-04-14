@@ -94,6 +94,18 @@ export default function DashboardPage() {
   useEffect(() => {
     initMonitor();
     carregarDados();
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel('dashboard-lancamentos')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lancamentos' }, () => {
+        carregarDados();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const carregarDados = async () => {
