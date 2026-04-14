@@ -176,7 +176,104 @@
     .footer{text-align:center;padding:1.5rem;font-size:.7rem;color:var(--text3);border-top:1px solid var(--border);}
     .footer a{color:#3b82f6;text-decoration:none;}
 
-    /* ── RESPONSIVE ── */
+    /* ── VISÃO ECONÔMICA ── */
+    .visao-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;}
+    @media(max-width:700px){.visao-grid{grid-template-columns:1fr}}
+    .visao-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.4rem 1.2rem;box-shadow:var(--shadow);text-align:center;position:relative;overflow:hidden;}
+    .visao-card::after{content:'';position:absolute;right:-16px;top:-16px;width:72px;height:72px;border-radius:50%;background:currentColor;opacity:.06;}
+    .visao-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:.5rem;}
+    .visao-value{font-size:1.5rem;font-weight:800;line-height:1;}
+    .visao-sub{font-size:.68rem;color:var(--text3);margin-top:.35rem;}
+
+    /* ── CADASTROS RÁPIDOS ── */
+    .cad-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:.75rem;margin-bottom:1.5rem;}
+    @media(max-width:1100px){.cad-grid{grid-template-columns:repeat(4,1fr)}}
+    @media(max-width:580px){.cad-grid{grid-template-columns:repeat(3,1fr)}}
+    .cad-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.9rem .5rem;text-align:center;cursor:pointer;transition:all var(--tr);text-decoration:none;color:var(--text);display:flex;flex-direction:column;align-items:center;gap:.4rem;box-shadow:var(--shadow);}
+    .cad-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);border-color:#3b82f6;background:rgba(59,130,246,.04);}
+    .cad-icon{font-size:1.6rem;}
+    .cad-name{font-size:.67rem;font-weight:700;text-align:center;line-height:1.3;color:var(--text);}
+
+    /* ── TIPOS DE LANÇAMENTO ── */
+    .lanc-tipo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;}
+    @media(max-width:600px){.lanc-tipo-grid{grid-template-columns:1fr}}
+    .lanc-tipo-card{background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);padding:1.6rem 1rem;text-align:center;cursor:pointer;transition:all var(--tr);text-decoration:none;color:var(--text);display:flex;flex-direction:column;align-items:center;gap:.55rem;box-shadow:var(--shadow);}
+    .lanc-tipo-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);}
+    .lanc-tipo-card.receita:hover{border-color:#22c55e;background:rgba(34,197,94,.05);}
+    .lanc-tipo-card.despesa:hover{border-color:#ef4444;background:rgba(239,68,68,.05);}
+    .lanc-tipo-card.transf:hover{border-color:#3b82f6;background:rgba(59,130,246,.05);}
+    .lanc-tipo-icon{font-size:2.5rem;}
+    .lanc-tipo-name{font-size:.9rem;font-weight:700;}
+    .lanc-tipo-desc{font-size:.7rem;color:var(--text3);}
+
+    /* ── GAUGE ORÇADO VS REALIZADO ── */
+    .gauge-outer-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;}
+    @media(max-width:700px){.gauge-outer-grid{grid-template-columns:1fr}}
+    .gauge-section-title{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text2);margin-bottom:1rem;padding-bottom:.5rem;border-bottom:2px solid var(--border);}
+    .gauge-flex{display:flex;flex-wrap:wrap;gap:.9rem;align-items:flex-start;}
+    .gauge-item{flex:1;min-width:90px;max-width:130px;text-align:center;}
+    .gauge-name{font-size:.62rem;color:var(--text3);font-weight:600;line-height:1.3;margin-top:.25rem;}
+
+    /* ── PRAZOS MÉDIOS ── */
+    .prazo-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;}
+    @media(max-width:600px){.prazo-grid{grid-template-columns:1fr}}
+    .prazo-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;box-shadow:var(--shadow);text-align:center;}
+    .prazo-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:.5rem;}
+    .prazo-value{font-size:2.8rem;font-weight:800;margin-bottom:.2rem;line-height:1;}
+    .prazo-unit{font-size:.75rem;color:var(--text3);font-weight:600;}
+
+    /* ── DRE LUCRATIVIDADE ── */
+    .dre-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;}
+    @media(max-width:900px){.dre-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:500px){.dre-grid{grid-template-columns:1fr}}
+    .dre-kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1rem;box-shadow:var(--shadow);display:flex;align-items:center;gap:.75rem;}
+    .dre-kpi-ico{width:42px;height:42px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+    .dre-kpi-body{flex:1;min-width:0;}
+    .dre-kpi-label{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:.2rem;}
+    .dre-kpi-value{font-size:1.1rem;font-weight:800;line-height:1.1;}
+    .dre-kpi-sub{font-size:.63rem;color:var(--text3);margin-top:.15rem;}
+
+    /* ── ORÇAMENTO ANUAL ── */
+    .orcamento-wrap{overflow-x:auto;}
+    .orcamento-wrap table{min-width:900px;}
+    .orcamento-wrap th{font-size:.61rem;padding:.4rem .45rem;}
+    .orcamento-wrap td{font-size:.7rem;padding:.4rem .45rem;}
+    .orcamento-wrap .cat-name{font-weight:700;color:var(--text);min-width:140px;}
+    .orcamento-wrap .total-row td{font-weight:800;background:var(--surface2);}
+    .orcamento-wrap .secao-hdr td{background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;font-weight:700;font-size:.67rem;text-transform:uppercase;letter-spacing:.06em;padding:.55rem .45rem;}
+    .val-real{color:var(--text);font-weight:600;}
+
+    /* ── CONTAS MODAL ── */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;display:none;align-items:center;justify-content:center;padding:1rem;}
+    .modal-overlay.open{display:flex;}
+    .modal-box{background:var(--surface);border-radius:var(--radius);padding:1.75rem;width:100%;max-width:560px;box-shadow:var(--shadow-lg);max-height:90vh;overflow-y:auto;}
+    .modal-title{font-size:1rem;font-weight:800;margin-bottom:1.2rem;display:flex;justify-content:space-between;align-items:center;}
+    .modal-close{background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--text3);padding:.2rem;line-height:1;}
+    .modal-close:hover{color:var(--text);}
+    .mgrid2{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;}
+    @media(max-width:480px){.mgrid2{grid-template-columns:1fr}}
+    .flabel{font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);display:block;margin-bottom:.25rem;}
+    .finput,.fselect{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.55rem .8rem;font-size:.85rem;color:var(--text);font-family:inherit;outline:none;transition:border var(--tr);margin-bottom:.75rem;}
+    .finput:focus,.fselect:focus{border-color:#3b82f6;}
+    .fradio-row{display:flex;gap:1.25rem;margin-bottom:.75rem;}
+    .fradio-row label{display:flex;align-items:center;gap:.4rem;font-size:.82rem;font-weight:600;cursor:pointer;}
+    .mbtn-prim{padding:.72rem 1.5rem;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;border:none;border-radius:var(--radius-sm);font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit;transition:filter var(--tr);}
+    .mbtn-prim:hover{filter:brightness(1.08);}
+    .mbtn-ghost{padding:.72rem 1.2rem;background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.88rem;font-weight:600;cursor:pointer;font-family:inherit;transition:background var(--tr);}
+    .mbtn-ghost:hover{background:var(--border);}
+    .msec-title{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin:.25rem 0 .7rem;padding-bottom:.35rem;border-bottom:1px solid var(--border);}
+
+    /* ── BANCO SALDOS ── */
+    .banco-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.6rem;margin-bottom:1.5rem;}
+    .banco-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.75rem 1rem;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center;}
+    .banco-name{font-size:.75rem;font-weight:700;color:var(--text2);}
+    .banco-val{font-size:.82rem;font-weight:800;}
+
+    /* ── SALDO EM CONTAS BAR ── */
+    .saldo-bar-wrap{background:var(--border);border-radius:99px;height:6px;overflow:hidden;margin-top:.3rem;}
+    .saldo-bar{height:100%;border-radius:99px;transition:width .6s ease;}
+
+        /* ── RESPONSIVE ── */
     @media(max-width:640px){.page{padding:1rem;} .header{padding:0 1rem;}}
   </style>
 </head>
@@ -287,6 +384,82 @@
 
   </div>
 
+
+  <!-- ══ VISÃO ECONÔMICA ═════════════════════════════════════════ -->
+  <div class="section-title">💼 Visão Econômica</div>
+  <div class="visao-grid" id="visaoGrid">
+    <div class="visao-card" style="color:#22c55e;">
+      <div class="visao-label">Receita Bruta</div>
+      <div class="visao-value" id="vRecBruta"><div class="skel" style="width:80%;margin:0 auto;height:28px;"></div></div>
+      <div class="visao-sub" id="vRecBrutaSub">–</div>
+    </div>
+    <div class="visao-card" style="color:#ef4444;">
+      <div class="visao-label">Custos e Despesas</div>
+      <div class="visao-value" id="vCustDesp"><div class="skel" style="width:80%;margin:0 auto;height:28px;"></div></div>
+      <div class="visao-sub" id="vCustDespSub">–</div>
+    </div>
+    <div class="visao-card">
+      <div class="visao-label">Lucro Líquido</div>
+      <div class="visao-value" id="vLucro"><div class="skel" style="width:80%;margin:0 auto;height:28px;"></div></div>
+      <div class="visao-sub" id="vLucroSub">–</div>
+    </div>
+  </div>
+
+  <!-- ══ TELA INICIAL DE CADASTROS ══════════════════════════════ -->
+  <div class="section-title">📂 Tela Inicial de Cadastros</div>
+  <div style="font-size:.78rem;color:var(--text2);margin-bottom:.9rem;">O que você deseja <strong>CADASTRAR</strong>?</div>
+  <div class="cad-grid">
+    <a class="cad-card" href="configuracoes.html">
+      <div class="cad-icon">📊</div>
+      <div class="cad-name">Tipos de Receitas</div>
+    </a>
+    <a class="cad-card" href="configuracoes.html">
+      <div class="cad-icon">💸</div>
+      <div class="cad-name">Tipos de Gastos</div>
+    </a>
+    <a class="cad-card" href="configuracoes.html">
+      <div class="cad-icon">🎯</div>
+      <div class="cad-name">Meta de Receitas</div>
+    </a>
+    <a class="cad-card" href="configuracoes.html">
+      <div class="cad-icon">📉</div>
+      <div class="cad-name">Meta de Gastos</div>
+    </a>
+    <a class="cad-card" href="#" onclick="openModal('receber');return false;">
+      <div class="cad-icon">👥</div>
+      <div class="cad-name">Meus Clientes</div>
+    </a>
+    <a class="cad-card" href="#" onclick="openModal('pagar');return false;">
+      <div class="cad-icon">🤝</div>
+      <div class="cad-name">Meus Fornecedores</div>
+    </a>
+    <a class="cad-card" href="configuracoes.html">
+      <div class="cad-icon">⚙️</div>
+      <div class="cad-name">Projetos e Documentos</div>
+    </a>
+  </div>
+
+  <!-- ══ TELA INICIAL DE LANÇAMENTOS ════════════════════════════ -->
+  <div class="section-title">🚀 Tela Inicial de Lançamentos</div>
+  <div style="font-size:.78rem;color:var(--text2);margin-bottom:.9rem;">O que você deseja <strong>LANÇAR</strong>?</div>
+  <div class="lanc-tipo-grid">
+    <a class="lanc-tipo-card receita" href="lancamentos.html">
+      <div class="lanc-tipo-icon">📈</div>
+      <div class="lanc-tipo-name">Lançamento de Títulos a Receber</div>
+      <div class="lanc-tipo-desc">Registrar receitas e contas a receber dos clientes</div>
+    </a>
+    <a class="lanc-tipo-card despesa" href="lancamentos.html">
+      <div class="lanc-tipo-icon">💸</div>
+      <div class="lanc-tipo-name">Lançamento de Títulos a Pagar</div>
+      <div class="lanc-tipo-desc">Registrar despesas e contas a pagar para fornecedores</div>
+    </a>
+    <a class="lanc-tipo-card transf" href="lancamentos.html">
+      <div class="lanc-tipo-icon">🔄</div>
+      <div class="lanc-tipo-name">Transferências entre Bancos</div>
+      <div class="lanc-tipo-desc">Movimentar saldo entre contas e bancos</div>
+    </a>
+  </div>
+
   <!-- ROW: CHARTS + QUICK ACTIONS -->
   <div class="three-col">
 
@@ -370,7 +543,200 @@
 
   </div>
 
+
+  <!-- ══ SALDO EM CONTAS ════════════════════════════════════════ -->
+  <div class="section-title">🏦 Saldo em Contas por Banco</div>
+  <div class="banco-grid" id="bancoGrid">
+    <div style="font-size:.78rem;color:var(--text3);padding:.5rem;">Aguardando dados…</div>
+  </div>
+
+  <!-- ══ ORÇADO VS REALIZADO ════════════════════════════════════ -->
+  <div class="section-title">🎯 Distribuição por Categoria</div>
+  <div class="gauge-outer-grid">
+    <div class="card">
+      <div class="gauge-section-title">📈 RECEITAS — Distribuição por Subgrupo</div>
+      <div class="gauge-flex" id="gaugeReceitas">
+        <div style="font-size:.78rem;color:var(--text3);padding:.5rem;">Aguardando dados…</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="gauge-section-title">📉 DESPESAS — Distribuição por Subgrupo</div>
+      <div class="gauge-flex" id="gaugeDespesas">
+        <div style="font-size:.78rem;color:var(--text3);padding:.5rem;">Aguardando dados…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ DRE — LUCRATIVIDADE ════════════════════════════════════ -->
+  <div class="section-title">📊 DRE — Análise de Lucratividade</div>
+  <div class="dre-grid" id="dreGrid">
+    <div class="dre-kpi"><div class="dre-kpi-ico" style="background:rgba(34,197,94,.12);">💵</div><div class="dre-kpi-body"><div class="dre-kpi-label">Receitas Operacionais</div><div class="dre-kpi-value"><span class="skel" style="display:inline-block;width:100px;height:18px;"></span></div></div></div>
+    <div class="dre-kpi"><div class="dre-kpi-ico" style="background:rgba(239,68,68,.12);">📤</div><div class="dre-kpi-body"><div class="dre-kpi-label">Custos e Despesas Oper.</div><div class="dre-kpi-value"><span class="skel" style="display:inline-block;width:100px;height:18px;"></span></div></div></div>
+    <div class="dre-kpi"><div class="dre-kpi-ico" style="background:rgba(59,130,246,.12);">📊</div><div class="dre-kpi-body"><div class="dre-kpi-label">Margem de Contribuição</div><div class="dre-kpi-value"><span class="skel" style="display:inline-block;width:100px;height:18px;"></span></div></div></div>
+    <div class="dre-kpi"><div class="dre-kpi-ico" style="background:rgba(139,92,246,.12);">%</div><div class="dre-kpi-body"><div class="dre-kpi-label">% Margem de Contribuição</div><div class="dre-kpi-value"><span class="skel" style="display:inline-block;width:80px;height:18px;"></span></div></div></div>
+    <div class="dre-kpi"><div class="dre-kpi-ico" style="background:rgba(6,182,212,.12);">💹</div><div class="dre-kpi-body"><div class="dre-kpi-label">Lucro Operacional</div><div class="dre-kpi-value"><span class="skel" style="display:inline-block;width:100px;height:18px;"></span></div></div></div>
+    <div class="dre-kpi"><div class="dre-kpi-ico" style="background:rgba(245,158,11,.12);">%</div><div class="dre-kpi-body"><div class="dre-kpi-label">% Margem Líquida</div><div class="dre-kpi-value"><span class="skel" style="display:inline-block;width:80px;height:18px;"></span></div></div></div>
+  </div>
+
+  <!-- ══ PRAZOS MÉDIOS DA EMPRESA ═══════════════════════════════ -->
+  <div class="section-title">📅 Prazos Médios da Empresa</div>
+  <div class="prazo-grid" id="prazoGrid">
+    <div class="prazo-card">
+      <div class="prazo-label">Prazo Médio de Recebimentos</div>
+      <div class="prazo-value" id="prazoReceb" style="color:#22c55e;">–</div>
+      <div class="prazo-unit">dias</div>
+    </div>
+    <div class="prazo-card">
+      <div class="prazo-label">Prazo Médio de Pagamentos</div>
+      <div class="prazo-value" id="prazoPagam" style="color:#ef4444;">–</div>
+      <div class="prazo-unit">dias</div>
+    </div>
+  </div>
+  <div id="prazoTip" style="display:none;border-radius:var(--radius-sm);padding:.75rem 1rem;font-size:.78rem;margin-top:-.5rem;margin-bottom:1.5rem;line-height:1.5;font-weight:500;"></div>
+
+  <!-- ══ ANÁLISE MENSAL DRE ══════════════════════════════════════ -->
+  <div class="section-title">📋 Análise Mensal — Receitas Operacionais</div>
+  <div class="two-col" style="margin-bottom:1.5rem;">
+    <div class="card">
+      <div class="card-title">📊 Distribuição das Receitas Operacionais</div>
+      <div class="chart-wrap"><canvas id="cDistReceita"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📉 Distribuição das Despesas Operacionais</div>
+      <div class="chart-wrap"><canvas id="cDistDespesa"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ══ ORÇAMENTO ANUAL ════════════════════════════════════════ -->
+  <div class="section-title">📅 Realizado Anual — Detalhamento por Mês</div>
+  <div class="card" style="margin-bottom:1.5rem;">
+    <div class="orcamento-wrap" id="orcWrap">
+      <div style="font-size:.78rem;color:var(--text3);padding:1.25rem;text-align:center;">Aguardando dados do Supabase…</div>
+    </div>
+  </div>
+
+  <!-- ══ CONTAS A RECEBER / PAGAR ═══════════════════════════════ -->
+  <div class="section-title">🧾 Contas a Receber / Pagar</div>
+  <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:2rem;">
+    <button class="qa-btn qa-primary" style="display:inline-block;width:auto;padding:.75rem 1.5rem;" onclick="openModal('receber')">
+      📥 Nova Conta a Receber
+    </button>
+    <button class="qa-btn qa-primary" style="display:inline-block;width:auto;padding:.75rem 1.5rem;background:linear-gradient(135deg,#ef4444,#dc2626);border-color:transparent;" onclick="openModal('pagar')">
+      📤 Nova Conta a Pagar
+    </button>
+  </div>
+
 </main>
+
+<!-- ══ MODAL CONTAS A RECEBER / PAGAR ═══════════════════════════ -->
+<div class="modal-overlay" id="contasModal">
+  <div class="modal-box">
+    <div class="modal-title">
+      <span id="modalTitleText">📥 Contas a Receber</span>
+      <button class="modal-close" onclick="closeModal()" aria-label="Fechar">✕</button>
+    </div>
+
+    <div class="msec-title">Dados do Documento</div>
+    <div class="mgrid2">
+      <div>
+        <label class="flabel">Data do documento</label>
+        <input type="date" class="finput" id="mDataDoc" />
+      </div>
+      <div>
+        <label class="flabel">Nº Documento</label>
+        <input type="text" class="finput" id="mDocumento" placeholder="NF, Fatura, Boleto…" />
+      </div>
+    </div>
+
+    <label class="flabel">Plano de Conta</label>
+    <select class="fselect" id="mPlanoConta">
+      <option value="">Selecione…</option>
+      <option>Receita com Produtos</option>
+      <option>Receita com Serviços</option>
+      <option>Outras Receitas</option>
+      <option>Custos Variáveis</option>
+      <option>Despesas com Pessoal</option>
+      <option>Despesas com Serviços</option>
+      <option>Despesas com Ocupação</option>
+      <option>Outras Despesas</option>
+    </select>
+
+    <div class="mgrid2">
+      <div>
+        <label class="flabel">Projeto</label>
+        <select class="fselect" id="mProjeto">
+          <option value="">Consolidado</option>
+          <option>Projeto 1</option>
+          <option>Projeto 2</option>
+        </select>
+      </div>
+      <div>
+        <label class="flabel">Conta (Banco)</label>
+        <select class="fselect" id="mConta">
+          <option value="">Selecione…</option>
+          <option>Santander</option>
+          <option>Banco 2</option>
+          <option>Banco 3</option>
+          <option>Caixinha</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="msec-title">Tipo de Lançamento</div>
+    <div class="fradio-row">
+      <label><input type="radio" name="mRecParcela" value="recorrente" checked> Recorrente</label>
+      <label><input type="radio" name="mRecParcela" value="parcelas"> Parcelas</label>
+    </div>
+
+    <div class="msec-title">Detalhes</div>
+    <label class="flabel">Cliente / Fornecedor</label>
+    <input type="text" class="finput" id="mCliente" placeholder="Nome do cliente ou fornecedor" />
+
+    <label class="flabel">Descrição</label>
+    <input type="text" class="finput" id="mDescricao" placeholder="Descrição detalhada" />
+
+    <div class="mgrid2">
+      <div>
+        <label class="flabel">Valor Total (R$)</label>
+        <input type="number" class="finput" id="mValor" placeholder="0,00" min="0" step="0.01" />
+      </div>
+      <div>
+        <label class="flabel">Qtde Parcelas</label>
+        <input type="number" class="finput" id="mQtdeParcela" value="1" min="1" max="360" />
+      </div>
+    </div>
+
+    <div class="mgrid2">
+      <div>
+        <label class="flabel">Valor da Parcela (R$)</label>
+        <input type="number" class="finput" id="mValorParcela" placeholder="Automático" readonly style="opacity:.7;" />
+      </div>
+      <div style="display:flex;flex-direction:column;">
+        <label class="flabel" style="opacity:0;">.</label>
+        <span style="font-size:.7rem;color:var(--text3);padding:.6rem 0;">Calculado automaticamente</span>
+      </div>
+    </div>
+
+    <div class="msec-title">Datas</div>
+    <div class="mgrid2">
+      <div>
+        <label class="flabel">Data de vencimento</label>
+        <input type="date" class="finput" id="mDataVenc" />
+      </div>
+      <div>
+        <label class="flabel" id="mDataRecebLabel">Data de recebimento</label>
+        <input type="date" class="finput" id="mDataReceb" />
+      </div>
+    </div>
+
+    <div id="mSaveMsg" style="font-size:.78rem;margin-bottom:.75rem;display:none;"></div>
+
+    <div style="display:flex;justify-content:flex-end;gap:.75rem;margin-top:.25rem;">
+      <button class="mbtn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="mbtn-prim" onclick="salvarConta()">💾 Cadastrar</button>
+    </div>
+  </div>
+</div>
 
 <footer class="footer">
   Sistema Financeiro © 2026 — Carlos Caxito &nbsp;|&nbsp;
@@ -481,6 +847,13 @@ async function loadAll() {
     renderTipoChart(lancamentos);
     renderRecentes(lancamentos.slice(0, 12));
     renderTopSubgrupos(lancamentos);
+    renderVisaoEconomica(lancamentos);
+    renderBancoSaldos(lancamentos);
+    renderGauges(lancamentos);
+    renderDRE(lancamentos);
+    renderPrazos(lancamentos);
+    renderDistCharts(lancamentos);
+    renderOrcamentoAnual(lancamentos);
 
   } catch(err) {
     setConnStatus('err', 'Falha na conexão');
@@ -704,6 +1077,358 @@ function renderTopSubgrupos(data) {
   }
   buildTop('DESPESA', 'topDesp', '#ef4444');
   buildTop('RECEITA', 'topRec',  '#22c55e');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   VISÃO ECONÔMICA
+══════════════════════════════════════════════════════════════ */
+function renderVisaoEconomica(data) {
+  const recBruta = data.filter(l => l.tipo === 'RECEITA').reduce((a,l) => a + +l.valor, 0);
+  const custDesp = data.filter(l => l.tipo === 'DESPESA').reduce((a,l) => a + +l.valor, 0);
+  const lucro    = recBruta - custDesp;
+  const margem   = recBruta > 0 ? ((lucro / recBruta) * 100).toFixed(1) : '–';
+
+  document.getElementById('vRecBruta').textContent = fmt(recBruta);
+  document.getElementById('vRecBrutaSub').textContent = `${data.filter(l=>l.tipo==='RECEITA').length} lançamento(s)`;
+  document.getElementById('vCustDesp').textContent = fmt(custDesp);
+  document.getElementById('vCustDespSub').textContent = `${data.filter(l=>l.tipo==='DESPESA').length} lançamento(s)`;
+  document.getElementById('vLucro').textContent = fmt(lucro);
+  document.getElementById('vLucro').style.color = lucro >= 0 ? '#22c55e' : '#ef4444';
+  document.getElementById('vLucroSub').textContent = `Margem: ${margem}%`;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SALDO EM CONTAS POR BANCO
+══════════════════════════════════════════════════════════════ */
+function renderBancoSaldos(data) {
+  const byBanco = {};
+  data.forEach(l => {
+    const banco = l.conta_banco || l.banco || (l.classe?.subgrupo?.grupo?.nome === 'BANCO' ? l.classe?.subgrupo?.nome : null);
+    if (!banco) return;
+    byBanco[banco] = (byBanco[banco] || 0) + (l.tipo === 'RECEITA' ? +l.valor : -l.valor);
+  });
+
+  const entries = Object.entries(byBanco).sort((a,b) => b[1]-a[1]);
+  if (!entries.length) {
+    document.getElementById('bancoGrid').innerHTML = '<div style="font-size:.78rem;color:var(--text3);padding:.5rem;">Nenhuma informação de banco encontrada nos lançamentos.</div>';
+    return;
+  }
+  const maxAbs = Math.max(...entries.map(([,v]) => Math.abs(v)), 1);
+  document.getElementById('bancoGrid').innerHTML = entries.map(([banco, saldo]) => {
+    const color = saldo >= 0 ? '#22c55e' : '#ef4444';
+    const pct   = Math.round((Math.abs(saldo) / maxAbs) * 100);
+    return `<div class="banco-card">
+      <div>
+        <div class="banco-name">${banco}</div>
+        <div class="saldo-bar-wrap"><div class="saldo-bar" style="width:${pct}%;background:${color};"></div></div>
+      </div>
+      <div class="banco-val" style="color:${color};">${fmt(saldo)}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   GAUGE — DISTRIBUIÇÃO POR SUBGRUPO
+══════════════════════════════════════════════════════════════ */
+function renderGauges(data) {
+  const SEMI = 94.25;
+
+  function buildGauges(tipo, elId) {
+    const filtered = data.filter(l => l.tipo === tipo);
+    const byS = {};
+    filtered.forEach(l => {
+      const name = l.classe?.subgrupo?.nome || 'Geral';
+      byS[name] = (byS[name] || 0) + +l.valor;
+    });
+    const total  = Object.values(byS).reduce((a,b) => a+b, 0);
+    const entries = Object.entries(byS).sort((a,b) => b[1]-a[1]).slice(0, 6);
+
+    if (!entries.length) {
+      document.getElementById(elId).innerHTML = '<div style="font-size:.78rem;color:var(--text3);padding:.5rem;">Sem dados</div>';
+      return;
+    }
+    document.getElementById(elId).innerHTML = entries.map(([name, val]) => {
+      const pct   = total > 0 ? Math.round((val / total) * 100) : 0;
+      const fill  = (pct / 100) * SEMI;
+      const color = pct < 40 ? '#22c55e' : pct < 70 ? '#f59e0b' : '#ef4444';
+      return `<div class="gauge-item">
+        <div style="position:relative;width:76px;height:46px;margin:0 auto .3rem;">
+          <svg width="76" height="46" viewBox="0 0 76 46">
+            <path d="M8 44 A 30 30 0 0 1 68 44" fill="none" stroke="var(--border)" stroke-width="7" stroke-linecap="round"/>
+            <path d="M8 44 A 30 30 0 0 1 68 44" fill="none" stroke="${color}" stroke-width="7" stroke-linecap="round"
+              stroke-dasharray="${fill.toFixed(1)} ${SEMI.toFixed(1)}"/>
+          </svg>
+          <div style="position:absolute;bottom:2px;left:0;right:0;text-align:center;font-size:.72rem;font-weight:800;color:${color};">${pct}%</div>
+        </div>
+        <div class="gauge-name">${name}</div>
+        <div style="font-size:.6rem;color:var(--text3);">${fmt(val)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  buildGauges('RECEITA', 'gaugeReceitas');
+  buildGauges('DESPESA', 'gaugeDespesas');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DRE — LUCRATIVIDADE
+══════════════════════════════════════════════════════════════ */
+function renderDRE(data) {
+  const recOpTotal  = data.filter(l => l.tipo === 'RECEITA').reduce((a,l) => a + +l.valor, 0);
+  const custTotal   = data.filter(l => l.tipo === 'DESPESA').reduce((a,l) => a + +l.valor, 0);
+  const margContr   = recOpTotal - custTotal;
+  const pctMarg     = recOpTotal > 0 ? ((margContr / recOpTotal) * 100) : 0;
+  const lucroOp     = margContr;
+  const lucroLiq    = lucroOp;
+  const pctLiq      = recOpTotal > 0 ? ((lucroLiq / recOpTotal) * 100) : 0;
+
+  const posColor = v => v >= 0 ? '#22c55e' : '#ef4444';
+
+  document.getElementById('dreGrid').innerHTML = `
+    <div class="dre-kpi">
+      <div class="dre-kpi-ico" style="background:rgba(34,197,94,.12);">💵</div>
+      <div class="dre-kpi-body">
+        <div class="dre-kpi-label">Receitas Operacionais</div>
+        <div class="dre-kpi-value" style="color:#22c55e;">${fmt(recOpTotal)}</div>
+      </div>
+    </div>
+    <div class="dre-kpi">
+      <div class="dre-kpi-ico" style="background:rgba(239,68,68,.12);">📤</div>
+      <div class="dre-kpi-body">
+        <div class="dre-kpi-label">Custos e Despesas Oper.</div>
+        <div class="dre-kpi-value" style="color:#ef4444;">${fmt(custTotal)}</div>
+      </div>
+    </div>
+    <div class="dre-kpi">
+      <div class="dre-kpi-ico" style="background:rgba(59,130,246,.12);">📊</div>
+      <div class="dre-kpi-body">
+        <div class="dre-kpi-label">Margem de Contribuição</div>
+        <div class="dre-kpi-value" style="color:${posColor(margContr)};">${fmt(margContr)}</div>
+      </div>
+    </div>
+    <div class="dre-kpi">
+      <div class="dre-kpi-ico" style="background:rgba(139,92,246,.12);">%</div>
+      <div class="dre-kpi-body">
+        <div class="dre-kpi-label">% Margem de Contribuição</div>
+        <div class="dre-kpi-value" style="color:${posColor(pctMarg)};">${pctMarg.toFixed(1)}%</div>
+      </div>
+    </div>
+    <div class="dre-kpi">
+      <div class="dre-kpi-ico" style="background:rgba(6,182,212,.12);">💹</div>
+      <div class="dre-kpi-body">
+        <div class="dre-kpi-label">Lucro Operacional</div>
+        <div class="dre-kpi-value" style="color:${posColor(lucroOp)};">${fmt(lucroOp)}</div>
+      </div>
+    </div>
+    <div class="dre-kpi">
+      <div class="dre-kpi-ico" style="background:rgba(245,158,11,.12);">%</div>
+      <div class="dre-kpi-body">
+        <div class="dre-kpi-label">% Margem Líquida</div>
+        <div class="dre-kpi-value" style="color:${posColor(pctLiq)};">${pctLiq.toFixed(1)}%</div>
+      </div>
+    </div>
+  `;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PRAZOS MÉDIOS DA EMPRESA
+══════════════════════════════════════════════════════════════ */
+function renderPrazos(data) {
+  const today = Date.now();
+  function avgAge(items) {
+    if (!items.length) return null;
+    const days = items
+      .map(l => { if (!l.data) return null; const d = Math.round((today - new Date(l.data)) / 86400000); return d >= 0 && d < 365 ? d : null; })
+      .filter(d => d !== null);
+    if (!days.length) return null;
+    return Math.round(days.reduce((a,b) => a+b, 0) / days.length);
+  }
+
+  const recPend = data.filter(l => l.tipo === 'RECEITA' && !l.quitado);
+  const pagPend = data.filter(l => l.tipo === 'DESPESA' && !l.quitado);
+  const avgRec  = avgAge(recPend);
+  const avgPag  = avgAge(pagPend);
+
+  document.getElementById('prazoReceb').textContent = avgRec != null ? avgRec : '–';
+  document.getElementById('prazoPagam').textContent = avgPag != null ? avgPag : '–';
+
+  const tipEl = document.getElementById('prazoTip');
+  if (avgRec != null && avgPag != null) {
+    const bom = avgRec < avgPag;
+    tipEl.style.display = 'block';
+    tipEl.style.background = bom ? '#dcfce7' : '#fef9c3';
+    tipEl.style.color      = bom ? '#15803d' : '#92400e';
+    tipEl.textContent      = bom
+      ? '✅ Ótimo: você recebe dos seus clientes antes de pagar seus fornecedores. Isso beneficia seu capital de giro e fluxo de caixa.'
+      : '⚠️ Atenção: você paga seus fornecedores antes de receber dos clientes. Monitore seu fluxo de caixa.';
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DISTRIBUIÇÃO — ANÁLISE MENSAL (BARRAS POR SUBGRUPO)
+══════════════════════════════════════════════════════════════ */
+let chartDistRec = null, chartDistDesp = null;
+function renderDistCharts(data) {
+  function buildBar(tipo, canvasId, color) {
+    const filtered = data.filter(l => l.tipo === tipo);
+    const byS = {};
+    filtered.forEach(l => {
+      const name = l.classe?.subgrupo?.nome || 'Geral';
+      byS[name] = (byS[name] || 0) + +l.valor;
+    });
+    const sorted  = Object.entries(byS).sort((a,b) => b[1]-a[1]).slice(0, 8);
+    const labels  = sorted.map(([n]) => n);
+    const values  = sorted.map(([,v]) => v);
+    const total   = values.reduce((a,b) => a+b, 0);
+    const pcts    = values.map(v => total > 0 ? +((v/total)*100).toFixed(1) : 0);
+
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    const existing = tipo === 'RECEITA' ? chartDistRec : chartDistDesp;
+    if (existing) existing.destroy();
+
+    const chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{ label: '% do total', data: pcts, backgroundColor: color + 'bb', borderRadius: 6 }]
+      },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.raw}% — ${fmt(values[c.dataIndex])}` } } },
+        scales: {
+          x: { grid:{ color:gridColor() }, ticks:{ color:tickColor(), callback: v => v+'%' } },
+          y: { grid:{ color:gridColor() }, ticks:{ color:tickColor(), font:{ size:11 } } }
+        },
+        animation:{ duration:600 }
+      }
+    });
+    if (tipo === 'RECEITA') chartDistRec = chart; else chartDistDesp = chart;
+  }
+  buildBar('RECEITA', 'cDistReceita', 'rgba(34,197,94,');
+  buildBar('DESPESA', 'cDistDespesa', 'rgba(239,68,68,');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ORÇAMENTO ANUAL — REALIZADO POR MÊS
+══════════════════════════════════════════════════════════════ */
+function renderOrcamentoAnual(data) {
+  const MES = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+  const ano = new Date().getFullYear();
+
+  const byKey = {};
+  data.forEach(l => {
+    if (!l.data) return;
+    const d = new Date(l.data);
+    if (d.getFullYear() !== ano) return;
+    const grupo = l.classe?.subgrupo?.grupo?.nome || 'Sem Grupo';
+    const tipo  = l.tipo;
+    const key   = `${tipo}::${grupo}`;
+    if (!byKey[key]) byKey[key] = { grupo, tipo, m: Array(12).fill(0), total: 0 };
+    byKey[key].m[d.getMonth()] += +l.valor;
+    byKey[key].total += +l.valor;
+  });
+
+  const recs  = Object.values(byKey).filter(r => r.tipo === 'RECEITA').sort((a,b) => b.total - a.total);
+  const desps = Object.values(byKey).filter(r => r.tipo === 'DESPESA').sort((a,b) => b.total - a.total);
+
+  if (!recs.length && !desps.length) {
+    document.getElementById('orcWrap').innerHTML = `<div style="padding:1.25rem;text-align:center;font-size:.78rem;color:var(--text3);">Sem dados para ${ano}.</div>`;
+    return;
+  }
+
+  const fN = v => v > 0 ? 'R$\u00a0' + Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '–';
+
+  function section(rows, titulo, hdrColor) {
+    if (!rows.length) return '';
+    const totM = Array(12).fill(0);
+    rows.forEach(r => r.m.forEach((v,i) => totM[i] += v));
+    const grand = totM.reduce((a,b) => a+b, 0);
+    return `
+      <tr class="secao-hdr"><td colspan="14" style="background:${hdrColor};">${titulo} — ${ano}</td></tr>
+      ${rows.map(r => `<tr>
+        <td class="cat-name">${r.grupo}</td>
+        ${r.m.map(v => `<td class="val-real">${fN(v)}</td>`).join('')}
+        <td style="font-weight:700;">${fN(r.total)}</td>
+      </tr>`).join('')}
+      <tr class="total-row">
+        <td>TOTAL</td>
+        ${totM.map(v => `<td>${fN(v)}</td>`).join('')}
+        <td>${fN(grand)}</td>
+      </tr>`;
+  }
+
+  document.getElementById('orcWrap').innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th style="min-width:140px;">Categoria</th>
+          ${MES.map(m => `<th>${m}</th>`).join('')}
+          <th>TOTAL ${ano}</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${section(recs,  'RECEITAS',  'linear-gradient(135deg,#14532d,#16a34a)')}
+        ${section(desps, 'DESPESAS',  'linear-gradient(135deg,#7f1d1d,#dc2626)')}
+      </tbody>
+    </table>`;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MODAL CONTAS A RECEBER / PAGAR
+══════════════════════════════════════════════════════════════ */
+let _modalTipo = 'receber';
+
+function openModal(tipo) {
+  _modalTipo = tipo;
+  const isRec = tipo === 'receber';
+  document.getElementById('modalTitleText').textContent = isRec ? '📥 Contas a Receber' : '📤 Contas a Pagar';
+  document.getElementById('mDataRecebLabel').textContent = isRec ? 'Data de recebimento' : 'Data de pagamento';
+  document.getElementById('mDataDoc').value = new Date().toISOString().split('T')[0];
+  document.getElementById('mSaveMsg').style.display = 'none';
+  ['mValor','mQtdeParcela'].forEach(id => {
+    document.getElementById(id).addEventListener('input', calcParcela);
+  });
+  document.getElementById('contasModal').classList.add('open');
+}
+
+function calcParcela() {
+  const v = parseFloat(document.getElementById('mValor').value) || 0;
+  const q = parseInt(document.getElementById('mQtdeParcela').value) || 1;
+  document.getElementById('mValorParcela').value = q > 0 ? (v / q).toFixed(2) : '';
+}
+
+function closeModal() {
+  document.getElementById('contasModal').classList.remove('open');
+}
+
+async function salvarConta() {
+  if (!sb) { alert('Configure o Supabase primeiro.'); return; }
+  const valor = parseFloat(document.getElementById('mValor').value);
+  const data  = document.getElementById('mDataDoc').value;
+  if (!valor || valor <= 0) { alert('Informe um valor válido.'); return; }
+  if (!data) { alert('Informe a data do documento.'); return; }
+
+  const desc  = document.getElementById('mDescricao').value.trim()
+             || document.getElementById('mCliente').value.trim()
+             || (_modalTipo === 'receber' ? 'Conta a Receber' : 'Conta a Pagar');
+  const tipo  = _modalTipo === 'receber' ? 'RECEITA' : 'DESPESA';
+  const quitado = !!document.getElementById('mDataReceb').value;
+
+  const payload = { tipo, valor, data, descricao_complementar: desc, quitado };
+
+  const msgEl = document.getElementById('mSaveMsg');
+  msgEl.style.display = 'none';
+
+  const { error } = await sb.from('lancamentos').insert([payload]);
+  if (error) {
+    msgEl.style.display = 'block';
+    msgEl.style.color = '#dc2626';
+    msgEl.textContent = '⚠️ Erro ao salvar: ' + error.message;
+    return;
+  }
+
+  closeModal();
+  loadAll();
 }
 
 /* ══════════════════════════════════════════════════════════════
