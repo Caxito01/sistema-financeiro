@@ -40,8 +40,9 @@ let fixedCount = 0;
 for (const file of htmlFiles) {
   const filePath = path.join(docsDir, file);
   const content = fs.readFileSync(filePath, 'utf8');
-  if (content.includes('lista-lancamentos.html')) {
-    fs.writeFileSync(filePath, content.replaceAll('lista-lancamentos.html', 'lancamentos/lista.html'));
+  // Replace any stale forward paths back to flat html_version page names
+  if (content.includes('lancamentos/lista.html')) {
+    fs.writeFileSync(filePath, content.replaceAll('lancamentos/lista.html', 'lista-lancamentos.html'));
     fixedCount++;
     console.log(`Link corrigido: ${file}`);
   }

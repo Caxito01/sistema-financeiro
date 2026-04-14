@@ -59,7 +59,7 @@
     <a href="portal.html">🏠 Portal</a>
     <a href="dashboard.html">📊 Dashboard</a>
     <a href="lancamentos.html" class="active">➕ Novo Lançamento</a>
-    <a href="lancamentos/lista.html">📋 Lançamentos</a>
+    <a href="lista-lancamentos.html">📋 Lançamentos</a>
     <a href="relatorios.html">📈 Relatórios</a>
     <a href="cartao-credito.html">💳 Cartões</a>
     <a href="configuracoes.html">⚙️ Configurações</a>
@@ -175,7 +175,7 @@
           <button type="button" onclick="window.location.href='dashboard.html'" class="act-btn" style="flex: 1;">
             ← Voltar
           </button>
-          <button type="button" onclick="window.location.href='lancamentos/lista.html'" class="act-btn success" style="flex: 1;">
+          <button type="button" onclick="window.location.href='lista-lancamentos.html'" class="act-btn success" style="flex: 1;">
             📋 Ver Lançamentos
           </button>
           <button type="button" onclick="window.location.href='cartao-credito.html'" class="act-btn" style="flex: 1; background:rgba(124,58,237,.12);border-color:rgba(124,58,237,.35);color:#7c3aed">
@@ -409,7 +409,7 @@
         showSuccess('✅ Lançamento criado com sucesso! Redirecionando...');
         
         setTimeout(() => {
-          window.location.href = 'lancamentos/lista.html';
+          window.location.href = 'lista-lancamentos.html';
         }, 1500);
         
       } catch (error) {
