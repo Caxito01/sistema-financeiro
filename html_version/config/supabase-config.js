@@ -43,6 +43,22 @@ async function logout() {
   if (error) throw error;
 }
 
+// Enviar email de recuperação de senha
+async function resetPassword(email) {
+  const client = createSupabaseClient();
+  const { error } = await client.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + window.location.pathname.replace(/\/[^/]+$/, '/') + 'nova-senha.html',
+  });
+  if (error) throw error;
+}
+
+// Atualizar senha (após clicar no link do email)
+async function updatePassword(newPassword) {
+  const client = createSupabaseClient();
+  const { error } = await client.auth.updateUser({ password: newPassword });
+  if (error) throw error;
+}
+
 // Registrar novo usuário
 async function register(email, password) {
   const client = createSupabaseClient();

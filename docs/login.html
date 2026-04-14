@@ -36,13 +36,13 @@
 </head>
 <body>
     <header class="sf-header">
-    <a href="dashboard.html" class="sf-brand">💰 <span>Sistema</span> Financeiro</a>
+    <a href="portal.html" class="sf-brand">💰 <span>Sistema</span> Financeiro</a>
     <div class="sf-hr">
       <button class="sf-theme-btn" onclick="sfToggleTheme()" id="sfThemeBtn">🌙 Escuro</button>
     </div>
   </header>
   <nav class="sf-nav">
-    <a href="dashboard.html">📊 Dashboard</a>
+    <a href="portal.html">🏠 Portal</a>
     <a href="register.html">📝 Criar Conta</a>
     <a href="login.html" class="active">🔐 Login</a>
   </nav>
@@ -83,11 +83,33 @@
           >
         </div>
 
+        <div style="text-align:right; margin-bottom:.75rem;">
+          <a href="#" id="forgotLink" style="font-size:.8rem;color:#3b82f6;font-weight:500;">Esqueci minha senha</a>
+        </div>
+
         <button type="submit" class="btn btn-primary" style="width: 100%;" id="submitBtn">
           <span id="btnText">Entrar</span>
           <span id="btnLoading" class="loading hidden"></span>
         </button>
       </form>
+
+      <!-- Formulário de recuperação de senha (oculto por padrão) -->
+      <div id="recoverSection" style="display:none; margin-top:1.5rem; border-top:1px solid var(--border); padding-top:1.5rem;">
+        <h3 style="font-size:1rem;font-weight:600;margin-bottom:.5rem;">🔑 Recuperar Senha</h3>
+        <p style="font-size:.82rem;color:var(--text2);margin-bottom:1rem;">Digite seu email e enviaremos um link para redefinir sua senha.</p>
+        <div class="form-group">
+          <label for="recoverEmail">Email</label>
+          <input type="email" id="recoverEmail" placeholder="seu@email.com" autocomplete="email">
+        </div>
+        <div id="recoverMsg" class="alert hidden" style="margin-bottom:.75rem;"></div>
+        <button id="recoverBtn" class="btn btn-primary" style="width:100%;" onclick="sendRecover()">
+          <span id="recoverBtnText">Enviar link</span>
+          <span id="recoverBtnLoading" class="loading hidden"></span>
+        </button>
+        <div style="text-align:center;margin-top:.75rem;">
+          <a href="#" id="backToLogin" style="font-size:.8rem;color:#64748b;">← Voltar ao login</a>
+        </div>
+      </div>
 
       <div class="text-center mt-2">
         <p style="font-size: 0.875rem; color: var(--gray-600);">
@@ -114,7 +136,7 @@
     window.addEventListener('DOMContentLoaded', async () => {
       const session = await checkAuth();
       if (session) {
-        window.location.href = 'dashboard.html';
+        window.location.href = 'portal.html';
       }
     });
 
@@ -128,6 +150,44 @@
       debugInfo.classList.add('hidden');
       errorMessage.classList.add('hidden');
       successMessage.classList.add('hidden');
+    }
+
+    // Esqueci minha senha
+    document.getElementById('forgotLink').addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('loginForm').style.display = 'none';
+      document.getElementById('forgotLink').closest('div').style.display = 'none';
+      document.getElementById('recoverSection').style.display = 'block';
+      hideMessages();
+    });
+    document.getElementById('backToLogin').addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('loginForm').style.display = '';
+      document.getElementById('forgotLink').closest('div').style.display = '';
+      document.getElementById('recoverSection').style.display = 'none';
+      hideMessages();
+    });
+
+    async function sendRecover() {
+      const email = document.getElementById('recoverEmail').value.trim();
+      const msg = document.getElementById('recoverMsg');
+      const btn = document.getElementById('recoverBtn');
+      const btnText = document.getElementById('recoverBtnText');
+      const btnLoading = document.getElementById('recoverBtnLoading');
+      if (!email) { msg.className='alert alert-error'; msg.textContent='Digite seu email.'; msg.classList.remove('hidden'); return; }
+      btn.disabled = true; btnText.classList.add('hidden'); btnLoading.classList.remove('hidden');
+      msg.classList.add('hidden');
+      try {
+        await resetPassword(email);
+        msg.className = 'alert alert-success';
+        msg.textContent = '✅ Email enviado! Verifique sua caixa de entrada.';
+        msg.classList.remove('hidden');
+      } catch(err) {
+        msg.className = 'alert alert-error';
+        msg.textContent = err.message || 'Erro ao enviar email.';
+        msg.classList.remove('hidden');
+      }
+      btn.disabled = false; btnText.classList.remove('hidden'); btnLoading.classList.add('hidden');
     }
 
     // Handler do formulário
@@ -154,7 +214,7 @@
           debugInfo.classList.add('hidden');
           
           setTimeout(() => {
-            window.location.href = 'dashboard.html';
+            window.location.href = 'portal.html';
           }, 1000);
         }
       } catch (error) {
