@@ -1,0 +1,22 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Git: Commit e Push GitHub",
+			"type": "shell",
+			"command": "cd c:\\ProjetoHTML\\Html_projeto && git add html_version/cartao-credito.html html_version/dashboard.html && git commit -m \"feat: categoria em cartoes e card faturas no dashboard\" && git push origin main"
+		},
+		{
+			"label": "Git Push - temp",
+			"type": "shell",
+			"command": "cd c:\\ProjetoHTML\\Html_projeto && git add html_version/cartao-credito.html html_version/dashboard.html && git commit -m \"feat: categoria em cartoes e card faturas no dashboard\" && git push origin main",
+			"isBackground": false
+		},
+		{
+			"label": "Git: Commit e Push - categorias e faturas",
+			"type": "shell",
+			"command": "cd c:\\ProjetoHTML\\Html_projeto && git add html_version/cartao-credito.html html_version/dashboard.html && git commit -m \"feat: coluna categoria nos cartoes e card faturas no dashboard\" && git push origin main",
+			"isBackground": false
+		}
+	]
+}
