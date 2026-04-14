@@ -206,35 +206,56 @@ table { width:100%; border-collapse:collapse; font-size:12px; }
 </div>
 
 <script>
-const LANCAMENTOS = [
-  {id:1,  tipo:"despesa", grupo:"DESPESAS", subgrupo:"IMÓVEL",               classe:"Água",               descricao:"Conta de Água",             valor:89.00,   venc:"2026-02-10", quitado:false},
-  {id:2,  tipo:"despesa", grupo:"DESPESAS", subgrupo:"IMÓVEL",               classe:"Energia Elétrica",   descricao:"Conta de Luz",              valor:248.74,  venc:"2026-02-15", quitado:false},
-  {id:3,  tipo:"despesa", grupo:"DESPESAS", subgrupo:"IMÓVEL",               classe:"Energia Elétrica",   descricao:"Energia elétrica",          valor:200.00,  venc:"2026-01-15", quitado:true},
-  {id:4,  tipo:"despesa", grupo:"DESPESAS", subgrupo:"DOAÇÕES",              classe:"Doações Diversas",   descricao:"Doação Igreja",             valor:420.00,  venc:"2026-02-01", quitado:true},
-  {id:5,  tipo:"despesa", grupo:"DESPESAS", subgrupo:"DESPESAS TRIBUTÁRIAS", classe:"GPS",                descricao:"GPS Fevereiro",             valor:532.00,  venc:"2026-02-20", quitado:false},
-  {id:6,  tipo:"despesa", grupo:"DESPESAS", subgrupo:"DESPESAS COM FILHOS",  classe:"Escola",             descricao:"Mensalidade Escola",        valor:200.00,  venc:"2026-02-05", quitado:false},
-  {id:7,  tipo:"despesa", grupo:"DESPESAS", subgrupo:"LANCHES E REFEIÇÕES",  classe:"Lanches da Empresa", descricao:"Compra Supermercado BH",    valor:1280.00, venc:"2026-03-09", quitado:false},
-  {id:8,  tipo:"despesa", grupo:"DESPESAS", subgrupo:"DESPESAS COM FILHOS",  classe:"Academia",           descricao:"Academia Henrique Eduardo", valor:200.00,  venc:"2026-02-06", quitado:false},
-  {id:9,  tipo:"despesa", grupo:"DESPESAS", subgrupo:"IMÓVEL",               classe:"Aluguel",            descricao:"Aluguel Março",             valor:1000.00, venc:"2026-03-05", quitado:true},
-  {id:10, tipo:"receita", grupo:"RECEITAS", subgrupo:"SALÁRIO",              classe:"Salário CLT",        descricao:"Salário Fevereiro",         valor:3500.00, venc:"2026-02-28", quitado:true},
-  {id:11, tipo:"receita", grupo:"RECEITAS", subgrupo:"FREELANCE",            classe:"Consultoria",        descricao:"Projeto consultoria",       valor:800.00,  venc:"2026-02-20", quitado:false},
-  {id:12, tipo:"receita", grupo:"RECEITAS", subgrupo:"SALÁRIO",              classe:"13º Salário",        descricao:"13º parcela",               valor:1750.00, venc:"2026-01-31", quitado:true},
-  {id:13, tipo:"receita", grupo:"RECEITAS", subgrupo:"OUTROS",               classe:"Reembolso",          descricao:"Reembolso empresa",         valor:350.00,  venc:"2026-02-15", quitado:true},
-  {id:14, tipo:"receita", grupo:"RECEITAS", subgrupo:"INVESTIMENTOS",        classe:"Rendimento",         descricao:"Rendimento CDB",            valor:420.00,  venc:"2026-02-28", quitado:true},
-  {id:15, tipo:"receita", grupo:"RECEITAS", subgrupo:"FREELANCE",            classe:"Design",             descricao:"Projeto design",            valor:1200.00, venc:"2026-03-10", quitado:false},
-  {id:16, tipo:"receita", grupo:"RECEITAS", subgrupo:"SALÁRIO",              classe:"Bônus",              descricao:"Bônus trimestral",          valor:5080.00, venc:"2026-03-31", quitado:false},
-];
+let LANCAMENTOS = [];
+let totalDesp = 0, totalRec = 0, saldo = 0, totalQuit = 0, compPct = 0, pendentes = 0;
 
 const fc = v => 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2});
 const today = new Date();
 let isDark = document.documentElement.getAttribute('data-theme') === 'dark', CI = {};
 
-const totalDesp = LANCAMENTOS.filter(l=>l.tipo==='despesa').reduce((s,l)=>s+l.valor,0);
-const totalRec  = LANCAMENTOS.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
-const saldo     = totalRec - totalDesp;
-const totalQuit = LANCAMENTOS.filter(l=>l.quitado).reduce((s,l)=>s+l.valor,0);
-const compPct   = Math.round((totalDesp/totalRec)*100);
-const pendentes = LANCAMENTOS.filter(l=>!l.quitado).reduce((s,l)=>s+l.valor,0);
+async function init() {
+  try {
+    document.getElementById('kpiRow').innerHTML = '<div style="padding:1rem;color:var(--muted);font-size:.85rem;">⏳ Carregando dados do Supabase…</div>';
+    const sb = createSupabaseClient();
+    const { data: lancRaw, error } = await sb
+      .from('lancamentos')
+      .select(`
+        id, tipo, valor, data, quitado, descricao_complementar,
+        classe:classes(id, descricao,
+          subgrupo:subgrupos(id, nome,
+            grupo:grupos(id, nome, tipo)
+          )
+        )
+      `)
+      .order('data', { ascending: false });
+
+    if (error) throw error;
+
+    LANCAMENTOS = (lancRaw || []).map(l => ({
+      id:       l.id,
+      tipo:     String(l.tipo ?? '').trim().toLowerCase().includes('rec') ? 'receita' : 'despesa',
+      grupo:    l.classe?.subgrupo?.grupo?.nome ?? 'SEM GRUPO',
+      subgrupo: l.classe?.subgrupo?.nome        ?? 'SEM SUBGRUPO',
+      classe:   l.classe?.descricao             ?? 'SEM CLASSE',
+      descricao: l.descricao_complementar       ?? '-',
+      valor:    parseFloat(l.valor || 0),
+      venc:     l.data ?? '',
+      quitado:  Boolean(l.quitado),
+    }));
+
+    totalDesp = LANCAMENTOS.filter(l=>l.tipo==='despesa').reduce((s,l)=>s+l.valor,0);
+    totalRec  = LANCAMENTOS.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
+    saldo     = totalRec - totalDesp;
+    totalQuit = LANCAMENTOS.filter(l=>l.quitado).reduce((s,l)=>s+l.valor,0);
+    compPct   = totalRec > 0 ? Math.round((totalDesp/totalRec)*100) : 0;
+    pendentes = LANCAMENTOS.filter(l=>!l.quitado).reduce((s,l)=>s+l.valor,0);
+
+    renderKPI(); buildCharts(); buildTable();
+  } catch(err) {
+    console.error('Erro ao carregar dados:', err);
+    document.getElementById('kpiRow').innerHTML = '<div style="padding:1rem;color:#ef4444;font-size:.85rem;">❌ Erro ao carregar dados do Supabase. Verifique o console.</div>';
+  }
+}
 
 document.getElementById('hdrDate').textContent = today.toLocaleDateString('pt-BR',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
 document.getElementById('ftrDate').textContent = today.toLocaleDateString('pt-BR');
@@ -395,7 +416,7 @@ function toggleSub(sId){
 }
 
 document.getElementById('srch').addEventListener('input',e=>buildTable(e.target.value.toLowerCase()));
-renderKPI(); buildCharts(); buildTable();
+init();
 
     async function handleLogout() {
       try {
