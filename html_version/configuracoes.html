@@ -394,8 +394,16 @@
       const l=document.getElementById('fpLista');
       document.getElementById('fpCount').textContent=allFP.length;
       if(!allFP.length){l.innerHTML='<div class="empty-state"><span class="empty-icon">💳</span>Nenhuma forma de pagamento cadastrada</div>';return}
-      const icons={'Dinheiro':'💵','Pix':'💠','PIX':'💠','Cartão':'💳','Cartao':'💳','Débito':'🏦','Debito':'🏦','Cheque':'📄','Boleto':'📑','Transferência':'🔄','Transferencia':'🔄'};
-      const getIcon = nome => { for(const[k,v] of Object.entries(icons)){if(nome.toLowerCase().includes(k.toLowerCase()))return v;} return '💳'; };
+      const mulheres=['geane','maria','ana','julia','paula','fernanda','patricia','camila','beatriz','carla','luciana','adriana','renata','marcia','helena','rosa','celia','claudia','sandra'];
+      const homens=['henrique','carlos','jose','joao','pedro','paulo','marcos','antonio','roberto','francisco','luis','andre','marcelo','rodrigo','eduardo','fernando','gabriel','rafael','daniel','thiago'];
+      const icons={'dinheiro':'💵','pix':'💠','cartão':'💳','cartao':'💳','débito':'🏦','debito':'🏦','cheque':'📄','boleto':'📑','transferência':'🔄','transferencia':'🔄','nubank':'💜','bradesco':'🔴','itaú':'🟠','itau':'🟠','santander':'🔴','bb':'🟡','caixa':'🔵'};
+      const getIcon = nome => {
+        const n = nome.toLowerCase();
+        if (mulheres.some(m => n.includes(m))) return '👩';
+        if (homens.some(h => n.includes(h))) return '👨';
+        for (const [k,v] of Object.entries(icons)) { if (n.includes(k)) return v; }
+        return '💳';
+      };
       l.innerHTML='<div class="fp-grid">'+allFP.map(fp=>{const at=fp.ativo!==false;const ic=getIcon(fp.nome);return`<div class="fp-item"><div class="fp-item-icon">${ic}</div><div class="fp-item-body"><div class="fp-item-name" title="${fp.nome}">${fp.nome}</div><span class="${at?'badge-ativo':'badge-inativo'}">${at?'Ativo':'Inativo'}</span></div><div class="fp-item-actions"><button class="btn btn-secondary btn-sm" onclick="editarFP(${fp.id})" title="Editar">✏️</button><button class="btn btn-${at?'warning':'success'} btn-sm" onclick="toggleAtivoFP(${fp.id},${at})" title="${at?'Desativar':'Ativar'}">${at?'⏸️':'▶️'}</button><button class="btn btn-danger btn-sm" onclick="deletarFP(${fp.id})" title="Excluir">🗑️</button></div></div>`}).join('')+'</div>';
     }
 
