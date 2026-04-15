@@ -396,7 +396,7 @@
       if(!allFP.length){l.innerHTML='<div class="empty-state"><span class="empty-icon">💳</span>Nenhuma forma de pagamento cadastrada</div>';return}
       const mulheres=['geane','maria','ana','julia','paula','fernanda','patricia','camila','beatriz','carla','luciana','adriana','renata','marcia','helena','rosa','celia','claudia','sandra'];
       const homens=['henrique','carlos','jose','joao','pedro','paulo','marcos','antonio','roberto','francisco','luis','andre','marcelo','rodrigo','eduardo','fernando','gabriel','rafael','daniel','thiago'];
-      const icons={'dinheiro':'💵','pix':'💠','cartão':'💳','cartao':'💳','débito':'🏦','debito':'🏦','cheque':'📄','boleto':'📑','transferência':'🔄','transferencia':'🔄','nubank':'💜','bradesco':'🔴','itaú':'🟠','itau':'🟠','santander':'🔴','bb':'🟡','caixa':'🔵'};
+      const icons={'dinheiro':'💵','pix':'💠','cartão':'💳','cartao':'💳','débito':'🏦','debito':'🏦','cheque':'📄','boleto':'📑','transferência':'🔄','transferencia':'🔄','nubank':'💜','bradesco':'🔴','itaú':'🟠','itau':'🟠','santander':'🔴','banco do brasil':'🟡','bb':'🟡','caixa':'🔵'};
       const getIcon = nome => {
         const n = nome.toLowerCase();
         if (mulheres.some(m => n.includes(m))) return '👩';
