@@ -351,7 +351,7 @@
     });
 
     async function carregarGrupos(){try{allGrupos=await fetchData('grupos',{order:{column:'nome',ascending:true}})||[];if(nivel==='grupos')renderGrupos()}catch(e){showToast('Erro ao carregar grupos','error')}}
-    async function carregarSubgrupos(gid){try{allSubgrupos=await fetchData('subgrupos',{eq:{grupo_id:gid},order:{column:'nome',ascending:true}})||[];renderSubgrupos()}catch(e){showToast('Erro ao carregar subgrupos','error')}}
+    async function carregarSubgrupos(gid){try{allSubgrupos=await fetchData('subgrupos',{eq:{grupo_id:gid},order:{column:'codigo',ascending:true}})||[];renderSubgrupos()}catch(e){showToast('Erro ao carregar subgrupos','error')}}
     async function carregarClasses(sid){try{allClasses=await fetchData('classes',{eq:{subgrupo_id:sid},order:{column:'descricao',ascending:true}})||[];renderClasses()}catch(e){showToast('Erro ao carregar classes','error')}}
     async function carregarFP(){try{allFP=await fetchData('formas_pagamento',{order:{column:'nome',ascending:true}})||[];renderFP()}catch(e){showToast('Erro ao carregar formas de pagamento','error')}}
 
@@ -383,7 +383,7 @@
     function renderSubgrupos(){
       const l=document.getElementById('hierLista');
       if(!allSubgrupos.length){l.innerHTML='<div class="empty-state"><span class="empty-icon">📁</span>Nenhum subgrupo neste grupo</div>';return}
-      l.innerHTML='<ul class="tree-list">'+allSubgrupos.map(s=>`<li class="tree-item" onclick="selecionarSubgrupo(${esc(s)})"><div><div class="tree-item-name">${s.nome}</div></div><div class="tree-item-actions" onclick="event.stopPropagation()"><button class="btn btn-secondary btn-sm" onclick="editarSubgrupo(${s.id})">✏️</button><button class="btn btn-danger btn-sm" onclick="deletarSubgrupo(${s.id})">🗑️</button></div></li>`).join('')+'</ul>';
+      l.innerHTML='<ul class="tree-list">'+allSubgrupos.map(s=>`<li class="tree-item" onclick="selecionarSubgrupo(${esc(s)})"><div><div class="tree-item-name">${s.codigo?`<span style="color:var(--text3);font-size:.85rem;font-weight:600">${s.codigo}</span> - `:``}${s.nome}</div></div><div class="tree-item-actions" onclick="event.stopPropagation()"><button class="btn btn-secondary btn-sm" onclick="editarSubgrupo(${s.id})">✏️</button><button class="btn btn-danger btn-sm" onclick="deletarSubgrupo(${s.id})">🗑️</button></div></li>`).join('')+'</ul>';
     }
     function renderClasses(){
       const l=document.getElementById('hierLista');
@@ -422,7 +422,7 @@
       if(!nome){showToast('Informe o nome','warning');return}
       try{
         if(nivel==='grupos'){await insertData('grupos',{nome,tipo:document.getElementById('inpTipo').value});await carregarGrupos();showToast('Grupo criado!','success')}
-        else if(nivel==='subgrupos'){const maxCodigo=allSubgrupos.length>0?Math.max(...allSubgrupos.map(s=>s.codigo||0)):0;await insertData('subgrupos',{nome,grupo_id:grupoSelecionado.id,codigo:maxCodigo+1});await carregarSubgrupos(grupoSelecionado.id);showToast('Subgrupo criado!','success')}
+        else if(nivel==='subgrupos'){const usados=new Set(allSubgrupos.map(s=>s.codigo||0));let prox=10;while(usados.has(prox))prox+=10;await insertData('subgrupos',{nome,grupo_id:grupoSelecionado.id,codigo:prox});await carregarSubgrupos(grupoSelecionado.id);showToast('Subgrupo criado!','success')}
         else{const p={descricao:nome,subgrupo_id:subgrupoSelecionado.id,ativo:true};const cd=document.getElementById('inpCodigo').value.trim();if(cd)p.codigo=cd;await insertData('classes',p);await carregarClasses(subgrupoSelecionado.id);showToast('Classe criada!','success')}
         cancelarForm();
       }catch(e){showToast('Erro: '+e.message,'error')}
