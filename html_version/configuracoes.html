@@ -131,6 +131,17 @@
     [data-theme="dark"] .ajuda-tree-sub{background:#14401e}
     .ajuda-tree-classe{padding:.2rem .65rem;margin-left:3rem;color:var(--text2);font-size:.78rem}
     .ajuda-footer{position:sticky;bottom:0;background:var(--surface2);border-top:1px solid var(--border);padding:1rem 1.5rem;display:flex;justify-content:flex-end}
+    .badge-corrente{background:#dbeafe;color:#1d4ed8;padding:.15rem .55rem;border-radius:99px;font-size:.65rem;font-weight:700}
+    .badge-poupanca{background:#dcfce7;color:#16a34a;padding:.15rem .55rem;border-radius:99px;font-size:.65rem;font-weight:700}
+    [data-theme="dark"] .badge-corrente{background:#1e3a5f;color:#93c5fd}
+    [data-theme="dark"] .badge-poupanca{background:#14401e;color:#4ade80}
+    .banco-item{display:flex;align-items:center;gap:.75rem;background:var(--surface);border:2px solid var(--border);border-radius:12px;padding:.7rem 1rem;transition:border-color var(--transition),box-shadow var(--transition);flex:0 1 auto}
+    .banco-item:hover{border-color:#22c55e;box-shadow:0 4px 16px rgba(34,197,94,.12)}
+    .banco-item-icon{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#22c55e,#16a34a);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+    .banco-item-body{display:flex;flex-direction:column;gap:.2rem;min-width:0;flex:1}
+    .banco-item-name{font-size:.88rem;font-weight:700;color:var(--text)}
+    .banco-item-info{font-size:.75rem;color:var(--text2);display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
+    .banco-item-actions{display:flex;gap:.25rem;opacity:0;transition:opacity .15s;flex-shrink:0}.banco-item:hover .banco-item-actions{opacity:1}
   </style>
 </head>
 <body>
@@ -250,6 +261,51 @@
         <div class="empty-state"><span class="empty-icon">⏳</span>Carregando...</div>
       </div>
     </div>
+    <!-- BANCOS -->
+    <div class="card">
+      <div class="card-title">
+        🏦 Bancos Cadastrados
+        <span class="count-badge" id="bancosCount">0</span>
+        <div style="margin-left:auto">
+          <button class="btn btn-primary btn-sm" onclick="mostrarFormBanco()">➕ Novo Banco</button>
+        </div>
+      </div>
+      <div id="formBanco" class="inline-form hidden">
+        <div class="inline-form-title" id="formBancoTitle">Novo Banco</div>
+        <div class="inline-form-row">
+          <div class="form-group" style="min-width:160px">
+            <label>Banco</label>
+            <input type="text" id="inpBancoNome" placeholder="Ex: Bradesco" />
+          </div>
+          <div class="form-group" style="max-width:130px">
+            <label>N° Agência</label>
+            <input type="text" id="inpBancoAg" placeholder="Ex: 1234-5" />
+          </div>
+          <div class="form-group" style="max-width:160px">
+            <label>N° Conta</label>
+            <input type="text" id="inpBancoConta" placeholder="Ex: 12345-6" />
+          </div>
+          <div class="form-group" style="max-width:140px">
+            <label>Tipo de Conta</label>
+            <select id="inpBancoTipo">
+              <option value="Corrente">Corrente</option>
+              <option value="Poupança">Poupança</option>
+            </select>
+          </div>
+          <div class="form-group" style="max-width:150px">
+            <label>Saldo Inicial (R$)</label>
+            <input type="number" id="inpBancoSaldo" placeholder="0,00" step="0.01" min="0" />
+          </div>
+          <div style="align-self:flex-end;display:flex;gap:.35rem">
+            <button class="btn btn-success btn-sm" onclick="salvarBanco()">✅ Salvar</button>
+            <button class="btn btn-secondary btn-sm" onclick="cancelarFormBanco()">✕</button>
+          </div>
+        </div>
+      </div>
+      <div id="bancosLista">
+        <div class="empty-state"><span class="empty-icon">⏳</span>Carregando...</div>
+      </div>
+    </div>
   </main>
 
   <footer class="footer">
@@ -342,12 +398,12 @@
     function toggleTheme(){const h=document.documentElement,d=h.getAttribute('data-theme')==='dark';h.setAttribute('data-theme',d?'light':'dark');document.getElementById('themeBtn').textContent=d?'🌙 Escuro':'☀️ Claro'}
 
     let nivel='grupos',grupoSelecionado=null,subgrupoSelecionado=null;
-    let editandoId=null,editandoTabela=null,editandoFPId=null;
-    let allGrupos=[],allSubgrupos=[],allClasses=[],allFP=[];
+    let editandoId=null,editandoTabela=null,editandoFPId=null,editandoBancoId=null;
+    let allGrupos=[],allSubgrupos=[],allClasses=[],allFP=[],allBancos=[];
 
     window.addEventListener('DOMContentLoaded',async()=>{
       await protectPage();
-      await Promise.all([carregarGrupos(),carregarFP()]);
+      await Promise.all([carregarGrupos(),carregarFP(),carregarBancos()]);
     });
 
     async function carregarGrupos(){try{allGrupos=await fetchData('grupos',{order:{column:'nome',ascending:true}})||[];if(nivel==='grupos')renderGrupos()}catch(e){showToast('Erro ao carregar grupos','error')}}
@@ -463,6 +519,38 @@
     function editarFP(id){const fp=allFP.find(x=>x.id===id);if(!fp)return;editandoFPId=id;document.getElementById('inpFPNome').value=fp.nome;document.getElementById('formFPTitle').textContent='Editar Forma de Pagamento';document.getElementById('formFP').classList.remove('hidden');document.getElementById('inpFPNome').focus()}
     async function toggleAtivoFP(id,at){try{await updateData('formas_pagamento',id,{ativo:!at});await carregarFP()}catch(e){showToast('Erro: '+e.message,'error')}}
     async function deletarFP(id){if(!await showConfirm('Deletar forma de pagamento?','Esta ação não pode ser desfeita.'))return;try{await deleteData('formas_pagamento',id);await carregarFP();showToast('Deletado!','success')}catch(e){showToast('Erro: '+e.message,'error')}}
+
+    async function carregarBancos(){try{allBancos=await fetchData('bancos',{order:{column:'nome',ascending:true}})||[];renderBancos()}catch(e){document.getElementById('bancosLista').innerHTML='<div class="empty-state"><span class="empty-icon">🏦</span>Nenhum banco cadastrado</div>';document.getElementById('bancosCount').textContent='0'}}
+    function renderBancos(){
+      const l=document.getElementById('bancosLista');
+      document.getElementById('bancosCount').textContent=allBancos.length;
+      if(!allBancos.length){l.innerHTML='<div class="empty-state"><span class="empty-icon">🏦</span>Nenhum banco cadastrado</div>';return}
+      const iconsBanco={'bradesco':'🔴','itaú':'🟠','itau':'🟠','santander':'🔴','nubank':'💜','banco do brasil':'🟡','bb':'🟡','caixa':'🔵','inter':'🟠','sicoob':'🟢','sicredi':'🟢'};
+      const getBancoIcon=nome=>{const n=(nome||'').toLowerCase();for(const[k,v]of Object.entries(iconsBanco)){if(n.includes(k))return v}return'🏦'};
+      const fmtSaldo=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+      const saldoCor=v=>Number(v||0)<0?'color:#ef4444;font-weight:700':'color:#16a34a;font-weight:700';
+      l.innerHTML='<div class="fp-grid">'+allBancos.map(b=>{const at=b.ativo!==false;const ic=getBancoIcon(b.nome);const tipoCls=b.tipo_conta==='Poupança'?'badge-poupanca':'badge-corrente';return`<div class="banco-item"><div class="banco-item-icon">${ic}</div><div class="banco-item-body"><div class="banco-item-name">${b.nome}</div><div class="banco-item-info"><span>AG: <strong>${b.agencia||'—'}</strong></span><span>Conta: <strong>${b.conta||'—'}</strong></span><span class="${tipoCls}">${b.tipo_conta||'Corrente'}</span><span class="${at?'badge-ativo':'badge-inativo'}">${at?'Ativo':'Inativo'}</span></div><div style="margin-top:.25rem;font-size:.82rem">Saldo: <span style="${saldoCor(b.saldo)}">${fmtSaldo(b.saldo)}</span></div></div><div class="banco-item-actions"><button class="btn btn-secondary btn-sm" onclick="editarBanco(${b.id})" title="Editar">✏️</button><button class="btn btn-${at?'warning':'success'} btn-sm" onclick="toggleAtivoBanco(${b.id},${at})" title="${at?'Desativar':'Ativar'}">${at?'⏸️':'▶️'}</button><button class="btn btn-danger btn-sm" onclick="deletarBanco(${b.id})" title="Excluir">🗑️</button></div></div>`}).join('')+'</div>';
+    }
+    function mostrarFormBanco(){editandoBancoId=null;document.getElementById('inpBancoNome').value='';document.getElementById('inpBancoAg').value='';document.getElementById('inpBancoConta').value='';document.getElementById('inpBancoTipo').value='Corrente';document.getElementById('inpBancoSaldo').value='';document.getElementById('formBancoTitle').textContent='Novo Banco';document.getElementById('formBanco').classList.remove('hidden');document.getElementById('inpBancoNome').focus()}
+    function cancelarFormBanco(){document.getElementById('formBanco').classList.add('hidden');editandoBancoId=null}
+    async function salvarBanco(){
+      const nome=document.getElementById('inpBancoNome').value.trim();
+      const ag=document.getElementById('inpBancoAg').value.trim();
+      const conta=document.getElementById('inpBancoConta').value.trim();
+      const tipo=document.getElementById('inpBancoTipo').value;
+      const saldo=parseFloat(document.getElementById('inpBancoSaldo').value)||0;
+      if(!nome){showToast('Informe o nome do banco','warning');return}
+      if(!ag){showToast('Informe o número da agência','warning');return}
+      if(!conta){showToast('Informe o número da conta','warning');return}
+      try{
+        if(editandoBancoId){await updateData('bancos',editandoBancoId,{nome,agencia:ag,conta,tipo_conta:tipo,saldo});showToast('Banco atualizado!','success')}
+        else{await insertData('bancos',{nome,agencia:ag,conta,tipo_conta:tipo,saldo,ativo:true});showToast('Banco cadastrado!','success')}
+        editandoBancoId=null;cancelarFormBanco();await carregarBancos();
+      }catch(e){showToast('Erro: '+e.message,'error')}
+    }
+    function editarBanco(id){const b=allBancos.find(x=>x.id===id);if(!b)return;editandoBancoId=id;document.getElementById('inpBancoNome').value=b.nome||'';document.getElementById('inpBancoAg').value=b.agencia||'';document.getElementById('inpBancoConta').value=b.conta||'';document.getElementById('inpBancoTipo').value=b.tipo_conta||'Corrente';document.getElementById('inpBancoSaldo').value=b.saldo!=null?b.saldo:'';document.getElementById('formBancoTitle').textContent='Editar Banco';document.getElementById('formBanco').classList.remove('hidden');document.getElementById('inpBancoNome').focus()}
+    async function toggleAtivoBanco(id,at){try{await updateData('bancos',id,{ativo:!at});await carregarBancos()}catch(e){showToast('Erro: '+e.message,'error')}}
+    async function deletarBanco(id){if(!await showConfirm('Deletar banco?','Esta ação não pode ser desfeita.'))return;try{await deleteData('bancos',id);await carregarBancos();showToast('Banco deletado!','success')}catch(e){showToast('Erro: '+e.message,'error')}}
 
     function showToast(msg,type='success',duration=4000){const icons={success:'✅',error:'❌',warning:'⚠️',info:'ℹ️'};const c=document.getElementById('toast-container');const t=document.createElement('div');t.className=`toast ${type}`;t.innerHTML=`<span class="toast-icon">${icons[type]||'ℹ️'}</span><span class="toast-msg">${msg}</span><button class="toast-close" onclick="this.parentElement.remove()">✕</button>`;c.appendChild(t);setTimeout(()=>{t.classList.add('hiding');setTimeout(()=>t.remove(),260)},duration)}
     function showConfirm(title,desc,okLabel='Confirmar'){return new Promise(resolve=>{document.getElementById('confirm-title').textContent=title;document.getElementById('confirm-desc').textContent=desc;const ok=document.getElementById('confirm-ok');ok.textContent=okLabel;const ov=document.getElementById('confirm-overlay');ov.classList.remove('hidden');const cleanup=v=>{ov.classList.add('hidden');resolve(v)};ok.onclick=()=>cleanup(true);document.getElementById('confirm-cancel').onclick=()=>cleanup(false);ov.onclick=e=>{if(e.target===ov)cleanup(false)}})}
