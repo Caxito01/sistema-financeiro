@@ -869,7 +869,7 @@ function renderKPIs(data) {
   const agora = new Date();
   const mesAtual = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
   // Despesas = DESPESA normal + CARTAO apenas do mês atual
-  const despesas  = data.filter(l => l.tipo === 'DESPESA' || (l.tipo === 'CARTAO' && (l.data || '').slice(0, 7) === mesAtual));
+  const despesas  = data.filter(l => l.tipo === 'DESPESA' || l.tipo === 'CARTAO');
   const receitas  = data.filter(l => l.tipo === 'RECEITA');
   const totalD    = despesas.reduce((a,l) => a + +l.valor, 0);
   const totalR    = receitas.reduce((a,l) => a + +l.valor, 0);
@@ -983,7 +983,7 @@ function renderMensalChart(data) {
 function renderTipoChart(data) {
   const agoraD = new Date();
   const mesAtualD = `${agoraD.getFullYear()}-${String(agoraD.getMonth() + 1).padStart(2, '0')}`;
-  const totalD = data.filter(l=>l.tipo==='DESPESA'||(l.tipo==='CARTAO'&&(l.data||'').slice(0,7)===mesAtualD)).reduce((a,l)=>a+(+l.valor),0);
+  const totalD = data.filter(l=>l.tipo==='DESPESA'||l.tipo==='CARTAO').reduce((a,l)=>a+(+l.valor),0);
   const totalR = data.filter(l=>l.tipo==='RECEITA').reduce((a,l)=>a+(+l.valor),0);
   if (chartTipo) chartTipo.destroy();
   chartTipo = new Chart(document.getElementById('cTipo').getContext('2d'), {
@@ -1053,7 +1053,7 @@ function renderTopSubgrupos(data) {
   function buildTop(tipo, elId, color) {
     const agoraT = new Date();
     const mesAtualT = `${agoraT.getFullYear()}-${String(agoraT.getMonth() + 1).padStart(2, '0')}`;
-    const filtered = tipo === 'DESPESA' ? data.filter(l => l.tipo === 'DESPESA' || (l.tipo === 'CARTAO' && (l.data || '').slice(0, 7) === mesAtualT)) : data.filter(l => l.tipo === tipo);
+    const filtered = tipo === 'DESPESA' ? data.filter(l => l.tipo === 'DESPESA' || l.tipo === 'CARTAO') : data.filter(l => l.tipo === tipo);
     const byS = {};
     filtered.forEach(l => {
       const name = l.classe?.subgrupo?.nome || (l.tipo === 'CARTAO' ? '💳 Cartão de Crédito' : 'Sem subgrupo');
@@ -1084,14 +1084,14 @@ function renderTopSubgrupos(data) {
 ══════════════════════════════════════════════════════════════ */
 function renderVisaoEconomica(data) {
   const recBruta = data.filter(l => l.tipo === 'RECEITA').reduce((a,l) => a + +l.valor, 0);
-  const custDesp = data.filter(l => l.tipo === 'DESPESA').reduce((a,l) => a + +l.valor, 0);
+  const custDesp = data.filter(l => l.tipo === 'DESPESA' || l.tipo === 'CARTAO').reduce((a,l) => a + +l.valor, 0);
   const lucro    = recBruta - custDesp;
   const margem   = recBruta > 0 ? ((lucro / recBruta) * 100).toFixed(1) : '–';
 
   document.getElementById('vRecBruta').textContent = fmt(recBruta);
   document.getElementById('vRecBrutaSub').textContent = `${data.filter(l=>l.tipo==='RECEITA').length} lançamento(s)`;
   document.getElementById('vCustDesp').textContent = fmt(custDesp);
-  document.getElementById('vCustDespSub').textContent = `${data.filter(l=>l.tipo==='DESPESA').length} lançamento(s)`;
+  document.getElementById('vCustDespSub').textContent = `${data.filter(l=>l.tipo==='DESPESA'||l.tipo==='CARTAO').length} lançamento(s)`;
   document.getElementById('vLucro').textContent = fmt(lucro);
   document.getElementById('vLucro').style.color = lucro >= 0 ? '#22c55e' : '#ef4444';
   document.getElementById('vLucroSub').textContent = `Margem: ${margem}%`;
@@ -1175,7 +1175,7 @@ function renderGauges(data) {
 ══════════════════════════════════════════════════════════════ */
 function renderDRE(data) {
   const recOpTotal  = data.filter(l => l.tipo === 'RECEITA').reduce((a,l) => a + +l.valor, 0);
-  const custTotal   = data.filter(l => l.tipo === 'DESPESA').reduce((a,l) => a + +l.valor, 0);
+  const custTotal   = data.filter(l => l.tipo === 'DESPESA' || l.tipo === 'CARTAO').reduce((a,l) => a + +l.valor, 0);
   const margContr   = recOpTotal - custTotal;
   const pctMarg     = recOpTotal > 0 ? ((margContr / recOpTotal) * 100) : 0;
   const lucroOp     = margContr;
@@ -1245,7 +1245,7 @@ function renderPrazos(data) {
   }
 
   const recPend = data.filter(l => l.tipo === 'RECEITA' && !l.quitado);
-  const pagPend = data.filter(l => l.tipo === 'DESPESA' && !l.quitado);
+  const pagPend = data.filter(l => (l.tipo === 'DESPESA' || l.tipo === 'CARTAO') && !l.quitado);
   const avgRec  = avgAge(recPend);
   const avgPag  = avgAge(pagPend);
 
@@ -1329,7 +1329,7 @@ function renderOrcamentoAnual(data) {
   });
 
   const recs  = Object.values(byKey).filter(r => r.tipo === 'RECEITA').sort((a,b) => b.total - a.total);
-  const desps = Object.values(byKey).filter(r => r.tipo === 'DESPESA').sort((a,b) => b.total - a.total);
+  const desps = Object.values(byKey).filter(r => r.tipo === 'DESPESA' || r.tipo === 'CARTAO').sort((a,b) => b.total - a.total);
 
   if (!recs.length && !desps.length) {
     document.getElementById('orcWrap').innerHTML = `<div style="padding:1.25rem;text-align:center;font-size:.78rem;color:var(--text3);">Sem dados para ${ano}.</div>`;
