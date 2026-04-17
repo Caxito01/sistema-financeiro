@@ -248,7 +248,7 @@ async function init() {
     saldo     = totalRec - totalDesp;
     totalQuit = LANCAMENTOS.filter(l=>l.quitado).reduce((s,l)=>s+l.valor,0);
     compPct   = totalRec > 0 ? Math.round((totalDesp/totalRec)*100) : 0;
-    pendentes = LANCAMENTOS.filter(l=>!l.quitado).reduce((s,l)=>s+l.valor,0);
+    pendentes = LANCAMENTOS.filter(l=>(l.tipo==='DESPESA'||l.tipo==='CARTAO')&&!l.quitado).reduce((s,l)=>s+l.valor,0);
 
     renderKPI(); buildCharts(); buildTable();
   } catch(err) {
