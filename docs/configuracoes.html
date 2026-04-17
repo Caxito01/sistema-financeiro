@@ -543,8 +543,10 @@
       if(!ag){showToast('Informe o número da agência','warning');return}
       if(!conta){showToast('Informe o número da conta','warning');return}
       try{
+        const {data:{session}}=await createSupabaseClient().auth.getSession();
+        const userId=session?.user?.id;
         if(editandoBancoId){await updateData('bancos',editandoBancoId,{nome,agencia:ag,conta,tipo_conta:tipo,saldo});showToast('Banco atualizado!','success')}
-        else{await insertData('bancos',{nome,agencia:ag,conta,tipo_conta:tipo,saldo,ativo:true});showToast('Banco cadastrado!','success')}
+        else{await insertData('bancos',{nome,agencia:ag,conta,tipo_conta:tipo,saldo,ativo:true,user_id:userId});showToast('Banco cadastrado!','success')}
         editandoBancoId=null;cancelarFormBanco();await carregarBancos();
       }catch(e){showToast('Erro: '+e.message,'error')}
     }
