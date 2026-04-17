@@ -547,9 +547,9 @@
       }
 
       if (status === 'QUITADAS') {
-        filtrados = filtrados.filter(l => l.tipo === 'DESPESA' && l.quitado === true);
+        filtrados = filtrados.filter(l => (l.tipo === 'DESPESA' || l.tipo === 'CARTAO') && l.quitado === true);
       } else if (status === 'ABERTAS') {
-        filtrados = filtrados.filter(l => l.tipo === 'DESPESA' && l.quitado === false);
+        filtrados = filtrados.filter(l => (l.tipo === 'DESPESA' || l.tipo === 'CARTAO') && l.quitado === false);
       }
 
       if (dataInicio) {
@@ -609,8 +609,9 @@
         const valor     = parseFloat(lanc.valor || 0);
         const fmtVal    = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
         const prefixo   = lanc.tipo === 'RECEITA' ? '+' : '';
-        const valClass  = lanc.tipo === 'DESPESA' ? 'val-despesa' : 'val-receita';
-        const valColor  = lanc.tipo === 'DESPESA' ? 'var(--danger)' : 'var(--success)';
+        const _ehDesp  = lanc.tipo === 'DESPESA' || lanc.tipo === 'CARTAO';
+        const valClass  = _ehDesp ? 'val-despesa' : 'val-receita';
+        const valColor  = _ehDesp ? 'var(--danger)' : 'var(--success)';
         const quitadoTag = lanc.quitado ? ' <em style="font-size:.75em;color:#888">(quitado)</em>' : '';
 
         // Células de dados (HTML seguro — sem IDs embutidos)
@@ -628,7 +629,7 @@
         tdAcoes.className = 'no-print';
         tdAcoes.style.cssText = 'white-space:nowrap';
 
-        if (lanc.tipo === 'DESPESA' && !lanc.quitado) {
+        if ((lanc.tipo === 'DESPESA' || lanc.tipo === 'CARTAO') && !lanc.quitado) {
           const btnQ = document.createElement('button');
           btnQ.className = 'act-btn success sm';
           btnQ.style.cssText = 'margin-right:.25rem';
@@ -659,9 +660,10 @@
     }
 
     function atualizarTotais() {
-      const despesas = todosLancamentos.filter(l => l.tipo === 'DESPESA' && !l.quitado).reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
+      const _isDesp = l => l.tipo === 'DESPESA' || l.tipo === 'CARTAO';
+      const despesas = todosLancamentos.filter(l => _isDesp(l) && !l.quitado).reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
       const receitas = todosLancamentos.filter(l => l.tipo === 'RECEITA').reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
-      const totalDespesasGeral = todosLancamentos.filter(l => l.tipo === 'DESPESA').reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
+      const totalDespesasGeral = todosLancamentos.filter(l => _isDesp(l)).reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
       const saldo = receitas - totalDespesasGeral;
 
       const mask = '••••••';
@@ -798,11 +800,12 @@
       const fmtVal = v =>
         new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
       const listaAtual   = todosLancamentos;
-      const despAbertas  = listaAtual.filter(l => l.tipo === 'DESPESA' && !l.quitado)
+      const _isD = l => l.tipo === 'DESPESA' || l.tipo === 'CARTAO';
+      const despAbertas  = listaAtual.filter(l => _isD(l) && !l.quitado)
                                      .reduce((s,l) => s + parseFloat(l.valor||0), 0);
       const receitas     = listaAtual.filter(l => l.tipo === 'RECEITA')
                                      .reduce((s,l) => s + parseFloat(l.valor||0), 0);
-      const despTotal    = listaAtual.filter(l => l.tipo === 'DESPESA')
+      const despTotal    = listaAtual.filter(l => _isD(l))
                                      .reduce((s,l) => s + parseFloat(l.valor||0), 0);
       const quitadas     = listaAtual.filter(l => l.quitado)
                                      .reduce((s,l) => s + parseFloat(l.valor||0), 0);
