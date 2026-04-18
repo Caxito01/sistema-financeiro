@@ -1337,12 +1337,19 @@ function renderOrcamentoAnual(data) {
   data.forEach(l => {
     if (!l.data) return;
     const d = new Date(l.data);
-    if (d.getFullYear() !== ano) return;
+    // Cartão: aloca no mês seguinte (mês do pagamento da fatura)
+    let mesIdx = d.getMonth();
+    let anoLanc = d.getFullYear();
+    if (l.tipo === 'CARTAO') {
+      mesIdx += 1;
+      if (mesIdx > 11) { mesIdx = 0; anoLanc += 1; }
+    }
+    if (anoLanc !== ano) return;
     const grupo = l.classe?.subgrupo?.grupo?.nome || 'Sem Grupo';
     const tipo  = l.tipo;
     const key   = `${tipo}::${grupo}`;
     if (!byKey[key]) byKey[key] = { grupo, tipo, m: Array(12).fill(0), total: 0 };
-    byKey[key].m[d.getMonth()] += +l.valor;
+    byKey[key].m[mesIdx] += +l.valor;
     byKey[key].total += +l.valor;
   });
 
