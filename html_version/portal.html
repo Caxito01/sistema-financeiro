@@ -264,14 +264,25 @@
     .msec-title{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin:.25rem 0 .7rem;padding-bottom:.35rem;border-bottom:1px solid var(--border);}
 
     /* ── BANCO SALDOS ── */
-    .banco-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.6rem;margin-bottom:1.5rem;}
-    .banco-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.75rem 1rem;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center;}
-    .banco-name{font-size:.75rem;font-weight:700;color:var(--text2);}
-    .banco-val{font-size:.82rem;font-weight:800;}
-
-    /* ── SALDO EM CONTAS BAR ── */
-    .saldo-bar-wrap{background:var(--border);border-radius:99px;height:6px;overflow:hidden;margin-top:.3rem;}
-    .saldo-bar{height:100%;border-radius:99px;transition:width .6s ease;}
+    .banco-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin-bottom:1.5rem;}
+    .banco-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.2rem;box-shadow:0 2px 8px rgba(0,0,0,.06);display:flex;align-items:center;gap:1rem;transition:transform .18s ease,box-shadow .18s ease;position:relative;overflow:hidden;}
+    .banco-card:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.1);}
+    .banco-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:12px 0 0 12px;}
+    .banco-card.positivo::before{background:linear-gradient(180deg,#22c55e,#16a34a);}
+    .banco-card.negativo::before{background:linear-gradient(180deg,#ef4444,#dc2626);}
+    .banco-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;}
+    .banco-icon.positivo{background:linear-gradient(135deg,#dcfce7,#bbf7d0);color:#16a34a;}
+    .banco-icon.negativo{background:linear-gradient(135deg,#fee2e2,#fecaca);color:#dc2626;}
+    .banco-info{flex:1;min-width:0;}
+    .banco-name{font-size:.85rem;font-weight:700;color:var(--text1);margin-bottom:.15rem;}
+    .banco-detail{font-size:.68rem;color:var(--text3);letter-spacing:.02em;}
+    .banco-saldo-wrap{text-align:right;flex-shrink:0;}
+    .banco-val{font-size:1.05rem;font-weight:800;letter-spacing:-.02em;}
+    .banco-val.positivo{color:#16a34a;}
+    .banco-val.negativo{color:#dc2626;}
+    .banco-tipo-badge{display:inline-block;font-size:.6rem;font-weight:600;padding:.15rem .45rem;border-radius:99px;margin-top:.25rem;}
+    .banco-tipo-badge.positivo{background:#dcfce7;color:#16a34a;}
+    .banco-tipo-badge.negativo{background:#fee2e2;color:#dc2626;}
 
         /* ── RESPONSIVE ── */
     @media(max-width:640px){.page{padding:1rem;} .header{padding:0 1rem;}}
@@ -1125,20 +1136,34 @@ function renderBancoSaldos(bancos) {
     document.getElementById('bancoGrid').innerHTML = '<div style="font-size:.78rem;color:var(--text3);padding:.5rem;">Nenhum banco cadastrado. Cadastre bancos em Configurações.</div>';
     return;
   }
-  const maxAbs = Math.max(...bancos.map(b => Math.abs(+b.saldo || 0)), 1);
-  document.getElementById('bancoGrid').innerHTML = bancos.map(b => {
+  const totalSaldo = bancos.reduce((s, b) => s + (+b.saldo || 0), 0);
+  const totalClass = totalSaldo >= 0 ? 'positivo' : 'negativo';
+
+  const cards = bancos.map(b => {
     const saldo = +b.saldo || 0;
-    const color = saldo >= 0 ? '#22c55e' : '#ef4444';
-    const pct   = Math.round((Math.abs(saldo) / maxAbs) * 100);
-    const tipo  = b.tipo_conta ? `<span style="font-size:.65rem;color:var(--text3);margin-left:.3rem;">(${b.tipo_conta})</span>` : '';
-    return `<div class="banco-card">
-      <div>
-        <div class="banco-name">${b.nome}${tipo}</div>
-        <div class="saldo-bar-wrap"><div class="saldo-bar" style="width:${pct}%;background:${color};"></div></div>
+    const cls   = saldo >= 0 ? 'positivo' : 'negativo';
+    const ag    = b.agencia ? `Ag: ${b.agencia}` : '';
+    const cc    = b.conta ? `Cc: ${b.conta}` : '';
+    const detail = [ag, cc].filter(Boolean).join(' · ');
+    return `<div class="banco-card ${cls}">
+      <div class="banco-icon ${cls}">🏦</div>
+      <div class="banco-info">
+        <div class="banco-name">${b.nome}</div>
+        ${detail ? `<div class="banco-detail">${detail}</div>` : ''}
       </div>
-      <div class="banco-val" style="color:${color};">${fmt(saldo)}</div>
+      <div class="banco-saldo-wrap">
+        <div class="banco-val ${cls}">${fmt(saldo)}</div>
+        <div class="banco-tipo-badge ${cls}">${b.tipo_conta || 'Corrente'}</div>
+      </div>
     </div>`;
   }).join('');
+
+  const totalCard = `<div style="grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:.7rem 1.2rem;border-radius:10px;background:linear-gradient(135deg,${totalSaldo >= 0 ? '#f0fdf4,#dcfce7' : '#fef2f2,#fee2e2'});border:1px solid ${totalSaldo >= 0 ? '#bbf7d0' : '#fecaca'};">
+    <span style="font-size:.78rem;font-weight:700;color:var(--text2);">💰 Saldo Total</span>
+    <span style="font-size:1.1rem;font-weight:800;color:${totalSaldo >= 0 ? '#16a34a' : '#dc2626'};">${fmt(totalSaldo)}</span>
+  </div>`;
+
+  document.getElementById('bancoGrid').innerHTML = cards + totalCard;
 }
 
 /* ══════════════════════════════════════════════════════════════
