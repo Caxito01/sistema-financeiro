@@ -31,15 +31,6 @@
     .sf-nav a.active{background:#f0fdf4;color:#16a34a}
     [data-theme="dark"] .sf-nav a.active{background:rgba(34,197,94,.15);color:#4ade80}
     .sf-footer{text-align:center;padding:1.5rem;font-size:.72rem;color:var(--text3);border-top:1px solid var(--border);margin-top:1rem}
-    .act-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 18px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;text-decoration:none}
-    .act-btn:hover{border-color:#7c5cfc;background:#7c5cfc;color:#fff}
-    .act-btn.primary{background:#7c5cfc;border-color:#7c5cfc;color:#fff}
-    .act-btn.primary:hover{background:#6a4ce0}
-    .act-btn.success{background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.3);color:#16a34a}
-    .act-btn.success:hover{background:#22c55e;border-color:#22c55e;color:#fff}
-    .act-btn.danger{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.3);color:#ef4444}
-    .act-btn.danger:hover{background:#ef4444;border-color:#ef4444;color:#fff}
-    .act-btn.sm{padding:4px 10px;font-size:.75rem;border-radius:7px;flex:unset}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -272,11 +263,11 @@
     <a href="portal.html">🏠 Portal</a>
     <a href="dashboard.html">📊 Dashboard</a>
     <a href="lancamentos.html">➕ Novo Lançamento</a>
-    <a href="lista-lancamentos.html" class="active">📋 Lançamentos</a>
+    <a href="lista-lancamentos.html" class="active">📋 Lista</a>
     <a href="relatorios.html">📈 Relatórios</a>
     <a href="cartao-credito.html">💳 Cartões</a>
     <a href="configuracoes.html">⚙️ Configurações</a>
-    <a href="#" onclick="handleLogout();return false;">🔐 Sair</a>
+    <a href="login.html">🔐 Login</a>
   </nav>
 
   <!-- ══ CABEÇALHO IMPRESSÃO (oculto na tela) ══ -->
@@ -328,8 +319,8 @@
     <div class="flex-between mb-4">
       <h1 style="font-size: 2rem; font-weight: 700;">📋 Lançamentos</h1>
       <div class="flex gap-2 no-print">
-        <button onclick="window.location.href='dashboard.html'" class="act-btn">← Voltar</button>
-        <button onclick="window.location.href='lancamentos.html'" class="act-btn primary">➕ Novo</button>
+        <button onclick="window.location.href='dashboard.html'" class="btn btn-secondary">← Voltar</button>
+        <button onclick="window.location.href='lancamentos.html'" class="btn btn-primary">➕ Novo</button>
       </div>
     </div>
 
@@ -379,12 +370,12 @@
         </div>
       </div>
       <div class="flex gap-2">
-        <button onclick="aplicarFiltros()" class="act-btn primary">Filtrar</button>
-        <button onclick="limparFiltros()" class="act-btn">Limpar</button>
-        <button onclick="exportarCSV()" class="act-btn success">📊 Exportar CSV</button>
-        <button onclick="imprimirRelatorio()" class="act-btn" style="background:rgba(30,64,175,.12);border-color:rgba(30,64,175,.3);color:#3b82f6">🖨️ Imprimir Relatório</button>
-        <button onclick="toggleOcultarValores()" id="btnOcultar" class="act-btn" style="background:rgba(99,102,241,.12);border-color:rgba(99,102,241,.3);color:#6366f1">👁️ Ocultar</button>
-        <button onclick="salvarPDF()" class="act-btn" style="background:rgba(220,38,38,.12);border-color:rgba(220,38,38,.3);color:#dc2626">📄 Salvar PDF</button>
+        <button onclick="aplicarFiltros()" class="btn btn-primary">Filtrar</button>
+        <button onclick="limparFiltros()" class="btn btn-secondary">Limpar</button>
+        <button onclick="exportarCSV()" class="btn" style="background: var(--success); color: white;">📊 Exportar CSV</button>
+        <button onclick="imprimirRelatorio()" class="btn" style="background: #1e40af; color: white;">🖨️ Imprimir Relatório</button>
+        <button onclick="toggleOcultarValores()" id="btnOcultar" class="btn" style="background: #6366f1; color: white;">👁️ Ocultar</button>
+        <button onclick="salvarPDF()" class="btn" style="background: #dc2626; color: white;">📄 Salvar PDF</button>
       </div>
     </div>
 
@@ -458,8 +449,8 @@
       </div>
 
       <div class="flex gap-2">
-        <button onclick="fecharModal()" class="act-btn" style="flex:1">Cancelar</button>
-        <button onclick="confirmarQuitacao()" class="act-btn success" style="flex:1">✅ Confirmar</button>
+        <button onclick="fecharModal()" class="btn btn-secondary" style="flex: 1;">Cancelar</button>
+        <button onclick="confirmarQuitacao()" class="btn btn-success" style="flex: 1;">✅ Confirmar</button>
       </div>
     </div>
   </div>
@@ -560,25 +551,8 @@
         filtrados = filtrados.filter(l => l.data <= dataFim);
       }
 
-      filtrados.sort(ordenacaoPersonalizada);
-
       renderizarTabela(filtrados);
-      atualizarTotais();
-    }
-
-    function ordenacaoPersonalizada(a, b) {
-      const hoje = new Date();
-      hoje.setHours(23, 59, 59, 999);
-      function prioridade(l) {
-        if (l.quitado)             return 2;  // quitados — ústimo
-        if (new Date(l.data) <= hoje) return 0;  // hoje ou passado — primeiro
-        return 1;                               // qualquer data futura — segundo
-      }
-      const pa = prioridade(a), pb = prioridade(b);
-      if (pa !== pb) return pa - pb;
-      const da = new Date(a.data), db = new Date(b.data);
-      if (pa === 1) return da - db;  // futuros: crescente (mais próximo primeiro)
-      return db - da;                 // passados/quitados: decrescente (mais recente primeiro)
+      atualizarTotais(filtrados);
     }
 
     function renderizarTabela(lancamentos) {
@@ -609,9 +583,9 @@
         const valor     = parseFloat(lanc.valor || 0);
         const fmtVal    = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
         const prefixo   = lanc.tipo === 'RECEITA' ? '+' : '';
-        const _ehDesp  = lanc.tipo === 'DESPESA' || lanc.tipo === 'CARTAO';
-        const valClass  = _ehDesp ? 'val-despesa' : 'val-receita';
-        const valColor  = _ehDesp ? 'var(--danger)' : 'var(--success)';
+        const ehDespesa  = lanc.tipo === 'DESPESA' || lanc.tipo === 'CARTAO';
+        const valClass  = ehDespesa ? 'val-despesa' : 'val-receita';
+        const valColor  = ehDespesa ? 'var(--danger)' : 'var(--success)';
         const quitadoTag = lanc.quitado ? ' <em style="font-size:.75em;color:#888">(quitado)</em>' : '';
 
         // Células de dados (HTML seguro — sem IDs embutidos)
@@ -631,8 +605,8 @@
 
         if ((lanc.tipo === 'DESPESA' || lanc.tipo === 'CARTAO') && !lanc.quitado) {
           const btnQ = document.createElement('button');
-          btnQ.className = 'act-btn success sm';
-          btnQ.style.cssText = 'margin-right:.25rem';
+          btnQ.className = 'btn btn-success';
+          btnQ.style.cssText = 'padding:.25rem .5rem;font-size:.75rem;margin-right:.25rem';
           btnQ.innerHTML = '✅ Quitar';
           btnQ.addEventListener('click', () => abrirModalQuitacao(lanc.id));
           tdAcoes.appendChild(btnQ);
@@ -640,16 +614,16 @@
 
         if (lanc.quitado) {
           const btnR = document.createElement('button');
-          btnR.className = 'act-btn sm';
-          btnR.style.cssText = 'margin-right:.25rem;background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.35);color:#d97706';
+          btnR.className = 'btn';
+          btnR.style.cssText = 'padding:.25rem .5rem;font-size:.75rem;margin-right:.25rem;background:var(--warning);color:white';
           btnR.innerHTML = '↩️ Reabrir';
           btnR.addEventListener('click', () => reabrirLancamento(lanc.id));
           tdAcoes.appendChild(btnR);
         }
 
         const btnD = document.createElement('button');
-        btnD.className = 'act-btn danger sm';
-        btnD.style.cssText = '';
+        btnD.className = 'btn btn-danger';
+        btnD.style.cssText = 'padding:.25rem .5rem;font-size:.75rem';
         btnD.innerHTML = '🗑️';
         btnD.addEventListener('click', () => deletarLancamento(lanc.id));
         tdAcoes.appendChild(btnD);
@@ -659,15 +633,16 @@
       });
     }
 
-    function atualizarTotais() {
-      const _isDesp = l => l.tipo === 'DESPESA' || l.tipo === 'CARTAO';
-      const despesas = todosLancamentos.filter(l => _isDesp(l) && !l.quitado).reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
-      const receitas = todosLancamentos.filter(l => l.tipo === 'RECEITA').reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
-      const totalDespesasGeral = todosLancamentos.filter(l => _isDesp(l)).reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
-      const saldo = receitas - totalDespesasGeral;
+    function atualizarTotais(lista) {
+      const dados = lista || todosLancamentos;
+      const ehDespesa = l => l.tipo === 'DESPESA' || l.tipo === 'CARTAO';
+      const despesasAbertas = dados.filter(l => ehDespesa(l) && !l.quitado).reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
+      const receitas = dados.filter(l => l.tipo === 'RECEITA').reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
+      const despesasQuitadas = dados.filter(l => ehDespesa(l) && l.quitado).reduce((sum, l) => sum + parseFloat(l.valor || 0), 0);
+      const saldo = receitas - despesasQuitadas - despesasAbertas;
 
       const mask = '••••••';
-      document.getElementById('totalDespesas').textContent = ocultarValores ? mask : `R$ ${despesas.toFixed(2)}`;
+      document.getElementById('totalDespesas').textContent = ocultarValores ? mask : `R$ ${despesasAbertas.toFixed(2)}`;
       document.getElementById('totalReceitas').textContent = ocultarValores ? mask : `R$ ${receitas.toFixed(2)}`;
       document.getElementById('saldo').textContent = ocultarValores ? mask : `R$ ${saldo.toFixed(2)}`;
       document.getElementById('saldo').style.color = saldo >= 0 ? 'var(--success)' : 'var(--danger)';
