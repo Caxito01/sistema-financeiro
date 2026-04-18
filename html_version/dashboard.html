@@ -207,7 +207,7 @@ table { width:100%; border-collapse:collapse; font-size:12px; }
 
 <script>
 let LANCAMENTOS = [];
-let LANC_MES = [];
+let LANC_DASH = [];
 let totalDesp = 0, totalRec = 0, saldo = 0, totalQuit = 0, compPct = 0, pendentes = 0, fatCartao = 0;
 
 const fc = v => 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2});
@@ -234,6 +234,7 @@ async function init() {
 
     LANCAMENTOS = (lancRaw || []).map(l => ({
       id:       l.id,
+      rawTipo:  String(l.tipo ?? '').trim().toUpperCase(),
       tipo:     String(l.tipo ?? '').trim().toLowerCase().includes('rec') ? 'receita' : 'despesa',
       grupo:    l.classe?.subgrupo?.grupo?.nome ?? 'SEM GRUPO',
       subgrupo: l.classe?.subgrupo?.nome        ?? 'SEM SUBGRUPO',
@@ -244,26 +245,32 @@ async function init() {
       quitado:  Boolean(l.quitado),
     }));
 
-    // Filtra apenas o mês atual para KPIs e tabela
+    // Exclui parcelas futuras de cartão (além do mês atual) dos totais e tabela
+    // Despesas/Receitas normais aparecem sempre; CARTÃO só se for até o mês atual
     const agora = new Date();
-    const mesAtual = agora.getMonth();
-    const anoAtual = agora.getFullYear();
-    const LANC_MES = LANCAMENTOS.filter(l => {
-      if (!l.venc) return false;
-      const d = new Date(l.venc);
-      return d.getMonth() === mesAtual && d.getFullYear() === anoAtual;
+    const limiteCartao = new Date(agora.getFullYear(), agora.getMonth() + 1, 0); // último dia do mês atual
+    LANC_DASH = LANCAMENTOS.filter(l => {
+      if (l.rawTipo === 'CARTAO') {
+        if (!l.venc) return true;
+        return new Date(l.venc) <= limiteCartao;
+      }
+      return true; // DESPESA e RECEITA normais sempre aparecem
     });
 
-    // Ordena: mais recente primeiro (vencimento próximo antes, distante depois)
-    LANC_MES.sort((a, b) => new Date(a.venc) - new Date(b.venc));
+    // Ordena: vencimento mais próximo primeiro, mais distante depois
+    LANC_DASH.sort((a, b) => {
+      const da = a.venc ? new Date(a.venc).getTime() : 0;
+      const db = b.venc ? new Date(b.venc).getTime() : 0;
+      return db - da;
+    });
 
-    totalDesp = LANC_MES.filter(l=>l.tipo==='despesa').reduce((s,l)=>s+l.valor,0);
-    totalRec  = LANC_MES.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
+    totalDesp = LANC_DASH.filter(l=>l.tipo==='despesa').reduce((s,l)=>s+l.valor,0);
+    totalRec  = LANC_DASH.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
     saldo     = totalRec - totalDesp;
-    totalQuit = LANC_MES.filter(l=>l.quitado).reduce((s,l)=>s+l.valor,0);
+    totalQuit = LANC_DASH.filter(l=>l.quitado).reduce((s,l)=>s+l.valor,0);
     compPct   = totalRec > 0 ? Math.round((totalDesp/totalRec)*100) : 0;
-    pendentes = LANC_MES.filter(l=>l.tipo==='despesa'&&!l.quitado).reduce((s,l)=>s+l.valor,0);
-    fatCartao = LANC_MES.filter(l=>l.tipo==='despesa'&&l.descricao.includes('[Cartão')).reduce((s,l)=>s+l.valor,0);
+    pendentes = LANC_DASH.filter(l=>l.tipo==='despesa'&&!l.quitado).reduce((s,l)=>s+l.valor,0);
+    fatCartao = LANC_DASH.filter(l=>l.rawTipo==='CARTAO').reduce((s,l)=>s+l.valor,0);
 
     renderKPI(); buildCharts(); buildTable();
   } catch(err) {
@@ -318,7 +325,7 @@ function dc(id){ if(CI[id]){CI[id].destroy();delete CI[id];} }
 function buildCharts() {
   dc('ds');
   const despSub={};
-  LANC_MES.filter(l=>l.tipo==='despesa').forEach(l=>{despSub[l.subgrupo]=(despSub[l.subgrupo]||0)+l.valor;});
+  LANC_DASH.filter(l=>l.tipo==='despesa').forEach(l=>{despSub[l.subgrupo]=(despSub[l.subgrupo]||0)+l.valor;});
   const dsC=['#ef4444','#f97316','#f59e0b','#8b5cf6','#3b82f6','#06b6d4','#ec4899'];
   CI['ds']=new Chart(document.getElementById('despSubChart'),{type:'doughnut',
     data:{labels:Object.keys(despSub),datasets:[{data:Object.values(despSub),backgroundColor:Object.keys(despSub).map((_,i)=>dsC[i%dsC.length]+'cc'),borderColor:Object.keys(despSub).map((_,i)=>dsC[i%dsC.length]),borderWidth:2,hoverOffset:8}]},
@@ -326,7 +333,7 @@ function buildCharts() {
 
   dc('tc');
   const clMap={};
-  LANC_MES.filter(l=>l.tipo==='despesa').forEach(l=>{clMap[l.classe]=(clMap[l.classe]||0)+l.valor;});
+  LANC_DASH.filter(l=>l.tipo==='despesa').forEach(l=>{clMap[l.classe]=(clMap[l.classe]||0)+l.valor;});
   const top=Object.entries(clMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
   CI['tc']=new Chart(document.getElementById('topClassChart'),{type:'bar',
     data:{labels:top.map(([k])=>k),datasets:[{label:'Despesa',data:top.map(([,v])=>v),backgroundColor:'rgba(239,68,68,.55)',borderColor:'#ef4444',borderWidth:2,borderRadius:6}]},
@@ -343,17 +350,17 @@ function buildCharts() {
 
   dc('rs');
   const recSub={};
-  LANC_MES.filter(l=>l.tipo==='receita').forEach(l=>{recSub[l.subgrupo]=(recSub[l.subgrupo]||0)+l.valor;});
+  LANC_DASH.filter(l=>l.tipo==='receita').forEach(l=>{recSub[l.subgrupo]=(recSub[l.subgrupo]||0)+l.valor;});
   const rsC=['#22c55e','#06b6d4','#3b82f6','#a78bfa','#34d399'];
   CI['rs']=new Chart(document.getElementById('recSubChart'),{type:'doughnut',
     data:{labels:Object.keys(recSub),datasets:[{data:Object.values(recSub),backgroundColor:Object.keys(recSub).map((_,i)=>rsC[i%rsC.length]+'cc'),borderColor:Object.keys(recSub).map((_,i)=>rsC[i%rsC.length]),borderWidth:2,hoverOffset:6}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom',labels:{...ll(),boxWidth:9,padding:6}},tooltip:{callbacks:{label:ctx=>' '+fc(ctx.parsed)}}}}});
 
   dc('st');
-  const dQ=LANC_MES.filter(l=>l.tipo==='despesa'&&l.quitado).reduce((s,l)=>s+l.valor,0);
-  const dP=LANC_MES.filter(l=>l.tipo==='despesa'&&!l.quitado).reduce((s,l)=>s+l.valor,0);
-  const rQ=LANC_MES.filter(l=>l.tipo==='receita'&&l.quitado).reduce((s,l)=>s+l.valor,0);
-  const rP=LANC_MES.filter(l=>l.tipo==='receita'&&!l.quitado).reduce((s,l)=>s+l.valor,0);
+  const dQ=LANC_DASH.filter(l=>l.tipo==='despesa'&&l.quitado).reduce((s,l)=>s+l.valor,0);
+  const dP=LANC_DASH.filter(l=>l.tipo==='despesa'&&!l.quitado).reduce((s,l)=>s+l.valor,0);
+  const rQ=LANC_DASH.filter(l=>l.tipo==='receita'&&l.quitado).reduce((s,l)=>s+l.valor,0);
+  const rP=LANC_DASH.filter(l=>l.tipo==='receita'&&!l.quitado).reduce((s,l)=>s+l.valor,0);
   CI['st']=new Chart(document.getElementById('statusChart'),{type:'bar',
     data:{labels:['Despesas','Receitas'],datasets:[
       {label:'✅ Quitado',data:[dQ,rQ],backgroundColor:'rgba(34,197,94,.55)',borderColor:'#22c55e',borderWidth:2,borderRadius:6},
@@ -364,7 +371,7 @@ function buildCharts() {
 
   dc('fl');
   const mes={};
-  LANCAMENTOS.forEach(l=>{
+  LANC_DASH.forEach(l=>{
     const k=new Date(l.venc).toLocaleDateString('pt-BR',{month:'short',year:'numeric'});
     if(!mes[k]){mes[k]={d:0,r:0,dt:new Date(l.venc)};}
     if(l.tipo==='despesa')mes[k].d+=l.valor;else mes[k].r+=l.valor;
@@ -385,7 +392,7 @@ function buildCharts() {
 function buildTable(q='') {
   const tbl=document.getElementById('tbl');
   const grupos={};
-  LANC_MES.forEach(l=>{
+  LANC_DASH.forEach(l=>{
     if(q&&!l.descricao.toLowerCase().includes(q)&&!l.classe.toLowerCase().includes(q)&&!l.subgrupo.toLowerCase().includes(q))return;
     if(!grupos[l.grupo])grupos[l.grupo]={tipo:l.tipo,subs:{},total:0};
     if(!grupos[l.grupo].subs[l.subgrupo])grupos[l.grupo].subs[l.subgrupo]={items:[],total:0};
