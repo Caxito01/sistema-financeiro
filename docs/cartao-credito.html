@@ -1390,23 +1390,38 @@
           if (error) throw error;
           if (!rows || rows.length === 0) { setSyncing(false); return 0; }
           const cardMap = Object.fromEntries(theCards.map(c => [c.id, c]));
+
+          // Encontra a menor parcela_numero de cada group_id para calcular
+          // corretamente qual é a parcela "atual" (month 0) ao recarregar.
+          // Ex: OFX importa parcela 3/5 como atual → min do grupo é 3.
+          const groupMinParcela = {};
+          rows.forEach(r => {
+            const gid = r.group_id || r.id;
+            const pn = r.parcela_numero || 1;
+            if (!(gid in groupMinParcela) || pn < groupMinParcela[gid]) {
+              groupMinParcela[gid] = pn;
+            }
+          });
+
           const loaded = rows.map(r => {
             const card = cardMap[r.cartao_id];
             const parcNum = r.parcela_numero || 1;
             const parcTotal = r.total_parcelas || 1;
+            const gid = r.group_id || r.id;
+            const minParc = groupMinParcela[gid] || 1;
             const rawDesc = r.descricao_complementar || "";
             const desc = rawDesc.replace(/\s*\[.*?\]\s*$/, "") || rawDesc;
             return {
               id: r.id,
               supabaseId: r.id,
-              groupId: r.group_id || r.id,
+              groupId: gid,
               cardId: r.cartao_id,
               cardAlias: card?.alias || "",
               desc,
               value: Number(r.valor),
               total: Number(r.valor) * parcTotal,
               installment: parcTotal > 1 ? `${parcNum}/${parcTotal}` : null,
-              month: parcNum - 1,
+              month: parcNum - minParc,
               dueDate: r.data ? new Date(r.data) : null,
               classeId: r.classe_id || null,
               categoryLabel: null,
