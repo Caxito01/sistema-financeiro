@@ -896,9 +896,9 @@ async function loadAll() {
     const classes     = classeRes.data || [];
     const bancos      = (bancosRes.data || []).filter(b => b.ativo !== false);
 
-    // Exclui parcelas futuras de cartão (além do mês atual) dos totais
+    // Exclui parcelas futuras de cartão (além do próximo mês) dos totais
     const agora = new Date();
-    const limiteCartao = new Date(agora.getFullYear(), agora.getMonth() + 1, 0); // último dia do mês atual
+    const limiteCartao = new Date(agora.getFullYear(), agora.getMonth() + 2, 0); // último dia do próximo mês
     const lancFiltrados = lancamentos.filter(l => {
       if (l.tipo === 'CARTAO') {
         if (!l.data) return true;

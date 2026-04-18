@@ -248,7 +248,7 @@ async function init() {
     // Exclui parcelas futuras de cartão (além do mês atual) dos totais e tabela
     // Despesas/Receitas normais aparecem sempre; CARTÃO só se for até o mês atual
     const agora = new Date();
-    const limiteCartao = new Date(agora.getFullYear(), agora.getMonth() + 1, 0); // último dia do mês atual
+    const limiteCartao = new Date(agora.getFullYear(), agora.getMonth() + 2, 0); // último dia do próximo mês
     LANC_DASH = LANCAMENTOS.filter(l => {
       if (l.rawTipo === 'CARTAO') {
         if (!l.venc) return true;
