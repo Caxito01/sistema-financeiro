@@ -923,13 +923,32 @@
     // ════════════════════════════════════════════════════════════════
     // BALANCE STRIP
     // ════════════════════════════════════════════════════════════════
-    function BalanceStrip({ card, spent }) {
+    function BalanceStrip({ card, spent, onEditLimit }) {
       const isDark = useTheme();
       const S = getS(isDark);
+      const [editing, setEditing] = useState(false);
+      const [editValue, setEditValue] = useState("");
+      const inputRef = useRef(null);
       const pct = card.limit > 0 ? Math.min((spent / card.limit) * 100, 100) : 0;
       const remaining = card.limit - spent;
       const accent = getAccent(card.brand);
       const barColor = pct > 85 ? "#ff4d4d" : pct > 60 ? "#f5a623" : accent;
+
+      useEffect(() => {
+        if (editing && inputRef.current) inputRef.current.focus();
+      }, [editing]);
+
+      function startEdit() {
+        setEditValue(card.limit.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+        setEditing(true);
+      }
+      function confirmEdit() {
+        const raw = parseFloat(editValue.replace(/\./g, "").replace(",", "."));
+        if (!isNaN(raw) && raw >= 0 && onEditLimit) onEditLimit(card.id, raw);
+        setEditing(false);
+      }
+      function cancelEdit() { setEditing(false); }
+
       return (
         <div style={{ ...S.strip, borderColor: accent + "44" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -950,9 +969,27 @@
           <div style={S.barBg}>
             <div style={{ ...S.barFill, width: `${pct}%`, background: barColor }} />
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ color: "#ff6b6b", fontSize: 12 }}>Lançado: {fmt(spent)}</span>
-            <span style={{ color: "#8a96aa", fontSize: 12 }}>Fatura: {fmt(card.limit)}</span>
+            {editing ? (
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <span style={{ color: "#8a96aa", fontSize: 12 }}>Fatura: R$</span>
+                <input
+                  ref={inputRef}
+                  style={{ width: 90, fontSize: 12, padding: "2px 4px", border: "1px solid " + accent, borderRadius: 4, background: isDark ? "#273549" : "#fff", color: isDark ? "#f1f5f9" : "#1e293b", outline: "none", fontFamily: "inherit" }}
+                  value={editValue}
+                  onChange={e => setEditValue(e.target.value.replace(/[^0-9.,]/g, ""))}
+                  onKeyDown={e => { if (e.key === "Enter") confirmEdit(); if (e.key === "Escape") cancelEdit(); }}
+                  onBlur={confirmEdit}
+                />
+                <button onClick={confirmEdit} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "#22c55e", padding: 0 }}>✓</button>
+                <button onClick={cancelEdit} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "#ef4444", padding: 0 }}>✕</button>
+              </span>
+            ) : (
+              <span style={{ color: "#8a96aa", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }} onClick={startEdit} title="Clique para alterar o valor da fatura">
+                Fatura: {fmt(card.limit)} <span style={{ fontSize: 11, opacity: 0.6 }}>✏️</span>
+              </span>
+            )}
           </div>
         </div>
       );
@@ -1037,7 +1074,7 @@
     // ════════════════════════════════════════════════════════════════
     // CARD SECTION
     // ════════════════════════════════════════════════════════════════
-    function CardSection({ card, entries, onRemoveGroup }) {
+    function CardSection({ card, entries, onRemoveGroup, onEditLimit }) {
       const isDark = useTheme();
       const S = getS(isDark);
       const [collapsed, setCollapsed] = useState(false);
@@ -1061,7 +1098,7 @@
 
       return (
         <div style={{ ...S.cardSection, borderColor: accent + "33" }}>
-          <BalanceStrip card={card} spent={spent} />
+          <BalanceStrip card={card} spent={spent} onEditLimit={onEditLimit} />
 
           <button style={{ ...S.collapseBtn, color: accent }}
             onClick={() => setCollapsed(c => !c)}>
@@ -1137,7 +1174,13 @@
                         <td style={S.td}>
                           {e.month === 0 && (
                             <button style={S.btnRemove} title="Remover todas as parcelas"
-                              onClick={() => onRemoveGroup(e.groupId)}>✕</button>
+                              onClick={() => {
+                                const parcelas = allEntries.filter(x => x.groupId === e.groupId);
+                                const msg = parcelas.length > 1
+                                  ? `Remover "${e.desc}" e todas as ${parcelas.length} parcelas?\n\nEssa ação não pode ser desfeita.`
+                                  : `Remover "${e.desc}"?\n\nEssa ação não pode ser desfeita.`;
+                                if (window.confirm(msg)) onRemoveGroup(e.groupId);
+                              }}>✕</button>
                           )}
                         </td>
                       </tr>
@@ -1414,6 +1457,17 @@
         setCards(p => [...p, finalCard]);
       }
 
+      // ── Altera o valor da fatura (limite) do cartão
+      async function handleUpdateCardLimit(cardId, newLimit) {
+        setCards(p => p.map(c => c.id === cardId ? { ...c, limit: newLimit } : c));
+        try {
+          const supa = createSupabaseClient();
+          await supa.from("cartoes").update({ limite: newLimit }).eq("id", cardId);
+        } catch (err) {
+          console.warn("Erro ao atualizar limite no Supabase:", err);
+        }
+      }
+
       // ── Remove cartão (soft delete no Supabase)
       async function handleRemoveCard(cardId) {
         try {
@@ -1631,7 +1685,7 @@
             <div className="sf-cards-grid">
               {cards.map(card => (
                 <CardSection key={card.id} card={card} entries={entries}
-                  onRemoveGroup={handleRemoveGroup} />
+                  onRemoveGroup={handleRemoveGroup} onEditLimit={handleUpdateCardLimit} />
               ))}
             </div>
           </div>
