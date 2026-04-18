@@ -871,7 +871,7 @@ async function loadAll() {
     renderDRE(lancFiltrados);
     renderPrazos(lancFiltrados);
     renderDistCharts(lancFiltrados);
-    renderOrcamentoAnual(lancFiltrados);
+    renderOrcamentoAnual(lancamentos);
 
   } catch(err) {
     setConnStatus('err', 'Falha na conexão');
@@ -1347,16 +1347,19 @@ function renderOrcamentoAnual(data) {
     if (anoLanc !== ano) return;
     const grupo = l.classe?.subgrupo?.grupo?.nome || 'Sem Grupo';
     const tipo  = l.tipo;
-    const key   = `${tipo}::${grupo}`;
-    if (!byKey[key]) byKey[key] = { grupo, tipo, m: Array(12).fill(0), total: 0 };
+    // Separa CARTAO como categoria distinta
+    const tipoKey = tipo === 'CARTAO' ? 'CARTAO' : tipo;
+    const key   = `${tipoKey}::${grupo}`;
+    if (!byKey[key]) byKey[key] = { grupo, tipo: tipoKey, m: Array(12).fill(0), total: 0 };
     byKey[key].m[mesIdx] += +l.valor;
     byKey[key].total += +l.valor;
   });
 
-  const recs  = Object.values(byKey).filter(r => r.tipo === 'RECEITA').sort((a,b) => b.total - a.total);
-  const desps = Object.values(byKey).filter(r => r.tipo === 'DESPESA' || r.tipo === 'CARTAO').sort((a,b) => b.total - a.total);
+  const recs    = Object.values(byKey).filter(r => r.tipo === 'RECEITA').sort((a,b) => b.total - a.total);
+  const desps   = Object.values(byKey).filter(r => r.tipo === 'DESPESA').sort((a,b) => b.total - a.total);
+  const cartao  = Object.values(byKey).filter(r => r.tipo === 'CARTAO').sort((a,b) => b.total - a.total);
 
-  if (!recs.length && !desps.length) {
+  if (!recs.length && !desps.length && !cartao.length) {
     document.getElementById('orcWrap').innerHTML = `<div style="padding:1.25rem;text-align:center;font-size:.78rem;color:var(--text3);">Sem dados para ${ano}.</div>`;
     return;
   }
@@ -1382,6 +1385,34 @@ function renderOrcamentoAnual(data) {
       </tr>`;
   }
 
+  // Seção combinada: DESPESAS + CARTÃO com total geral
+  const allDesps = [...desps, ...cartao];
+  const totMAll = Array(12).fill(0);
+  allDesps.forEach(r => r.m.forEach((v,i) => totMAll[i] += v));
+  const grandAll = totMAll.reduce((a,b) => a+b, 0);
+
+  let despSection = '';
+  if (allDesps.length) {
+    despSection = `
+      <tr class="secao-hdr"><td colspan="14" style="background:linear-gradient(135deg,#7f1d1d,#dc2626);">DESPESAS — ${ano}</td></tr>
+      ${desps.map(r => `<tr>
+        <td class="cat-name">${r.grupo}</td>
+        ${r.m.map(v => `<td class="val-real">${fN(v)}</td>`).join('')}
+        <td style="font-weight:700;">${fN(r.total)}</td>
+      </tr>`).join('')}
+      ${cartao.length ? `<tr class="secao-hdr"><td colspan="14" style="background:linear-gradient(135deg,#7c2d12,#ea580c);">💳 FATURA CARTÃO — ${ano}</td></tr>` : ''}
+      ${cartao.map(r => `<tr>
+        <td class="cat-name">💳 ${r.grupo}</td>
+        ${r.m.map(v => `<td class="val-real">${fN(v)}</td>`).join('')}
+        <td style="font-weight:700;">${fN(r.total)}</td>
+      </tr>`).join('')}
+      <tr class="total-row">
+        <td>TOTAL DESPESAS</td>
+        ${totMAll.map(v => `<td>${fN(v)}</td>`).join('')}
+        <td>${fN(grandAll)}</td>
+      </tr>`;
+  }
+
   document.getElementById('orcWrap').innerHTML = `
     <table>
       <thead>
@@ -1392,8 +1423,8 @@ function renderOrcamentoAnual(data) {
         </tr>
       </thead>
       <tbody>
-        ${section(recs,  'RECEITAS',  'linear-gradient(135deg,#14532d,#16a34a)')}
-        ${section(desps, 'DESPESAS',  'linear-gradient(135deg,#7f1d1d,#dc2626)')}
+        ${section(recs, 'RECEITAS', 'linear-gradient(135deg,#14532d,#16a34a)')}
+        ${despSection}
       </tbody>
     </table>`;
 }
