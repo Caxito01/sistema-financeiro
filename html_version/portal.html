@@ -335,6 +335,8 @@
   <a href="lancamentos.html" class="mnav-link">➕ Novo Lançamento</a>
   <a href="lista-lancamentos.html" class="mnav-link">📋 Lançamentos</a>
   <a href="relatorios.html" class="mnav-link">📈 Relatórios</a>
+  <a href="cartao-credito.html" class="mnav-link">💳 Cartões</a>
+  <a href="configuracoes.html" class="mnav-link">⚙️ Configurações</a>
   <a href="login.html" class="mnav-link">🔐 Login</a>
 </nav>
 <!-- ══ PAGE ══════════════════════════════════════════════════════ -->
@@ -464,7 +466,7 @@
       <div class="lanc-tipo-name">Lançamento de Títulos a Pagar</div>
       <div class="lanc-tipo-desc">Registrar despesas e contas a pagar para fornecedores</div>
     </a>
-    <a class="lanc-tipo-card transf" href="lancamentos.html">
+    <a class="lanc-tipo-card transf" href="#" onclick="openTransfModal();return false;">
       <div class="lanc-tipo-icon">🔄</div>
       <div class="lanc-tipo-name">Transferências entre Bancos</div>
       <div class="lanc-tipo-desc">Movimentar saldo entre contas e bancos</div>
@@ -638,6 +640,49 @@
   </div>
 
 </main>
+
+<!-- ══ MODAL TRANSFERÊNCIA ENTRE BANCOS ═════════════════════════ -->
+<div class="modal-overlay" id="transfModal">
+  <div class="modal-box" style="max-width:480px;">
+    <div class="modal-title">
+      <span>🔄 Transferência entre Bancos</span>
+      <button class="modal-close" onclick="closeTransfModal()" aria-label="Fechar">✕</button>
+    </div>
+
+    <div class="msec-title">Banco de Origem (saída)</div>
+    <select class="fselect" id="tfOrigem">
+      <option value="">Selecione o banco de origem…</option>
+    </select>
+    <div id="tfOrigemSaldo" style="font-size:.72rem;color:var(--text3);margin-top:-.5rem;margin-bottom:.75rem;"></div>
+
+    <div class="msec-title">Banco de Destino (entrada)</div>
+    <select class="fselect" id="tfDestino">
+      <option value="">Selecione o banco de destino…</option>
+    </select>
+    <div id="tfDestinoSaldo" style="font-size:.72rem;color:var(--text3);margin-top:-.5rem;margin-bottom:.75rem;"></div>
+
+    <div class="mgrid2">
+      <div>
+        <label class="flabel">Valor (R$)</label>
+        <input type="number" class="finput" id="tfValor" placeholder="0,00" min="0.01" step="0.01" />
+      </div>
+      <div>
+        <label class="flabel">Data</label>
+        <input type="date" class="finput" id="tfData" />
+      </div>
+    </div>
+
+    <label class="flabel">Observação (opcional)</label>
+    <input type="text" class="finput" id="tfObs" placeholder="Ex: Pagamento de fatura" />
+
+    <div id="tfMsg" style="font-size:.78rem;margin-bottom:.75rem;display:none;"></div>
+
+    <div style="display:flex;justify-content:flex-end;gap:.75rem;margin-top:.25rem;">
+      <button class="mbtn-ghost" onclick="closeTransfModal()">Cancelar</button>
+      <button class="mbtn-prim" id="tfBtnSalvar" onclick="salvarTransferencia()">🔄 Transferir</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══ MODAL CONTAS A RECEBER / PAGAR ═══════════════════════════ -->
 <div class="modal-overlay" id="contasModal">
@@ -1476,6 +1521,120 @@ function calcParcela() {
 
 function closeModal() {
   document.getElementById('contasModal').classList.remove('open');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TRANSFERÊNCIA ENTRE BANCOS
+══════════════════════════════════════════════════════════════ */
+let _bancosList = [];
+
+async function openTransfModal() {
+  document.getElementById('tfMsg').style.display = 'none';
+  document.getElementById('tfValor').value = '';
+  document.getElementById('tfObs').value = '';
+  document.getElementById('tfData').value = new Date().toISOString().split('T')[0];
+  document.getElementById('tfOrigemSaldo').textContent = '';
+  document.getElementById('tfDestinoSaldo').textContent = '';
+  document.getElementById('tfBtnSalvar').disabled = false;
+
+  // Carregar bancos ativos
+  const { data, error } = await sb.from('bancos').select('id, nome, saldo, tipo_conta').eq('ativo', true);
+  if (error) { alert('Erro ao carregar bancos: ' + error.message); return; }
+  _bancosList = data || [];
+  if (!_bancosList.length) { alert('Nenhum banco cadastrado. Cadastre bancos em Configurações.'); return; }
+
+  const buildOpts = (elId) => {
+    const sel = document.getElementById(elId);
+    sel.innerHTML = '<option value="">Selecione…</option>' +
+      _bancosList.map(b => `<option value="${b.id}">${b.nome} (${b.tipo_conta || 'Corrente'})</option>`).join('');
+  };
+  buildOpts('tfOrigem');
+  buildOpts('tfDestino');
+
+  document.getElementById('tfOrigem').onchange = () => {
+    const b = _bancosList.find(x => x.id == document.getElementById('tfOrigem').value);
+    document.getElementById('tfOrigemSaldo').textContent = b ? `Saldo atual: ${fmt(+b.saldo)}` : '';
+  };
+  document.getElementById('tfDestino').onchange = () => {
+    const b = _bancosList.find(x => x.id == document.getElementById('tfDestino').value);
+    document.getElementById('tfDestinoSaldo').textContent = b ? `Saldo atual: ${fmt(+b.saldo)}` : '';
+  };
+
+  document.getElementById('transfModal').classList.add('open');
+}
+
+function closeTransfModal() {
+  document.getElementById('transfModal').classList.remove('open');
+}
+
+async function salvarTransferencia() {
+  const origemId  = document.getElementById('tfOrigem').value;
+  const destinoId = document.getElementById('tfDestino').value;
+  const valor     = parseFloat(document.getElementById('tfValor').value);
+  const data      = document.getElementById('tfData').value;
+  const obs       = document.getElementById('tfObs').value.trim();
+  const msgEl     = document.getElementById('tfMsg');
+
+  // Validações
+  if (!origemId || !destinoId) { showTfMsg('Selecione origem e destino.', 'red'); return; }
+  if (origemId === destinoId) { showTfMsg('Origem e destino devem ser diferentes.', 'red'); return; }
+  if (!valor || valor <= 0) { showTfMsg('Informe um valor válido.', 'red'); return; }
+  if (!data) { showTfMsg('Informe a data.', 'red'); return; }
+
+  const origem  = _bancosList.find(b => b.id == origemId);
+  const destino = _bancosList.find(b => b.id == destinoId);
+  if (+origem.saldo < valor) {
+    showTfMsg(`Saldo insuficiente em ${origem.nome} (${fmt(+origem.saldo)}).`, 'red');
+    return;
+  }
+
+  if (!confirm(`Transferir ${fmt(valor)} de ${origem.nome} para ${destino.nome}?`)) return;
+
+  document.getElementById('tfBtnSalvar').disabled = true;
+
+  try {
+    // Atualizar saldo do banco de origem (diminui)
+    const novoSaldoOrigem = (+origem.saldo - valor).toFixed(2);
+    const { error: e1 } = await sb.from('bancos').update({ saldo: novoSaldoOrigem }).eq('id', origemId);
+    if (e1) throw e1;
+
+    // Atualizar saldo do banco de destino (aumenta)
+    const novoSaldoDestino = (+destino.saldo + valor).toFixed(2);
+    const { error: e2 } = await sb.from('bancos').update({ saldo: novoSaldoDestino }).eq('id', destinoId);
+    if (e2) throw e2;
+
+    // Registrar log da transferência
+    const { data: { session } } = await sb.auth.getSession();
+    const userId = session?.user?.id;
+    await sb.from('transferencias_bancos').insert({
+      banco_origem_id: +origemId,
+      banco_destino_id: +destinoId,
+      valor: valor,
+      data: data,
+      observacao: obs || null,
+      user_id: userId
+    });
+
+    showTfMsg(`✅ Transferência de ${fmt(valor)} realizada com sucesso!`, '#16a34a');
+    // Atualizar saldos locais
+    origem.saldo = novoSaldoOrigem;
+    destino.saldo = novoSaldoDestino;
+    document.getElementById('tfOrigem').dispatchEvent(new Event('change'));
+    document.getElementById('tfDestino').dispatchEvent(new Event('change'));
+
+    // Recarregar dados do portal após 1.5s
+    setTimeout(() => { closeTransfModal(); loadAll(); }, 1500);
+  } catch (err) {
+    showTfMsg('Erro: ' + err.message, 'red');
+    document.getElementById('tfBtnSalvar').disabled = false;
+  }
+}
+
+function showTfMsg(text, color) {
+  const el = document.getElementById('tfMsg');
+  el.style.display = 'block';
+  el.style.color = color;
+  el.textContent = text;
 }
 
 async function salvarConta() {
