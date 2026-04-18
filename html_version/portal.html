@@ -838,22 +838,40 @@ async function loadAll() {
     const subgrupos   = subRes.data  || [];
     const classes     = classeRes.data || [];
 
+    // Exclui parcelas futuras de cartão (além do mês atual) dos totais
+    const agora = new Date();
+    const limiteCartao = new Date(agora.getFullYear(), agora.getMonth() + 1, 0); // último dia do mês atual
+    const lancFiltrados = lancamentos.filter(l => {
+      if (l.tipo === 'CARTAO') {
+        if (!l.data) return true;
+        return new Date(l.data) <= limiteCartao;
+      }
+      return true;
+    });
+
+    // Ordena: mais recente primeiro
+    lancFiltrados.sort((a, b) => {
+      const da = a.data ? new Date(a.data).getTime() : 0;
+      const db = b.data ? new Date(b.data).getTime() : 0;
+      return db - da;
+    });
+
     setConnStatus('ok', 'Conectado');
     document.getElementById('connError').classList.remove('show');
 
-    renderKPIs(lancamentos);
-    renderMiniStats(lancamentos, grupos, subgrupos, classes);
-    renderMensalChart(lancamentos);
-    renderTipoChart(lancamentos);
-    renderRecentes(lancamentos.slice(0, 12));
-    renderTopSubgrupos(lancamentos);
-    renderVisaoEconomica(lancamentos);
-    renderBancoSaldos(lancamentos);
-    renderGauges(lancamentos);
-    renderDRE(lancamentos);
-    renderPrazos(lancamentos);
-    renderDistCharts(lancamentos);
-    renderOrcamentoAnual(lancamentos);
+    renderKPIs(lancFiltrados);
+    renderMiniStats(lancFiltrados, grupos, subgrupos, classes);
+    renderMensalChart(lancFiltrados);
+    renderTipoChart(lancFiltrados);
+    renderRecentes(lancFiltrados.slice(0, 12));
+    renderTopSubgrupos(lancFiltrados);
+    renderVisaoEconomica(lancFiltrados);
+    renderBancoSaldos(lancFiltrados);
+    renderGauges(lancFiltrados);
+    renderDRE(lancFiltrados);
+    renderPrazos(lancFiltrados);
+    renderDistCharts(lancFiltrados);
+    renderOrcamentoAnual(lancFiltrados);
 
   } catch(err) {
     setConnStatus('err', 'Falha na conexão');
