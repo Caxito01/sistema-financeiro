@@ -815,7 +815,7 @@ function toggleTheme() {
 ══════════════════════════════════════════════════════════════ */
 async function loadAll() {
   try {
-    const [lancRes, grupoRes, subRes, classeRes] = await Promise.all([
+    const [lancRes, grupoRes, subRes, classeRes, bancosRes] = await Promise.all([
       sb.from('lancamentos').select(`
         id, tipo, valor, data, quitado, descricao_complementar,
         classe:classes(
@@ -829,6 +829,7 @@ async function loadAll() {
       sb.from('grupos').select('id, nome, tipo, ativo'),
       sb.from('subgrupos').select('id, nome, grupo_id'),
       sb.from('classes').select('id, descricao'),
+      sb.from('bancos').select('id, nome, agencia, conta, tipo_conta, saldo, ativo'),
     ]);
 
     if (lancRes.error) throw lancRes.error;
@@ -837,6 +838,7 @@ async function loadAll() {
     const grupos      = grupoRes.data || [];
     const subgrupos   = subRes.data  || [];
     const classes     = classeRes.data || [];
+    const bancos      = (bancosRes.data || []).filter(b => b.ativo !== false);
 
     // Exclui parcelas futuras de cartão (além do mês atual) dos totais
     const agora = new Date();
@@ -866,7 +868,7 @@ async function loadAll() {
     renderRecentes(lancFiltrados.slice(0, 12));
     renderTopSubgrupos(lancFiltrados);
     renderVisaoEconomica(lancFiltrados);
-    renderBancoSaldos(lancFiltrados);
+    renderBancoSaldos(bancos);
     renderGauges(lancFiltrados);
     renderDRE(lancFiltrados);
     renderPrazos(lancFiltrados);
@@ -1118,26 +1120,20 @@ function renderVisaoEconomica(data) {
 /* ══════════════════════════════════════════════════════════════
    SALDO EM CONTAS POR BANCO
 ══════════════════════════════════════════════════════════════ */
-function renderBancoSaldos(data) {
-  const byBanco = {};
-  data.forEach(l => {
-    const banco = l.conta_banco || l.banco || (l.classe?.subgrupo?.grupo?.nome === 'BANCO' ? l.classe?.subgrupo?.nome : null);
-    if (!banco) return;
-    byBanco[banco] = (byBanco[banco] || 0) + (l.tipo === 'RECEITA' ? +l.valor : -l.valor);
-  });
-
-  const entries = Object.entries(byBanco).sort((a,b) => b[1]-a[1]);
-  if (!entries.length) {
-    document.getElementById('bancoGrid').innerHTML = '<div style="font-size:.78rem;color:var(--text3);padding:.5rem;">Nenhuma informação de banco encontrada nos lançamentos.</div>';
+function renderBancoSaldos(bancos) {
+  if (!bancos.length) {
+    document.getElementById('bancoGrid').innerHTML = '<div style="font-size:.78rem;color:var(--text3);padding:.5rem;">Nenhum banco cadastrado. Cadastre bancos em Configurações.</div>';
     return;
   }
-  const maxAbs = Math.max(...entries.map(([,v]) => Math.abs(v)), 1);
-  document.getElementById('bancoGrid').innerHTML = entries.map(([banco, saldo]) => {
+  const maxAbs = Math.max(...bancos.map(b => Math.abs(+b.saldo || 0)), 1);
+  document.getElementById('bancoGrid').innerHTML = bancos.map(b => {
+    const saldo = +b.saldo || 0;
     const color = saldo >= 0 ? '#22c55e' : '#ef4444';
     const pct   = Math.round((Math.abs(saldo) / maxAbs) * 100);
+    const tipo  = b.tipo_conta ? `<span style="font-size:.65rem;color:var(--text3);margin-left:.3rem;">(${b.tipo_conta})</span>` : '';
     return `<div class="banco-card">
       <div>
-        <div class="banco-name">${banco}</div>
+        <div class="banco-name">${b.nome}${tipo}</div>
         <div class="saldo-bar-wrap"><div class="saldo-bar" style="width:${pct}%;background:${color};"></div></div>
       </div>
       <div class="banco-val" style="color:${color};">${fmt(saldo)}</div>
