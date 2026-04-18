@@ -944,48 +944,50 @@ async function loadAll() {
 function renderKPIs(data) {
   const agora = new Date();
   const mesAtual = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
-  // Despesas = DESPESA normal + CARTAO apenas do mês atual
-  const despesas  = data.filter(l => l.tipo === 'DESPESA' || l.tipo === 'CARTAO');
-  const receitas  = data.filter(l => l.tipo === 'RECEITA');
+  // Filtra apenas lançamentos do mês atual
+  const doMes = data.filter(l => (l.data || '').slice(0, 7) === mesAtual);
+  const despesas  = doMes.filter(l => l.tipo === 'DESPESA' || l.tipo === 'CARTAO');
+  const receitas  = doMes.filter(l => l.tipo === 'RECEITA');
   const totalD    = despesas.reduce((a,l) => a + +l.valor, 0);
   const totalR    = receitas.reduce((a,l) => a + +l.valor, 0);
   const saldo     = totalR - totalD;
-  const totalQ    = data.filter(l => l.quitado).reduce((a,l) => a + +l.valor, 0);
-  const totalP    = data.filter(l => (l.tipo === 'DESPESA' || l.tipo === 'CARTAO') && !l.quitado).reduce((a,l) => a + +l.valor, 0);
+  const totalQ    = doMes.filter(l => l.quitado).reduce((a,l) => a + +l.valor, 0);
+  const totalP    = doMes.filter(l => (l.tipo === 'DESPESA' || l.tipo === 'CARTAO') && !l.quitado).reduce((a,l) => a + +l.valor, 0);
   const comprPct  = totalR > 0 ? Math.round((totalD / totalR) * 100) : 0;
   const saldoCls  = saldo >= 0 ? 'k-pos' : 'k-neg';
   const gaugeColor= comprPct < 60 ? '#22c55e' : comprPct < 90 ? '#f59e0b' : '#ef4444';
+  const nomeMes = agora.toLocaleString('pt-BR', { month: 'long' }).replace(/^\w/, c => c.toUpperCase());
 
   document.getElementById('kpiGrid').innerHTML = `
     <div class="kpi k-desp" style="animation-delay:.0s">
       <div class="kpi-icon">📉</div>
       <div class="kpi-label">Total Despesas</div>
       <div class="kpi-value">${fmt(totalD)}</div>
-      <div class="kpi-sub">${despesas.length} lançamento(s)</div>
+      <div class="kpi-sub">${despesas.length} lançamento(s) em ${nomeMes}</div>
     </div>
     <div class="kpi k-rec" style="animation-delay:.07s">
       <div class="kpi-icon">📈</div>
       <div class="kpi-label">Total Receitas</div>
       <div class="kpi-value">${fmt(totalR)}</div>
-      <div class="kpi-sub">${receitas.length} lançamento(s)</div>
+      <div class="kpi-sub">${receitas.length} lançamento(s) em ${nomeMes}</div>
     </div>
     <div class="kpi ${saldoCls}" style="animation-delay:.14s">
       <div class="kpi-icon">${saldo >= 0 ? '💰' : '⚠️'}</div>
       <div class="kpi-label">Saldo</div>
       <div class="kpi-value">${fmt(saldo)}</div>
-      <div class="kpi-sub">Receitas − Despesas</div>
+      <div class="kpi-sub">Receitas − Despesas (${nomeMes})</div>
     </div>
     <div class="kpi k-quit" style="animation-delay:.21s">
       <div class="kpi-icon">✅</div>
       <div class="kpi-label">Total Quitado</div>
       <div class="kpi-value">${fmt(totalQ)}</div>
-      <div class="kpi-sub">${data.filter(l=>l.quitado).length} item(s)</div>
+      <div class="kpi-sub">${doMes.filter(l=>l.quitado).length} item(s) em ${nomeMes}</div>
     </div>
     <div class="kpi k-pend" style="animation-delay:.28s">
       <div class="kpi-icon">⏰</div>
       <div class="kpi-label">A Vencer/Pendente</div>
       <div class="kpi-value">${fmt(totalP)}</div>
-      <div class="kpi-sub">${data.filter(l=>!l.quitado).length} item(s)</div>
+      <div class="kpi-sub">${doMes.filter(l=>!l.quitado).length} item(s) em ${nomeMes}</div>
     </div>
     <div class="kpi k-gauge" style="animation-delay:.35s">
       <div class="kpi-icon">📊</div>

@@ -264,13 +264,16 @@ async function init() {
       return db - da;
     });
 
-    totalDesp = LANC_DASH.filter(l=>l.tipo==='despesa').reduce((s,l)=>s+l.valor,0);
-    totalRec  = LANC_DASH.filter(l=>l.tipo==='receita').reduce((s,l)=>s+l.valor,0);
+    const _agora = new Date();
+    const mesAtual = `${_agora.getFullYear()}-${String(_agora.getMonth() + 1).padStart(2, '0')}`;
+
+    totalDesp = LANC_DASH.filter(l=>l.tipo==='despesa' && (l.venc||'').slice(0,7)===mesAtual).reduce((s,l)=>s+l.valor,0);
+    totalRec  = LANC_DASH.filter(l=>l.tipo==='receita' && (l.venc||'').slice(0,7)===mesAtual).reduce((s,l)=>s+l.valor,0);
     saldo     = totalRec - totalDesp;
-    totalQuit = LANC_DASH.filter(l=>l.quitado).reduce((s,l)=>s+l.valor,0);
+    totalQuit = LANC_DASH.filter(l=>l.quitado && (l.venc||'').slice(0,7)===mesAtual).reduce((s,l)=>s+l.valor,0);
     compPct   = totalRec > 0 ? Math.round((totalDesp/totalRec)*100) : 0;
-    pendentes = LANC_DASH.filter(l=>l.tipo==='despesa'&&!l.quitado).reduce((s,l)=>s+l.valor,0);
-    fatCartao = LANC_DASH.filter(l=>l.rawTipo==='CARTAO').reduce((s,l)=>s+l.valor,0);
+    pendentes = LANC_DASH.filter(l=>l.tipo==='despesa'&&!l.quitado && (l.venc||'').slice(0,7)===mesAtual).reduce((s,l)=>s+l.valor,0);
+    fatCartao = LANC_DASH.filter(l=>l.rawTipo==='CARTAO' && (l.venc||'').slice(0,7)===mesAtual).reduce((s,l)=>s+l.valor,0);
 
     renderKPI(); buildCharts(); buildTable();
   } catch(err) {
