@@ -136,6 +136,20 @@
           </div>
         </div>
 
+        <!-- Parcelas (recorrência) -->
+        <div class="form-group" id="parcelasGroup">
+          <label for="parcelas">Parcelas</label>
+          <input
+            type="number"
+            id="parcelas"
+            name="parcelas"
+            min="1"
+            max="120"
+            value="1"
+          >
+          <span style="font-size:.75rem;color:#64748b;display:block;margin-top:.35rem;">Cria um lançamento por mês (mesma descrição, valor e categoria) — use para empréstimos e despesas parceladas. Ex.: 12 parcelas gera "Descrição (1/12)" até "Descrição (12/12)".</span>
+        </div>
+
         <!-- Grupo -->
         <div class="form-group">
           <label for="grupo">Grupo *</label>
@@ -255,6 +269,9 @@
       });
       cartaoSection.style.display = 'none';
 
+      document.getElementById('parcelasGroup').style.display = (tipo === 'DESPESA') ? '' : 'none';
+      document.getElementById('parcelas').value = '1';
+
       if (tipo === 'DESPESA') {
         btnDespesa.className = 'btn btn-danger';
         btnDespesa.style = 'flex: 1; padding: 0.75rem; min-width: 130px;';
@@ -368,40 +385,64 @@
       carregarClasses(e.target.value);
     });
 
+    // Soma "months" meses a uma data YYYY-MM-DD, ajustando o dia se o mês de destino for mais curto
+    function addMonthsClamped(dataStr, months) {
+      const [y, m, d] = dataStr.split('-').map(Number);
+      const alvo = new Date(y, (m - 1) + months, 1);
+      const ultimoDia = new Date(alvo.getFullYear(), alvo.getMonth() + 1, 0).getDate();
+      const dia = Math.min(d, ultimoDia);
+      const mm = String(alvo.getMonth() + 1).padStart(2, '0');
+      const dd = String(dia).padStart(2, '0');
+      return `${alvo.getFullYear()}-${mm}-${dd}`;
+    }
+
     // Submit form
     document.getElementById('lancamentoForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      
+
       hideMessages();
-      
+
       const submitBtn = document.getElementById('submitBtn');
       const btnText = document.getElementById('btnText');
       const btnLoading = document.getElementById('btnLoading');
-      
+
       submitBtn.disabled = true;
       btnText.classList.add('hidden');
       btnLoading.classList.remove('hidden');
 
-      const formData = {
-        descricao_complementar: document.getElementById('descricao').value.trim(),
-        valor: (parseInt(document.getElementById('valor').value.replace(/\D/g,'')||'0',10))/100,
-        data: document.getElementById('data').value,
-        tipo: tipoSelecionado,
-        classe_id: parseInt(document.getElementById('classe').value)
-      };
+      const descricaoBase = document.getElementById('descricao').value.trim();
+      const valorLancamento = (parseInt(document.getElementById('valor').value.replace(/\D/g,'')||'0',10))/100;
+      const dataBase = document.getElementById('data').value;
+      const classeId = parseInt(document.getElementById('classe').value);
+      const totalParcelas = tipoSelecionado === 'DESPESA'
+        ? Math.max(1, parseInt(document.getElementById('parcelas').value, 10) || 1)
+        : 1;
+
+      const registros = [];
+      for (let i = 0; i < totalParcelas; i++) {
+        registros.push({
+          descricao_complementar: totalParcelas > 1 ? `${descricaoBase} (${i + 1}/${totalParcelas})` : descricaoBase,
+          valor: valorLancamento,
+          data: addMonthsClamped(dataBase, i),
+          tipo: tipoSelecionado,
+          classe_id: classeId
+        });
+      }
 
       try {
         const supabase = createSupabaseClient();
         const { data: session } = await supabase.auth.getSession();
-        
+
         if (session.session) {
-          formData.user_id = session.session.user.id;
+          registros.forEach(r => { r.user_id = session.session.user.id; });
         }
 
-        await insertData('lancamentos', formData);
-        
-        showSuccess('✅ Lançamento criado com sucesso! Redirecionando...');
-        
+        await insertData('lancamentos', registros);
+
+        showSuccess(totalParcelas > 1
+          ? `✅ ${totalParcelas} lançamentos criados com sucesso! Redirecionando...`
+          : '✅ Lançamento criado com sucesso! Redirecionando...');
+
         setTimeout(() => {
           window.location.href = 'lista-lancamentos.html';
         }, 1500);
