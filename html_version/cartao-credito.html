@@ -563,6 +563,14 @@
         const toImport = parsed.transactions.filter(t => selected[t.fitid]);
         const newEntries = [];
 
+        // Ancora a fatura no período do próprio extrato OFX (dtEnd), não no
+        // ponteiro de "fatura atual" salvo no cartão — evita que todo o
+        // arquivo caia no mês errado quando esse ponteiro está desatualizado.
+        const dtEnd = parsed.meta.dtEnd;
+        const baseDueDate = dtEnd
+          ? new Date(dtEnd.getFullYear(), dtEnd.getMonth(), targetCard.dueDate.getDate())
+          : targetCard.dueDate;
+
         toImport.forEach((t, idx) => {
           const groupId = Date.now() + idx * 1000;
           const inst = t.installment;
@@ -571,7 +579,7 @@
               id: groupId, groupId, cardId: targetCard.id,
               desc: t.cleanDesc, value: t.amount, total: t.amount,
               installment: null, month: 0,
-              dueDate: addMonths(targetCard.dueDate, 0),
+              dueDate: addMonths(baseDueDate, 0),
               fromOFX: true, ofxDate: t.date, ofxFitid: t.fitid,
               classeId: rowCategories[t.fitid]?.classeId || null, categoryLabel: rowCategories[t.fitid]?.label || null, cardAlias: targetCard.alias,
             });
@@ -581,7 +589,7 @@
               id: groupId, groupId, cardId: targetCard.id,
               desc: t.cleanDesc, value: t.amount, total: t.amount * inst.total,
               installment: `${inst.current}/${inst.total}`, month: 0,
-              dueDate: addMonths(targetCard.dueDate, 0),
+              dueDate: addMonths(baseDueDate, 0),
               fromOFX: true, ofxDate: t.date, ofxFitid: t.fitid,
               classeId: rowCategories[t.fitid]?.classeId || null, categoryLabel: rowCategories[t.fitid]?.label || null, cardAlias: targetCard.alias,
             });
@@ -590,7 +598,7 @@
                 id: groupId + r, groupId, cardId: targetCard.id,
                 desc: t.cleanDesc, value: t.amount, total: t.amount * inst.total,
                 installment: `${inst.current + r}/${inst.total}`, month: r,
-                dueDate: addMonths(targetCard.dueDate, r),
+                dueDate: addMonths(baseDueDate, r),
                 fromOFX: true, ofxDate: t.date, ofxFitid: t.fitid,
                 classeId: rowCategories[t.fitid]?.classeId || null, categoryLabel: rowCategories[t.fitid]?.label || null, cardAlias: targetCard.alias,
               });
