@@ -551,17 +551,8 @@
         filtrados = filtrados.filter(l => l.data <= dataFim);
       }
 
-      // Ordena: mês seguinte (próximo) no topo, depois os demais por data decrescente
-      const agora = new Date();
-      const proxMes = `${agora.getFullYear()}-${String(agora.getMonth() + 2).padStart(2, '0')}`;
-      filtrados.sort((a, b) => {
-        const aMes = (a.data || '').slice(0, 7);
-        const bMes = (b.data || '').slice(0, 7);
-        const aProx = aMes === proxMes ? 1 : 0;
-        const bProx = bMes === proxMes ? 1 : 0;
-        if (aProx !== bProx) return bProx - aProx; // próximo mês primeiro
-        return (b.data || '').localeCompare(a.data || ''); // depois por data desc
-      });
+      // Ordena por data crescente: vencimentos mais próximos primeiro, mais distantes (ex.: 2030) por último
+      filtrados.sort((a, b) => (a.data || '').localeCompare(b.data || ''));
 
       renderizarTabela(filtrados);
       atualizarTotais(filtrados);
