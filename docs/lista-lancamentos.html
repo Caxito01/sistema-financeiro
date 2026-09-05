@@ -551,8 +551,13 @@
         filtrados = filtrados.filter(l => l.data <= dataFim);
       }
 
-      // Ordena por data crescente: vencimentos mais próximos primeiro, mais distantes (ex.: 2030) por último
-      filtrados.sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+      // Ordena: não quitados primeiro (por data crescente), quitados depois
+      filtrados.sort((a, b) => {
+        const aQuitado = a.quitado ? 1 : 0;
+        const bQuitado = b.quitado ? 1 : 0;
+        if (aQuitado !== bQuitado) return aQuitado - bQuitado;
+        return (a.data || '').localeCompare(b.data || '');
+      });
 
       renderizarTabela(filtrados);
       atualizarTotais(filtrados);
