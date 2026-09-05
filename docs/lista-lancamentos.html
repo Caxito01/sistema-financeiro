@@ -343,6 +343,10 @@
     <!-- Filtros -->
     <div class="card no-print">
       <h3 style="font-weight: 600; margin-bottom: 1rem;">🔍 Filtros</h3>
+      <div class="form-group">
+        <label>Descrição</label>
+        <input type="text" id="filtroBusca" placeholder="Buscar por descrição da receita ou despesa...">
+      </div>
       <div class="grid grid-cols-4">
         <div class="form-group">
           <label>Tipo</label>
@@ -525,16 +529,23 @@
       }
     }
 
+    document.getElementById('filtroBusca').addEventListener('input', aplicarFiltros);
+
     function aplicarFiltros() {
       const tipo = document.getElementById('filtroTipo').value;
       const status = document.getElementById('filtroStatus').value;
       const dataInicio = document.getElementById('filtroDataInicio').value;
       const dataFim = document.getElementById('filtroDataFim').value;
+      const busca = document.getElementById('filtroBusca').value.trim().toLowerCase();
 
       let filtrados = [...todosLancamentos];
 
       if (tipo !== 'TODOS') {
         filtrados = filtrados.filter(l => l.tipo === tipo);
+      }
+
+      if (busca) {
+        filtrados = filtrados.filter(l => (l.descricao_complementar || '').toLowerCase().includes(busca));
       }
 
       if (status === 'QUITADAS') {
@@ -659,6 +670,7 @@
     function limparFiltros() {
       document.getElementById('filtroTipo').value = 'TODOS';
       document.getElementById('filtroStatus').value = 'TODAS';
+      document.getElementById('filtroBusca').value = '';
       document.getElementById('filtroDataInicio').value = '';
       document.getElementById('filtroDataFim').value = '';
       aplicarFiltros();
@@ -751,6 +763,7 @@
       const status = document.getElementById('filtroStatus').value;
       const di     = document.getElementById('filtroDataInicio').value;
       const df     = document.getElementById('filtroDataFim').value;
+      const busca  = document.getElementById('filtroBusca').value.trim();
 
       // Período
       const fmtData = d => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR');
@@ -772,6 +785,7 @@
       const partes = [
         `Tipo: ${tipoLabel}`,
         `Status: ${statusLabel}`,
+        busca ? `Descrição: "${busca}"` : null,
         periodo !== 'Todos os períodos' ? `Período: ${periodo}` : null
       ].filter(Boolean);
       document.getElementById('printFiltersRow').innerHTML =
