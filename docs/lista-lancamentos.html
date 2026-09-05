@@ -466,6 +466,7 @@
   <script src="config/supabase-config.js"></script>
   <script>
     let todosLancamentos = [];
+    let listaFiltradaAtual = [];
     let lancamentoParaQuitar = null;
     let formasPagamento = [];
     let ocultarValores = false;
@@ -569,6 +570,8 @@
         if (aQuitado !== bQuitado) return aQuitado - bQuitado;
         return (a.data || '').localeCompare(b.data || '');
       });
+
+      listaFiltradaAtual = filtrados;
 
       renderizarTabela(filtrados);
       atualizarTotais(filtrados);
@@ -796,7 +799,7 @@
       // KPIs
       const fmtVal = v =>
         new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
-      const listaAtual   = todosLancamentos;
+      const listaAtual   = listaFiltradaAtual;
       const _isD = l => l.tipo === 'DESPESA' || l.tipo === 'CARTAO';
       const despAbertas  = listaAtual.filter(l => _isD(l) && !l.quitado)
                                      .reduce((s,l) => s + parseFloat(l.valor||0), 0);
@@ -821,7 +824,7 @@
 
     function exportarCSV() {
       let csv = 'Data;Descrição;Grupo;Subgrupo;Classe;Tipo;Valor\n';
-      todosLancamentos.forEach(lanc => {
+      listaFiltradaAtual.forEach(lanc => {
         const data = new Date(lanc.data).toLocaleDateString('pt-BR');
         const desc = (lanc.descricao_complementar || '').replace(/"/g, '""');
         const grupo = (lanc.classe?.subgrupo?.grupo?.nome || '-').replace(/"/g, '""');
