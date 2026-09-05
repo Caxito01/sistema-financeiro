@@ -435,12 +435,13 @@
           total_parcelas: e.installment ? parseInt(e.installment.split("/")[1], 10) : 1,
         }));
         const { data: inserted, error } = await supa.from("lancamentos").insert(records).select("id");
-        if (error) { console.error("Erro Supabase cartão:", error.message); return null; }
+        if (error) { console.error("Erro Supabase cartão:", error.message); return { mapping: null, error: error.message }; }
         // retorna mapeamento localId → supabaseId (mesma ordem do insert)
-        return inserted ? inserted.map((row, i) => ({ localId: entries[i].id, supabaseId: row.id })) : null;
+        const mapping = inserted ? inserted.map((row, i) => ({ localId: entries[i].id, supabaseId: row.id })) : null;
+        return { mapping, error: null };
       } catch (err) {
         console.error("Erro ao salvar lançamentos do cartão:", err);
-        return null;
+        return { mapping: null, error: err.message };
       }
     }
 
@@ -457,6 +458,7 @@
       const [error, setError] = useState("");
       const [rowCategories, setRowCategories] = useState({});
       const [catSaved, setCatSaved] = useState(false);
+      const [importing, setImporting] = useState(false);
       const fileRef = useRef();
 
       // Sincroniza targetCardId quando os cartões mudam
@@ -558,18 +560,21 @@
         setSelected(sel);
       }
 
-      function doImport() {
-        if (!targetCard) return;
+      async function doImport() {
+        if (!targetCard || importing) return;
         const toImport = parsed.transactions.filter(t => selected[t.fitid]);
         const newEntries = [];
 
         // Ancora a fatura no período do próprio extrato OFX (dtEnd), não no
         // ponteiro de "fatura atual" salvo no cartão — evita que todo o
         // arquivo caia no mês errado quando esse ponteiro está desatualizado.
+        // targetCard.dueDate pode vir null (cartão recém-criado); nesse caso
+        // cai no comportamento antigo em vez de quebrar em .getDate().
         const dtEnd = parsed.meta.dtEnd;
-        const baseDueDate = dtEnd
-          ? new Date(dtEnd.getFullYear(), dtEnd.getMonth(), targetCard.dueDate.getDate())
-          : targetCard.dueDate;
+        const cardDueDate = targetCard.dueDate instanceof Date && !isNaN(targetCard.dueDate) ? targetCard.dueDate : null;
+        const baseDueDate = (dtEnd && cardDueDate)
+          ? new Date(dtEnd.getFullYear(), dtEnd.getMonth(), cardDueDate.getDate())
+          : (cardDueDate || dtEnd || new Date());
 
         toImport.forEach((t, idx) => {
           const groupId = Date.now() + idx * 1000;
@@ -607,8 +612,20 @@
         });
 
         const importedIds = toImport.map(t => t.fitid);
-        onImport(newEntries, importedIds);
-        onClose();
+        setImporting(true);
+        setError("");
+        try {
+          const result = await onImport(newEntries, importedIds);
+          if (result?.ok) {
+            onClose();
+          } else {
+            setError("Não foi possível salvar as transações no banco de dados" + (result?.error ? `: ${result.error}` : ".") + " Confira as categorias selecionadas e tente novamente.");
+          }
+        } catch (err) {
+          setError("Erro ao importar: " + err.message);
+        } finally {
+          setImporting(false);
+        }
       }
 
       const selectedCount = Object.values(selected).filter(Boolean).length;
@@ -816,11 +833,11 @@
               </div>
 
               <button
-                style={{ ...S.btnPrimary, background: accent, opacity: (selectedCount > 0 && !allDups) ? 1 : 0.4 }}
+                style={{ ...S.btnPrimary, background: accent, opacity: (selectedCount > 0 && !allDups && !importing) ? 1 : 0.4 }}
                 onClick={doImport}
-                disabled={selectedCount === 0 || allDups}
+                disabled={selectedCount === 0 || allDups || importing}
               >
-                ⬆ Importar {selectedCount} transação(ões) → {targetCard?.alias}
+                {importing ? "Salvando..." : `⬆ Importar ${selectedCount} transação(ões) → ${targetCard?.alias}`}
               </button>
             </>
           )}
@@ -1530,9 +1547,9 @@
           classeId: category?.classeId || null, categoryLabel: category?.label || null, cardAlias: card.alias,
         }));
         setEntries(prev => [...prev, ...newEntries]);
-        const inserted = await saveCartaoEntriesToSupabase(newEntries);
-        if (inserted) {
-          const idMap = Object.fromEntries(inserted.map(r => [r.localId, r.supabaseId]));
+        const { mapping } = await saveCartaoEntriesToSupabase(newEntries);
+        if (mapping) {
+          const idMap = Object.fromEntries(mapping.map(r => [r.localId, r.supabaseId]));
           setEntries(prev => prev.map(e => idMap[e.id] ? { ...e, supabaseId: idMap[e.id] } : e));
         }
       }
@@ -1540,11 +1557,22 @@
       async function handleOFXImport(newEntries, fitids) {
         setEntries(prev => [...prev, ...newEntries]);
         setImportedFitids(prev => new Set([...prev, ...fitids]));
-        const inserted = await saveCartaoEntriesToSupabase(newEntries);
-        if (inserted) {
-          const idMap = Object.fromEntries(inserted.map(r => [r.localId, r.supabaseId]));
+        const { mapping, error } = await saveCartaoEntriesToSupabase(newEntries);
+        if (mapping) {
+          const idMap = Object.fromEntries(mapping.map(r => [r.localId, r.supabaseId]));
           setEntries(prev => prev.map(e => idMap[e.id] ? { ...e, supabaseId: idMap[e.id] } : e));
+          return { ok: true };
         }
+        // O insert falhou: desfaz a adição otimista para a UI não mostrar
+        // lançamentos que na verdade não foram salvos no banco.
+        const newIds = new Set(newEntries.map(e => e.id));
+        setEntries(prev => prev.filter(e => !newIds.has(e.id)));
+        setImportedFitids(prev => {
+          const next = new Set(prev);
+          fitids.forEach(f => next.delete(f));
+          return next;
+        });
+        return { ok: false, error };
       }
 
       async function handleRemoveGroup(gid) {
