@@ -31,6 +31,13 @@
     .sf-nav a.active{background:#f0fdf4;color:#16a34a}
     [data-theme="dark"] .sf-nav a.active{background:rgba(34,197,94,.15);color:#4ade80}
     .sf-footer{text-align:center;padding:1.5rem;font-size:.72rem;color:var(--text3);border-top:1px solid var(--border);margin-top:1rem}
+
+    .month-divider td{padding:.45rem .75rem;font-weight:700;font-size:.75rem;letter-spacing:.03em;text-transform:uppercase;background:var(--surface2);color:var(--text2);border-top:1px solid var(--border)}
+    .month-divider.mes-atual td{background:rgba(34,197,94,.16);color:#16a34a}
+    [data-theme="dark"] .month-divider.mes-atual td{background:rgba(74,222,128,.18);color:#4ade80}
+    tr.row-mes-atual td{background:rgba(34,197,94,.06)}
+    [data-theme="dark"] tr.row-mes-atual td{background:rgba(74,222,128,.08)}
+    tr.row-mes-atual.row-quitado td{background:transparent}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -595,10 +602,31 @@
       tabela.classList.remove('hidden');
 
       tbody.innerHTML = '';
-      
+
+      const NOMES_MES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+      const hoje = new Date();
+      const mesAtualKey = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+      let mesAnterior = null;
+
       lancamentos.forEach(lanc => {
+        const mesKey = (lanc.data || '').slice(0, 7);
+        const ehMesAtual = mesKey === mesAtualKey;
+
+        if (mesKey && mesKey !== mesAnterior) {
+          mesAnterior = mesKey;
+          const [ano, mesNum] = mesKey.split('-');
+          const trDivider = document.createElement('tr');
+          trDivider.className = 'month-divider no-print' + (ehMesAtual ? ' mes-atual' : '');
+          const tdDivider = document.createElement('td');
+          tdDivider.colSpan = 7;
+          tdDivider.textContent = `${NOMES_MES[parseInt(mesNum, 10) - 1]} de ${ano}` + (ehMesAtual ? ' · mês atual' : '');
+          trDivider.appendChild(tdDivider);
+          tbody.appendChild(trDivider);
+        }
+
         const tr = document.createElement('tr');
         if (lanc.quitado) tr.classList.add('row-quitado');
+        if (ehMesAtual) tr.classList.add('row-mes-atual');
         tr.style.opacity = lanc.quitado ? '0.65' : '1';
 
         const data      = new Date(lanc.data).toLocaleDateString('pt-BR');
